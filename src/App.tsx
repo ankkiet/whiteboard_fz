@@ -178,7 +178,6 @@ export default function App() {
               <TopRightBar
                 onPresentClick={() => setIsPresentOpen(true)}
                 onToggleFocusMode={handleToggleFocusMode}
-                onOpenDesktopAppClick={() => setIsDesktopAppOpen(true)}
               />
             </div>
           ) : (

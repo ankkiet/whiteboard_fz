@@ -3,93 +3,12 @@ import react from '@vitejs/plugin-react';
 import fs from 'fs';
 import path from 'path';
 import {defineConfig} from 'vite';
-import {VitePWA} from 'vite-plugin-pwa';
 
 export default defineConfig(() => {
   return {
     plugins: [
       react(),
       tailwindcss(),
-      VitePWA({
-        registerType: 'autoUpdate',
-        includeAssets: [
-          'icon.svg',
-          'apple-touch-icon.png',
-          'pwa-192x192.png',
-          'pwa-512x512.png',
-          'pwa-maskable-512x512.png',
-        ],
-        manifest: {
-          id: '/',
-          name: 'Bảng Trắng Thông Minh - Smart Whiteboard',
-          short_name: 'BảngTrắng',
-          description:
-            'Ứng dụng bảng trắng vô tận & toán học lớp 1–12 hiện đại, hỗ trợ chạy trực tuyến và cài đặt độc lập trên Windows, macOS.',
-          theme_color: '#4f46e5',
-          background_color: '#f8fafc',
-          display: 'standalone',
-          start_url: '/',
-          scope: '/',
-          icons: [
-            {
-              src: '/pwa-192x192.png',
-              sizes: '192x192',
-              type: 'image/png',
-              purpose: 'any',
-            },
-            {
-              src: '/pwa-512x512.png',
-              sizes: '512x512',
-              type: 'image/png',
-              purpose: 'any',
-            },
-            {
-              src: '/pwa-maskable-512x512.png',
-              sizes: '512x512',
-              type: 'image/png',
-              purpose: 'maskable',
-            },
-          ],
-        },
-        workbox: {
-          globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
-          maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
-          runtimeCaching: [
-            {
-              urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
-              handler: 'CacheFirst',
-              options: {
-                cacheName: 'google-fonts-cache',
-                expiration: {
-                  maxEntries: 10,
-                  maxAgeSeconds: 60 * 60 * 24 * 365,
-                },
-                cacheableResponse: {
-                  statuses: [0, 200],
-                },
-              },
-            },
-            {
-              urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
-              handler: 'CacheFirst',
-              options: {
-                cacheName: 'gstatic-fonts-cache',
-                expiration: {
-                  maxEntries: 10,
-                  maxAgeSeconds: 60 * 60 * 24 * 365,
-                },
-                cacheableResponse: {
-                  statuses: [0, 200],
-                },
-              },
-            },
-          ],
-        },
-        devOptions: {
-          enabled: true,
-          type: 'module',
-        },
-      }),
       // Copies src/assets into dist/ so root-relative URLs like
       // "/src/assets/images/..." (e.g. generate_image output) still resolve
       // in production builds. Do not remove.
@@ -105,6 +24,50 @@ export default defineConfig(() => {
           const distAssets = path.resolve(distDir, 'src/assets');
           if (fs.existsSync(distDir) && fs.existsSync(srcAssets)) {
             fs.cpSync(srcAssets, distAssets, {recursive: true, force: true});
+          }
+
+          // Generate 100% self-contained single-file offline HTML bundle for Windows & macOS desktop downloads
+          const indexHtmlPath = path.resolve(distDir, 'index.html');
+          const assetsDir = path.resolve(distDir, 'assets');
+          if (fs.existsSync(indexHtmlPath) && fs.existsSync(assetsDir)) {
+            let html = fs.readFileSync(indexHtmlPath, 'utf-8');
+            const assetFiles = fs.readdirSync(assetsDir);
+            const cssFile = assetFiles.find((f) => f.startsWith('index-') && f.endsWith('.css'));
+            const jsFile = assetFiles.find((f) => f.startsWith('index-') && f.endsWith('.js'));
+
+            if (cssFile && jsFile) {
+              const rawCss = fs
+                .readFileSync(path.resolve(assetsDir, cssFile), 'utf-8')
+                .replace(/\/assets\/(KaTeX_[^"')]+\.(woff2|woff|ttf))/g, (fullMatch, fileName, ext) => {
+                  const fontPath = path.resolve(assetsDir, fileName);
+                  if (!fs.existsSync(fontPath)) return fullMatch;
+                  const mime =
+                    ext === 'woff2'
+                      ? 'font/woff2'
+                      : ext === 'woff'
+                        ? 'font/woff'
+                        : 'font/ttf';
+                  const b64 = fs.readFileSync(fontPath).toString('base64');
+                  return `data:${mime};base64,${b64}`;
+                });
+              const rawJs = fs
+                .readFileSync(path.resolve(assetsDir, jsFile), 'utf-8')
+                .replace(/<\/script/gi, '<\\/script');
+
+              html = html.replace(
+                /<link[^>]+rel="stylesheet"[^>]+href="\/assets\/index-[^"]+\.css"[^>]*>/i,
+                () => `<style>\n${rawCss}\n</style>`
+              );
+              html = html.replace(
+                /<script[^>]+src="\/assets\/index-[^"]+\.js"[^>]*><\/script>/i,
+                () => `<script type="module">\n${rawJs}\n</script>`
+              );
+
+              const publicBundlePath = path.resolve(__dirname, 'public/desktop-app-bundle.html');
+              const distBundlePath = path.resolve(distDir, 'desktop-app-bundle.html');
+              fs.writeFileSync(publicBundlePath, html, 'utf-8');
+              fs.writeFileSync(distBundlePath, html, 'utf-8');
+            }
           }
         },
       },

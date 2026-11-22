@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useBoardStore } from '../../store/useBoardStore';
 import { computeFitCamera, zoomCameraAtPoint } from '../../engine/geometry';
-import { PWAInstallTriggerButton } from '../modals/DesktopAppModal';
 import {
   ZoomIn,
   ZoomOut,
@@ -18,13 +17,11 @@ import { BoardPattern } from '../../types/board';
 interface TopRightBarProps {
   onPresentClick: () => void;
   onToggleFocusMode: () => void;
-  onOpenDesktopAppClick: () => void;
 }
 
 export const TopRightBar: React.FC<TopRightBarProps> = ({
   onPresentClick,
   onToggleFocusMode,
-  onOpenDesktopAppClick,
 }) => {
   const camera = useBoardStore((s) => s.camera);
   const setCamera = useBoardStore((s) => s.setCamera);
@@ -202,9 +199,6 @@ export const TopRightBar: React.FC<TopRightBarProps> = ({
       >
         <Focus className="w-4 h-4" />
       </button>
-
-      {/* Install / Package Desktop App (Windows & macOS) */}
-      <PWAInstallTriggerButton onOpenModal={onOpenDesktopAppClick} compact />
 
       {/* Present Mode */}
       <button
