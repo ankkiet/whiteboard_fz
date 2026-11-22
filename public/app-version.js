@@ -1,1 +1,1 @@
-window.__BTTM_VERSION_CALLBACK__&&window.__BTTM_VERSION_CALLBACK__({"version":"1.2.9193","buildId":"9193d132b1ff","notes":"Bản cập nhật Bảng Trắng Thông Minh mới nhất (Windows .exe & macOS .app)"});
+window.__BTTM_VERSION_CALLBACK__&&window.__BTTM_VERSION_CALLBACK__({"version":"1.2.3aaf","buildId":"3aaf2ea96870","notes":"Bản cập nhật Bảng Trắng Thông Minh mới nhất (Windows .exe & macOS .app)"});
