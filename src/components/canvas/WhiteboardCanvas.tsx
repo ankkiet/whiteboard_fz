@@ -8,6 +8,7 @@ import {
   isPointInElement,
   screenToWorld,
   translateElement,
+  worldToScreen,
   zoomCameraAtPoint,
 } from '../../engine/geometry';
 import {
@@ -118,6 +119,16 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
   const laserStrokeIdRef = useRef(0);
   const laserRafRef = useRef<number | null>(null);
 
+  // Hardware-accelerated cursor refs (zero canvas repaint on mouse move)
+  const cursorOverlayRef = useRef<HTMLDivElement>(null);
+  const cursorCircleRef = useRef<HTMLDivElement>(null);
+  const cursorDotRef = useRef<HTMLDivElement>(null);
+  const rafIdRef = useRef<number | null>(null);
+
+  // Palm rejection & pointer lock refs (prevents jumping or zooming while writing)
+  const activePointerIdRef = useRef<number | null>(null);
+  const lastPenActiveTimeRef = useRef<number>(0);
+
   // Trigger redraw when cached images finish decoding
   useEffect(() => {
     return subscribeImageCache(() => {
@@ -217,44 +228,6 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
       drawEraserTrail(ctx, eraserTrailRef.current, state.camera.zoom);
     }
 
-    if (
-      state.currentTool === 'eraser' &&
-      state.eraserMode === 'area' &&
-      eraserCursorWorldRef.current
-    ) {
-      const isAreaErasing = modeRef.current === 'area-eraser';
-      const activeSize = isAreaErasing
-        ? dynamicEraserRef.current.currentSize
-        : state.eraserSize;
-      drawEraserCursor(
-        ctx,
-        eraserCursorWorldRef.current,
-        activeSize / 2,
-        state.camera.zoom,
-        isAreaErasing,
-        state.isDarkMode,
-        isAreaErasing ? dynamicEraserRef.current.energy : 0
-      );
-    }
-
-    if (
-      (state.currentTool === 'pen' || state.currentTool === 'highlighter') &&
-      brushCursorWorldRef.current &&
-      modeRef.current !== 'pan'
-    ) {
-      const isHighlighter = state.currentTool === 'highlighter';
-      drawBrushCursor(
-        ctx,
-        brushCursorWorldRef.current,
-        computeBrushRadiusWorld(state.strokeWidth, isHighlighter),
-        isHighlighter ? state.highlighterColor : state.color,
-        isHighlighter,
-        state.camera.zoom,
-        state.isDarkMode,
-        modeRef.current === 'draw'
-      );
-    }
-
     if (marqueeRef.current) {
       drawMarqueeRect(ctx, marqueeRef.current, state.camera.zoom);
     }
@@ -287,6 +260,100 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
     eraserSize,
     renderTick,
   ]);
+
+  const requestRedraw = useCallback(() => {
+    if (rafIdRef.current !== null) return;
+    rafIdRef.current = requestAnimationFrame(() => {
+      rafIdRef.current = null;
+      drawFrame();
+    });
+  }, [drawFrame]);
+
+  useEffect(() => {
+    return () => {
+      if (rafIdRef.current !== null) {
+        cancelAnimationFrame(rafIdRef.current);
+      }
+    };
+  }, []);
+
+  // Synchronize cursor ring size, color and contrast styling whenever tool settings change
+  useEffect(() => {
+    if (!cursorCircleRef.current || !cursorDotRef.current) return;
+    const circle = cursorCircleRef.current;
+    const dot = cursorDotRef.current;
+    const zoom = camera.zoom;
+
+    if (currentTool === 'pen') {
+      const worldRadius = computeBrushRadiusWorld(strokeWidth, false);
+      const screenRadius = Math.max(worldRadius * zoom, 3);
+      const size = Math.round(screenRadius * 2);
+      circle.style.width = `${size}px`;
+      circle.style.height = `${size}px`;
+      circle.style.border = `1.5px solid ${color}`;
+      circle.style.backgroundColor = `${color}30`;
+      circle.style.boxShadow = isDarkMode
+        ? '0 0 0 1px rgba(255, 255, 255, 0.4)'
+        : '0 0 0 1px rgba(0, 0, 0, 0.25)';
+      dot.style.display = 'block';
+      dot.style.backgroundColor = color;
+    } else if (currentTool === 'highlighter') {
+      const worldRadius = computeBrushRadiusWorld(strokeWidth, true);
+      const screenRadius = Math.max(worldRadius * zoom, 6);
+      const size = Math.round(screenRadius * 2);
+      circle.style.width = `${size}px`;
+      circle.style.height = `${size}px`;
+      circle.style.border = `1.5px solid ${highlighterColor}`;
+      circle.style.backgroundColor = `${highlighterColor}45`;
+      circle.style.boxShadow = isDarkMode
+        ? '0 0 0 1px rgba(255, 255, 255, 0.4)'
+        : '0 0 0 1px rgba(0, 0, 0, 0.25)';
+      dot.style.display = 'none';
+    } else if (currentTool === 'eraser' && eraserMode === 'area') {
+      const size = Math.max(14, Math.round(eraserSize * zoom));
+      circle.style.width = `${size}px`;
+      circle.style.height = `${size}px`;
+      circle.style.border = '2px dashed rgba(239, 68, 68, 0.9)';
+      circle.style.backgroundColor = 'rgba(239, 68, 68, 0.15)';
+      circle.style.boxShadow = isDarkMode
+        ? '0 0 0 1px rgba(255, 255, 255, 0.25)'
+        : '0 0 0 1px rgba(0, 0, 0, 0.25)';
+      dot.style.display = 'block';
+      dot.style.backgroundColor = '#ef4444';
+    }
+  }, [
+    currentTool,
+    strokeWidth,
+    eraserSize,
+    color,
+    highlighterColor,
+    camera.zoom,
+    isDarkMode,
+    eraserMode,
+  ]);
+
+  const updateCursorOverlayPos = useCallback(
+    (clientX: number, clientY: number, customScreenPos?: Point) => {
+      if (!cursorOverlayRef.current || !canvasRef.current) return;
+      const isRingTool =
+        currentTool === 'pen' ||
+        currentTool === 'highlighter' ||
+        (currentTool === 'eraser' && eraserMode === 'area');
+
+      if (!isRingTool || modeRef.current === 'pan' || spacePressed) {
+        cursorOverlayRef.current.style.display = 'none';
+        return;
+      }
+
+      const rect = canvasRef.current.getBoundingClientRect();
+      const sx = customScreenPos ? customScreenPos.x : clientX - rect.left;
+      const sy = customScreenPos ? customScreenPos.y : clientY - rect.top;
+
+      cursorOverlayRef.current.style.display = 'block';
+      cursorOverlayRef.current.style.transform = `translate3d(${sx}px, ${sy}px, 0) translate(-50%, -50%)`;
+    },
+    [currentTool, eraserMode, spacePressed]
+  );
 
   const ensureLaserLoop = useCallback(() => {
     if (laserRafRef.current !== null) return;
@@ -549,6 +616,10 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
 
     const handleWheel = (e: WheelEvent) => {
       e.preventDefault();
+      // Block accidental wheel zoom or pan while actively writing, erasing, or dragging!
+      if (modeRef.current !== 'idle') {
+        return;
+      }
       if (e.deltaY === 0) return;
 
       const rect = canvas.getBoundingClientRect();
@@ -573,13 +644,37 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
       );
     };
 
+    // Prevent Safari / macOS gesture-zoom from unexpectedly zooming the page
+    const preventGesture = (e: Event) => e.preventDefault();
+    canvas.addEventListener('gesturestart', preventGesture, { passive: false });
+    canvas.addEventListener('gesturechange', preventGesture, { passive: false });
+
     canvas.addEventListener('wheel', handleWheel, { passive: false });
-    return () => canvas.removeEventListener('wheel', handleWheel);
+    return () => {
+      canvas.removeEventListener('gesturestart', preventGesture);
+      canvas.removeEventListener('gesturechange', preventGesture);
+      canvas.removeEventListener('wheel', handleWheel);
+    };
   }, []);
 
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+
+    // Palm rejection & multi-touch isolation:
+    // If a stroke is already in progress, reject any secondary touch or palm contact!
+    if (activePointerIdRef.current !== null && activePointerIdRef.current !== e.pointerId) {
+      return;
+    }
+
+    // Stylus priority palm rejection: if a pen was actively used recently, reject touch down
+    if (e.pointerType === 'pen') {
+      lastPenActiveTimeRef.current = Date.now();
+    } else if (e.pointerType === 'touch' && Date.now() - lastPenActiveTimeRef.current < 600) {
+      return;
+    }
+
+    activePointerIdRef.current = e.pointerId;
 
     const store = useBoardStore.getState();
     const rect = canvas.getBoundingClientRect();
@@ -625,6 +720,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
       drawStartPointRef.current = startPt;
       brushCursorWorldRef.current = snappedStart;
       activeStrokeRef.current = [startPt];
+      updateCursorOverlayPos(e.clientX, e.clientY);
       drawFrame();
       return;
     }
@@ -817,21 +913,31 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
   const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+
+    // Ignore movements from any secondary pointer/touch when an active gesture is in progress
+    if (activePointerIdRef.current !== null && e.pointerId !== activePointerIdRef.current) {
+      return;
+    }
+
     const mode = modeRef.current;
     const store = useBoardStore.getState();
     const rect = canvas.getBoundingClientRect();
     const worldPos = screenToWorld(e.clientX, e.clientY, store.camera, rect);
 
     if (mode === 'idle') {
-      if (store.currentTool === 'eraser' && store.eraserMode === 'area') {
-        eraserCursorWorldRef.current = worldPos;
-        brushCursorWorldRef.current = null;
-        drawFrame();
-      } else if (store.currentTool === 'pen' || store.currentTool === 'highlighter') {
-        brushCursorWorldRef.current = worldPos;
-        eraserCursorWorldRef.current = null;
-        drawFrame();
+      const hasVirtualEdge =
+        store.currentTool === 'pen' &&
+        (store.virtualTools.ruler.active || store.virtualTools.setSquare.active);
+      if (hasVirtualEdge) {
+        const snapThresh = 16 / store.camera.zoom;
+        const snapped = snapPointToVirtualToolEdge(worldPos, store.virtualTools, snapThresh);
+        if (snapped.snapped) {
+          const screenPos = worldToScreen(snapped.point.x, snapped.point.y, store.camera, rect);
+          updateCursorOverlayPos(e.clientX, e.clientY, screenPos);
+          return;
+        }
       }
+      updateCursorOverlayPos(e.clientX, e.clientY);
       return;
     }
 
@@ -856,6 +962,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
     }
 
     if (mode === 'draw') {
+      updateCursorOverlayPos(e.clientX, e.clientY);
       if (e.shiftKey && drawStartPointRef.current) {
         const startPt = drawStartPointRef.current;
         const snapped = magneticSnapLineEnd(
@@ -868,7 +975,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
           [snapped.point.x, snapped.point.y, 0.5],
           Math.max(3, 6 / store.camera.zoom)
         );
-        drawFrame();
+        requestRedraw();
         return;
       }
 
@@ -891,6 +998,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
         const sampleWorld = hasVirtualEdge
           ? snapPointToVirtualToolEdge(rawWorld, store.virtualTools, snapThresh).point
           : rawWorld;
+        if (!Number.isFinite(sampleWorld.x) || !Number.isFinite(sampleWorld.y)) continue;
         const samplePressure = sample.pointerType === 'pen' ? sample.pressure : 0.5;
         const last = pts[pts.length - 1];
         if (!last || Math.hypot(sampleWorld.x - last[0], sampleWorld.y - last[1]) >= minStep) {
@@ -900,12 +1008,13 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
         }
       }
       if (added) {
-        drawFrame();
+        requestRedraw();
       }
       return;
     }
 
     if (mode === 'area-eraser') {
+      updateCursorOverlayPos(e.clientX, e.clientY);
       const prevPos = lastAreaEraserPosRef.current ?? worldPos;
       lastAreaEraserPosRef.current = worldPos;
       eraserCursorWorldRef.current = worldPos;
@@ -932,7 +1041,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
         store.setElements(res.elements, false);
         areaErasedDirtyRef.current = true;
       }
-      drawFrame();
+      requestRedraw();
       return;
     }
 
@@ -950,7 +1059,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
           }
         }
       }
-      drawFrame();
+      requestRedraw();
       return;
     }
 
@@ -978,7 +1087,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
           height: Math.abs(end.y - start.y),
         };
       }
-      drawFrame();
+      requestRedraw();
       return;
     }
 
@@ -1017,11 +1126,25 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
         .map((el) => el.id);
       const hitIds = expandSelectionWithGroups(store.elements, rawHitIds, store.editingGroupId);
       store.setSelectedIds(hitIds);
-      drawFrame();
+      requestRedraw();
     }
   };
 
   const handlePointerUp = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    // Only release when the active drawing/interacting pointer lifts
+    if (activePointerIdRef.current !== null && e.pointerId !== activePointerIdRef.current) {
+      return;
+    }
+    activePointerIdRef.current = null;
+    if (e.pointerType === 'pen') {
+      lastPenActiveTimeRef.current = Date.now();
+    }
+
+    if (rafIdRef.current !== null) {
+      cancelAnimationFrame(rafIdRef.current);
+      rafIdRef.current = null;
+    }
+
     const canvas = canvasRef.current;
     if (canvas && canvas.hasPointerCapture(e.pointerId)) {
       canvas.releasePointerCapture(e.pointerId);
@@ -1200,17 +1323,8 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
   };
 
   const handlePointerLeave = () => {
-    let needsRedraw = false;
-    if (eraserCursorWorldRef.current !== null) {
-      eraserCursorWorldRef.current = null;
-      needsRedraw = true;
-    }
-    if (brushCursorWorldRef.current !== null) {
-      brushCursorWorldRef.current = null;
-      needsRedraw = true;
-    }
-    if (needsRedraw) {
-      drawFrame();
+    if (cursorOverlayRef.current) {
+      cursorOverlayRef.current.style.display = 'none';
     }
   };
 
@@ -1265,6 +1379,35 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
         onContextMenu={(e) => e.preventDefault()}
         className={`block w-full h-full touch-none ${cursorClass}`}
       />
+
+      {/* Hardware-accelerated cursor ring overlay (zero canvas redraw, 0ms lag) */}
+      <div
+        ref={cursorOverlayRef}
+        data-testid="cursor-ring-overlay"
+        className="pointer-events-none absolute top-0 left-0 z-30 will-change-transform"
+        style={{
+          display: 'none',
+          transform: 'translate3d(-9999px, -9999px, 0) translate(-50%, -50%)',
+        }}
+      >
+        <div
+          ref={cursorCircleRef}
+          className="rounded-full flex items-center justify-center pointer-events-none"
+          style={{
+            width: 16,
+            height: 16,
+            border: '1.5px solid #4f46e5',
+            backgroundColor: 'rgba(79, 70, 229, 0.2)',
+            boxShadow: '0 0 0 1px rgba(0, 0, 0, 0.25)',
+          }}
+        >
+          <div
+            ref={cursorDotRef}
+            className="w-1 h-1 rounded-full pointer-events-none"
+            style={{ backgroundColor: '#4f46e5' }}
+          />
+        </div>
+      </div>
 
       {/* Subtle empty-board onboarding cue (auto-hidden when virtual instruments or pinned problem are active) */}
       {hasLoaded &&

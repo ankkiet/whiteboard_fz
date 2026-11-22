@@ -1,6 +1,6 @@
 {
   "appId": "vn.smartwhiteboard.app",
-  "productName": "Bang Trang Thong Minh",
+  "productName": "Bảng Trắng Thông Minh",
   "directories": {
     "output": "release"
   },
@@ -22,7 +22,8 @@
         "arch": ["x64"]
       }
     ],
-    "icon": "public/pwa-512x512.png"
+    "icon": "public/pwa-512x512.png",
+    "legalTrademarks": "Bản quyền © 2026 Bảng Trắng Thông Minh. Toàn quyền bảo lưu."
   },
   "mac": {
     "target": ["dmg", "zip"],
@@ -31,8 +32,15 @@
   },
   "nsis": {
     "oneClick": false,
+    "perMachine": false,
+    "allowElevation": true,
     "allowToChangeInstallationDirectory": true,
     "createDesktopShortcut": true,
-    "createStartMenuShortcut": true
+    "createStartMenuShortcut": true,
+    "shortcutName": "Bảng Trắng Thông Minh",
+    "uninstallDisplayName": "Bảng Trắng Thông Minh",
+    "license": "electron/license.txt",
+    "runAfterFinish": true,
+    "deleteAppDataOnUninstall": false
   }
 }

@@ -44,12 +44,15 @@ import {
   X,
   ChevronDown,
   UserRoundCog,
+  KeyRound,
+  Laptop,
 } from 'lucide-react';
 
 interface HomePageProps {
   drive: GoogleDriveWorkspaceState;
   onEnterEditor: () => void;
   onOpenDesktopAppClick: () => void;
+  onOpenAuthBridgeClick?: () => void;
 }
 
 const BoardThumbnail: React.FC<{ file: DriveWhiteboardFile; isBoard: boolean }> = ({
@@ -150,6 +153,7 @@ export const HomePage: React.FC<HomePageProps> = ({
   drive,
   onEnterEditor,
   onOpenDesktopAppClick,
+  onOpenAuthBridgeClick,
 }) => {
   const localTitle = useBoardStore((s) => s.title);
   const localBoardType = useBoardStore((s) => s.boardType);
@@ -157,6 +161,8 @@ export const HomePage: React.FC<HomePageProps> = ({
   const theme = useBoardStore((s) => s.theme);
   const setTheme = useBoardStore((s) => s.setTheme);
   const startNewBoard = useBoardStore((s) => s.startNewBoard);
+
+  const isFileProtocol = typeof window !== 'undefined' && window.location.protocol === 'file:';
 
   const [filter, setFilter] = useState<DriveFileFilter>('all');
   const [sort, setSort] = useState<DriveFileSort>('modifiedDesc');
@@ -351,6 +357,20 @@ export const HomePage: React.FC<HomePageProps> = ({
                       <UserRoundCog className="w-3.5 h-3.5 text-slate-400" />
                       <span>Đổi tài khoản Google</span>
                     </button>
+                    {!isFileProtocol && onOpenAuthBridgeClick && (
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => {
+                          setShowAccountMenu(false);
+                          onOpenAuthBridgeClick();
+                        }}
+                        className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 transition-colors cursor-pointer"
+                      >
+                        <Laptop className="w-3.5 h-3.5" />
+                        <span>Mã kết nối cho app máy tính</span>
+                      </button>
+                    )}
                     <button
                       type="button"
                       role="menuitem"
@@ -679,34 +699,87 @@ export const HomePage: React.FC<HomePageProps> = ({
           )}
 
           {drive.needsAuth ? (
-            /* Compact, Balanced Signed-Out Connect Card */
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl px-6 py-10 flex flex-col items-center text-center">
-              <div className="w-12 h-12 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mb-4">
-                <CloudUpload className="w-6 h-6" />
-              </div>
-              <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white text-balance max-w-md">
-                Đăng nhập Google để đồng bộ toàn bộ bảng đã lưu
-              </h3>
-              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1.5 max-w-md leading-relaxed">
-                Tự động lưu dự án bảng trắng và ảnh PNG 4× gọn gàng trong thư mục riêng &ldquo;{APP_DRIVE_FOLDER_NAME}&rdquo;.
-              </p>
+            isFileProtocol ? (
+              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl px-6 py-9 flex flex-col items-center text-center">
+                <div className="w-12 h-12 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-4">
+                  <Check className="w-6 h-6" />
+                </div>
+                <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white text-balance max-w-md">
+                  Ứng dụng đang chạy ở chế độ ngoại tuyến
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1.5 max-w-lg leading-relaxed">
+                  Bản tải về máy lưu trữ toàn bộ bảng trắng trực tiếp và an toàn trên máy tính của bạn (IndexedDB). Bạn không cần đăng nhập tài khoản vẫn sử dụng trọn vẹn mọi công cụ vẽ, toán học, máy tính Casio và xuất/nhập tệp.
+                </p>
 
-              <div className="mt-5">
-                <GoogleSignInButton
-                  testId="home-google-signin-button"
-                  onClick={() => void drive.signIn()}
-                  isLoading={drive.isLoggingIn}
-                />
-              </div>
+                <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => handleOpenCreateModal()}
+                    className="inline-flex items-center justify-center gap-2 h-10 px-5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs transition-colors cursor-pointer shadow-xs"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Tạo bảng mới ngay</span>
+                  </button>
 
-              <div className="mt-5 flex flex-col sm:flex-row items-center justify-center gap-x-2 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
-                <span>Chỉ truy cập tệp do ứng dụng tạo</span>
-                <span aria-hidden="true" className="hidden sm:inline">
-                  ·
-                </span>
-                <span>Miễn phí dùng chung dung lượng Drive cá nhân</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (onOpenAuthBridgeClick) {
+                        onOpenAuthBridgeClick();
+                      } else {
+                        const portal =
+                          typeof window !== 'undefined'
+                            ? window.__BTTM_EMBEDDED_BUILD__?.updateOrigin
+                            : undefined;
+                        window.open(
+                          portal
+                            ? `${portal}?auth_bridge=1`
+                            : 'https://whiteboard-34d4d.web.app?auth_bridge=1',
+                          '_blank'
+                        );
+                      }
+                    }}
+                    className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-colors cursor-pointer shadow-xs"
+                  >
+                    <KeyRound className="w-4 h-4" />
+                    <span>Đăng nhập qua trình duyệt</span>
+                  </button>
+                </div>
+
+                <div className="mt-4 text-[11px] text-slate-500 dark:text-slate-400 max-w-md leading-relaxed">
+                  Để đồng bộ Google Drive: Bấm <strong>&ldquo;Đăng nhập qua trình duyệt&rdquo;</strong> để mở trình duyệt lấy mã kết nối an toàn về máy (chỉ cần làm một lần duy nhất).
+                </div>
               </div>
-            </div>
+            ) : (
+              /* Compact, Balanced Signed-Out Connect Card */
+              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl px-6 py-10 flex flex-col items-center text-center">
+                <div className="w-12 h-12 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mb-4">
+                  <CloudUpload className="w-6 h-6" />
+                </div>
+                <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white text-balance max-w-md">
+                  Đăng nhập Google để đồng bộ toàn bộ bảng đã lưu
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1.5 max-w-md leading-relaxed">
+                  Tự động lưu dự án bảng trắng và ảnh PNG 4× gọn gàng trong thư mục riêng &ldquo;{APP_DRIVE_FOLDER_NAME}&rdquo;.
+                </p>
+
+                <div className="mt-5">
+                  <GoogleSignInButton
+                    testId="home-google-signin-button"
+                    onClick={() => void drive.signIn()}
+                    isLoading={drive.isLoggingIn}
+                  />
+                </div>
+
+                <div className="mt-5 flex flex-col sm:flex-row items-center justify-center gap-x-2 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
+                  <span>Chỉ truy cập tệp do ứng dụng tạo</span>
+                  <span aria-hidden="true" className="hidden sm:inline">
+                    ·
+                  </span>
+                  <span>Miễn phí dùng chung dung lượng Drive cá nhân</span>
+                </div>
+              </div>
+            )
           ) : (
             <>
               {/* Balanced Filter, Search, Sort & Layout Bar */}

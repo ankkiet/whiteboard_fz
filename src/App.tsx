@@ -19,6 +19,7 @@ import {
 } from './components/modals/DocumentImportModal';
 import { DocumentPreviewModal } from './components/modals/DocumentPreviewModal';
 import { DesktopAppModal, OfflineIndicator } from './components/modals/DesktopAppModal';
+import { AuthBridgeModal } from './components/modals/AuthBridgeModal';
 import { PresentMode } from './components/present/PresentMode';
 import { MathPanel } from './components/math/MathPanel';
 import { VirtualGeometryToolsOverlay } from './components/math/VirtualGeometryToolsOverlay';
@@ -31,6 +32,12 @@ function getInitialView(): 'home' | 'editor' {
   if (typeof window === 'undefined') return 'home';
   const params = new URLSearchParams(window.location.search);
   return params.get('autostart') === '1' ? 'editor' : 'home';
+}
+
+function shouldAutoOpenAuthBridge(): boolean {
+  if (typeof window === 'undefined') return false;
+  const params = new URLSearchParams(window.location.search);
+  return params.get('auth_bridge') === '1' || window.location.hash.includes('auth_bridge');
 }
 
 export default function App() {
@@ -47,6 +54,7 @@ export default function App() {
   const [isDriveOpen, setIsDriveOpen] = useState(false);
   const [isPresentOpen, setIsPresentOpen] = useState(false);
   const [isDesktopAppOpen, setIsDesktopAppOpen] = useState(false);
+  const [isAuthBridgeOpen, setIsAuthBridgeOpen] = useState<boolean>(shouldAutoOpenAuthBridge);
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [isMathPanelOpen, setIsMathPanelOpen] = useState(true);
   const [pendingDoc, setPendingDoc] = useState<PendingDocumentImport | null>(null);
@@ -133,6 +141,7 @@ export default function App() {
           drive={drive}
           onEnterEditor={() => setActiveView('editor')}
           onOpenDesktopAppClick={() => setIsDesktopAppOpen(true)}
+          onOpenAuthBridgeClick={() => setIsAuthBridgeOpen(true)}
         />
       ) : (
         <>
@@ -209,6 +218,7 @@ export default function App() {
             isOpen={isDriveOpen}
             onClose={() => setIsDriveOpen(false)}
             drive={drive}
+            onOpenAuthBridgeClick={() => setIsAuthBridgeOpen(true)}
           />
           <DocumentImportModal pendingDoc={pendingDoc} onClose={() => setPendingDoc(null)} />
           <DocumentPreviewModal />
@@ -219,6 +229,11 @@ export default function App() {
       <DesktopAppModal
         isOpen={isDesktopAppOpen}
         onClose={() => setIsDesktopAppOpen(false)}
+      />
+      <AuthBridgeModal
+        isOpen={isAuthBridgeOpen}
+        onClose={() => setIsAuthBridgeOpen(false)}
+        drive={drive}
       />
       <OfflineIndicator />
       <ToastContainer />

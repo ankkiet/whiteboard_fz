@@ -2,7 +2,13 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { User } from 'firebase/auth';
 import { useBoardStore } from '../store/useBoardStore';
 import { exportBoardToPng } from '../engine/renderer';
-import { googleLogout, googleSignIn, initGoogleAuth } from '../services/googleAuth';
+import {
+  googleLogout,
+  googleSignIn,
+  initGoogleAuth,
+  setBridgeSession,
+} from '../services/googleAuth';
+import { parseAuthBridgeToken } from '../services/authBridge';
 import {
   clearCachedDriveFolder,
   createDriveWhiteboardFile,
@@ -78,6 +84,7 @@ export interface GoogleDriveWorkspaceState {
   ) => Promise<boolean>;
   renameFile: (file: DriveWhiteboardFile, newTitle: string) => Promise<boolean>;
   deleteFile: (file: DriveWhiteboardFile) => Promise<boolean>;
+  applyBridgeToken: (tokenString: string) => boolean;
 }
 
 export function useGoogleDriveWorkspace(): GoogleDriveWorkspaceState {
@@ -405,6 +412,34 @@ export function useGoogleDriveWorkspace(): GoogleDriveWorkspaceState {
     }
   }, [addToast]);
 
+  const applyBridgeToken = useCallback(
+    (tokenString: string): boolean => {
+      try {
+        const session = parseAuthBridgeToken(tokenString);
+        setBridgeSession(session, (u) => {
+          setUser(u);
+          setNeedsAuth(false);
+          needsAuthRef.current = false;
+        });
+        clearCachedDriveFolder();
+        setAppFolder(null);
+        setError(null);
+        addToast(
+          `Đã kết nối Google Drive qua trình duyệt (${session.user.email || session.user.displayName})`,
+          'success'
+        );
+        void refreshFiles();
+        return true;
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Mã kết nối không hợp lệ.';
+        setError({ message: msg });
+        addToast(msg, 'error');
+        return false;
+      }
+    },
+    [addToast, refreshFiles]
+  );
+
   const signOut = useCallback(async () => {
     clearPendingAutoSaveTimer();
     clearCachedDriveFolder();
@@ -632,5 +667,6 @@ export function useGoogleDriveWorkspace(): GoogleDriveWorkspaceState {
     openBoardFile,
     renameFile,
     deleteFile,
+    applyBridgeToken,
   };
 }

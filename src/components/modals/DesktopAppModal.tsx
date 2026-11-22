@@ -19,6 +19,8 @@ import {
   ShieldCheck,
   ExternalLink,
   Info,
+  FileText,
+  Shield,
 } from 'lucide-react';
 import {
   AppVersionManifest,
@@ -702,10 +704,27 @@ async function fetchOfflineAppBundleWithOrigin(): Promise<{
   return { html, manifest };
 }
 
+const EULA_TEXT = `THỎA THUẬN CẤP PHÉP NGƯỜI DÙNG CUỐI (EULA) & CHÍNH SÁCH BẢO VỆ DỮ LIỆU CÁ NHÂN
+Phần mềm: Bảng Trắng Thông Minh (Smart Whiteboard) - Bản quyền © 2026.
+
+1. Phạm vi cấp phép:
+Tác giả cấp quyền sử dụng phi độc quyền cho mục đích học tập, giảng dạy, làm việc cá nhân hoặc doanh nghiệp. Bạn được phép cài đặt trên các máy tính thuộc quyền quản lý của mình.
+
+2. Bảo vệ dữ liệu cá nhân (Tuân thủ Nghị định 13/2023/NĐ-CP):
+Ứng dụng hoạt động theo kiến trúc lưu trữ cục bộ (Offline-first). Toàn bộ nét vẽ, tài liệu và ghi chú được lưu trên máy của bạn (IndexedDB / LocalStorage). Ứng dụng không thu thập, không theo dõi và không chia sẻ bất kỳ dữ liệu cá nhân nào cho bên thứ ba.
+
+3. Quyền sở hữu trí tuệ:
+Mã nguồn ứng dụng được bảo hộ theo Luật Sở hữu trí tuệ Việt Nam. Bạn có toàn quyền sở hữu đối với các tác phẩm, bài học do bạn tạo ra trên bảng.
+
+4. Miễn trừ trách nhiệm pháp lý:
+Phần mềm được cung cấp "nguyên trạng" (as is). Người dùng tự chịu trách nhiệm sao lưu dữ liệu của mình trên máy.`;
+
 export const DesktopAppModal: React.FC<DesktopAppModalProps> = ({ isOpen, onClose }) => {
   const addToast = useBoardStore((s) => s.addToast);
   const [busyTarget, setBusyTarget] = useState<'win-exe' | 'win-zip' | 'mac-cmd' | 'mac-app' | null>(null);
   const [portalRequiredUrl, setPortalRequiredUrl] = useState<string | null>(null);
+  const [agreeEula, setAgreeEula] = useState<boolean>(true);
+  const [showEulaText, setShowEulaText] = useState<boolean>(false);
 
   if (!isOpen) return null;
 
@@ -821,10 +840,10 @@ export const DesktopAppModal: React.FC<DesktopAppModalProps> = ({ isOpen, onClos
             </div>
             <div className="min-w-0">
               <h2 className="text-base font-bold tracking-tight truncate">
-                Tải ứng dụng Desktop (Windows .EXE & macOS .APP)
+                Tải ứng dụng máy tính (Windows .exe & macOS .app)
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                Kiến trúc Win32 C thuần & macOS Bundle sạch 100% — Không chứa PowerShell hay script ngầm
+                Bộ cài đặt chuẩn, bảo mật tuyệt đối và tuân thủ đầy đủ quy định pháp luật
               </p>
             </div>
           </div>
@@ -860,6 +879,43 @@ export const DesktopAppModal: React.FC<DesktopAppModalProps> = ({ isOpen, onClos
               </a>
             </div>
           )}
+
+          {/* Legal Compliance & EULA Section */}
+          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 space-y-2 text-xs">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5 font-semibold text-slate-800 dark:text-slate-200">
+                <Shield className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                <span>Cam kết pháp lý & bảo vệ quyền riêng tư (Nghị định 13/2023/NĐ-CP)</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowEulaText(!showEulaText)}
+                className="text-[11px] text-indigo-600 dark:text-indigo-400 hover:underline inline-flex items-center gap-1 cursor-pointer font-medium"
+              >
+                <FileText className="w-3 h-3" />
+                <span>{showEulaText ? 'Thu gọn điều khoản' : 'Xem toàn văn thỏa thuận EULA'}</span>
+              </button>
+            </div>
+
+            {showEulaText && (
+              <div className="p-3 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 max-h-44 overflow-y-auto text-[11px] leading-relaxed text-slate-600 dark:text-slate-300 font-mono whitespace-pre-line">
+                {EULA_TEXT}
+              </div>
+            )}
+
+            <label className="flex items-start gap-2 pt-1 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={agreeEula}
+                onChange={(e) => setAgreeEula(e.target.checked)}
+                className="mt-0.5 rounded border-slate-300 dark:border-slate-700 text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5 cursor-pointer"
+              />
+              <span className="text-[11px] text-slate-600 dark:text-slate-300">
+                Tôi đồng ý với <strong>Thỏa thuận cấp phép người dùng cuối (EULA)</strong>, chính sách bản quyền và xác nhận ứng dụng chỉ lưu trữ dữ liệu cục bộ trên máy.
+              </span>
+            </label>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             {/* Windows .EXE Card */}
             <div
@@ -876,7 +932,7 @@ export const DesktopAppModal: React.FC<DesktopAppModalProps> = ({ isOpen, onClos
                   </div>
                   {os !== 'macos' && (
                     <span className="px-2 py-0.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold">
-                      Máy của bạn
+                      Hệ điều hành của bạn
                     </span>
                   )}
                 </div>
@@ -891,15 +947,15 @@ export const DesktopAppModal: React.FC<DesktopAppModalProps> = ({ isOpen, onClos
                 <ul className="space-y-1 text-[11px] text-slate-600 dark:text-slate-300">
                   <li className="flex items-center gap-1.5">
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                    <span>Nhị phân Win32 thuần (Không gọi PowerShell/CMD)</span>
+                    <span>Bộ cài đặt tự động tạo biểu tượng màn hình chính</span>
                   </li>
                   <li className="flex items-center gap-1.5">
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                    <span>Có PE CheckSum chuẩn Microsoft, 100% Offline</span>
+                    <span>Có mã PE CheckSum chuẩn Microsoft, 100% ngoại tuyến</span>
                   </li>
                   <li className="flex items-center gap-1.5">
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                    <span>Gói .ZIP kèm bản không cảnh báo SmartScreen</span>
+                    <span>Có kèm bản Portable (.zip) không cần cài đặt</span>
                   </li>
                 </ul>
               </div>
@@ -908,30 +964,30 @@ export const DesktopAppModal: React.FC<DesktopAppModalProps> = ({ isOpen, onClos
                 <button
                   type="button"
                   data-testid="download-windows-exe-button"
-                  disabled={busyTarget !== null}
+                  disabled={busyTarget !== null || !agreeEula}
                   onClick={() => void handleDownloadWindowsExe()}
-                  className="w-full h-10 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-colors cursor-pointer"
+                  className="w-full h-10 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-colors cursor-pointer"
                 >
                   {busyTarget === 'win-exe' ? (
                     <Loader2 className="w-4 h-4 animate-spin shrink-0" />
                   ) : (
                     <Download className="w-4 h-4 shrink-0" />
                   )}
-                  <span>Tải trực tiếp file .EXE</span>
+                  <span>Tải bộ cài đặt Windows (.exe)</span>
                 </button>
                 <button
                   type="button"
                   data-testid="download-windows-zip-button"
-                  disabled={busyTarget !== null}
+                  disabled={busyTarget !== null || !agreeEula}
                   onClick={() => void handleDownloadWindowsZip()}
-                  className="w-full h-8 px-2.5 rounded-lg bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-60 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-[11px] flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                  className="w-full h-8 px-2.5 rounded-lg bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-[11px] flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                 >
                   {busyTarget === 'win-zip' ? (
                     <Loader2 className="w-3 h-3 animate-spin shrink-0" />
                   ) : (
                     <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
                   )}
-                  <span>Tải gói Portable (.zip — Tránh trình duyệt chặn)</span>
+                  <span>Tải gói chạy ngay (.zip — không cần quyền admin)</span>
                 </button>
               </div>
             </div>
@@ -951,7 +1007,7 @@ export const DesktopAppModal: React.FC<DesktopAppModalProps> = ({ isOpen, onClos
                   </div>
                   {os === 'macos' && (
                     <span className="px-2 py-0.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold">
-                      Máy của bạn
+                      Hệ điều hành của bạn
                     </span>
                   )}
                 </div>
@@ -970,7 +1026,7 @@ export const DesktopAppModal: React.FC<DesktopAppModalProps> = ({ isOpen, onClos
                   </li>
                   <li className="flex items-center gap-1.5">
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                    <span>Tự động chép vào Desktop & Applications</span>
+                    <span>Tự động chép vào Desktop & thư mục Applications</span>
                   </li>
                 </ul>
               </div>
@@ -979,30 +1035,30 @@ export const DesktopAppModal: React.FC<DesktopAppModalProps> = ({ isOpen, onClos
                 <button
                   type="button"
                   data-testid="download-macos-app-button"
-                  disabled={busyTarget !== null}
+                  disabled={busyTarget !== null || !agreeEula}
                   onClick={() => void handleDownloadMacAppZip()}
-                  className="w-full h-10 px-3 rounded-xl bg-slate-900 dark:bg-slate-100 hover:bg-slate-800 dark:hover:bg-white disabled:opacity-60 text-white dark:text-slate-900 font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-colors cursor-pointer"
+                  className="w-full h-10 px-3 rounded-xl bg-slate-900 dark:bg-slate-100 hover:bg-slate-800 dark:hover:bg-white disabled:opacity-50 text-white dark:text-slate-900 font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-colors cursor-pointer"
                 >
                   {busyTarget === 'mac-app' ? (
                     <Loader2 className="w-4 h-4 animate-spin shrink-0" />
                   ) : (
                     <Download className="w-4 h-4 shrink-0" />
                   )}
-                  <span>Tải gói ứng dụng (.app.zip)</span>
+                  <span>Tải gói ứng dụng macOS (.app.zip)</span>
                 </button>
                 <button
                   type="button"
                   data-testid="download-macos-command-button"
-                  disabled={busyTarget !== null}
+                  disabled={busyTarget !== null || !agreeEula}
                   onClick={() => void handleDownloadMacInstallerCommand()}
-                  className="w-full h-8 px-2.5 rounded-lg bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-60 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-[11px] flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                  className="w-full h-8 px-2.5 rounded-lg bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-[11px] flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                 >
                   {busyTarget === 'mac-cmd' ? (
                     <Loader2 className="w-3 h-3 animate-spin shrink-0" />
                   ) : (
                     <Download className="w-3 h-3 shrink-0" />
                   )}
-                  <span>Tải bộ cài 1-File macOS (.command)</span>
+                  <span>Tải bộ cài đặt macOS (.command)</span>
                 </button>
               </div>
             </div>
@@ -1011,13 +1067,13 @@ export const DesktopAppModal: React.FC<DesktopAppModalProps> = ({ isOpen, onClos
           <div className="p-3.5 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/60 text-[11.5px] text-slate-700 dark:text-slate-200 space-y-1.5">
             <div className="flex items-center gap-1.5 font-bold text-emerald-800 dark:text-emerald-300">
               <ShieldCheck className="w-4 h-4 shrink-0" />
-              <span>Chứng nhận an toàn & Vì sao Windows SmartScreen hỏi xác nhận file .exe mới:</span>
+              <span>Chứng nhận an toàn & giải thích cảnh báo bảo mật hệ thống:</span>
             </div>
             <div>
-              • <strong>Đã loại bỏ hoàn toàn lệnh ngầm:</strong> File <code>.exe</code> chỉ dùng API đọc/ghi tệp chuẩn của Windows (<code>CreateFileA</code>, <code>ShellExecuteA</code>) và có mã kiểm tra <code>PE CheckSum</code> chuẩn — <strong>không dùng PowerShell hay CMD ẩn</strong> nên không bị phần mềm diệt virus báo nhầm là mã độc.
+              • <strong>Đã loại bỏ hoàn toàn lệnh ngầm:</strong> Tệp <code>.exe</code> chỉ sử dụng giao diện lập trình ứng dụng (API) chuẩn của Windows (<code>CreateFileA</code>, <code>ShellExecuteA</code>) và có mã kiểm tra <code>PE CheckSum</code> chuẩn — <strong>không sử dụng PowerShell hay CMD ẩn</strong>, đảm bảo an toàn và không bị phần mềm diệt virus nhận diện nhầm.
             </div>
             <div>
-              • <strong>Cách vượt qua thông báo &ldquo;Unknown Publisher&rdquo;:</strong> Mọi file <code>.exe</code> cá nhân chưa mua chứng chỉ số EV của Microsoft ($300–$500/năm) đều hiện bảng xác nhận màu xanh khi tải từ trình duyệt. Bạn hãy tải <strong>Gói Portable (.zip)</strong> ở trên hoặc bấm <strong>More info (Thêm thông tin)</strong> → <strong>Run anyway (Vẫn chạy)</strong>.
+              • <strong>Cách xử lý cảnh báo &ldquo;Nhà phát hành không xác định&rdquo;:</strong> Các phần mềm chưa đăng ký mua chứng chỉ số EV hàng năm của Microsoft đều sẽ hiển thị bảng xác nhận an toàn của Windows SmartScreen khi tải từ trình duyệt. Bạn có thể tải <strong>Gói chạy ngay (.zip)</strong> ở trên hoặc bấm <strong>More info (Thêm thông tin)</strong> → <strong>Run anyway (Vẫn chạy)</strong>.
             </div>
           </div>
         </div>

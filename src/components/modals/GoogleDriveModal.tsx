@@ -25,12 +25,14 @@ import {
   ExternalLink,
   AlertTriangle,
   Save,
+  KeyRound,
 } from 'lucide-react';
 
 interface GoogleDriveModalProps {
   isOpen: boolean;
   onClose: () => void;
   drive: GoogleDriveWorkspaceState;
+  onOpenAuthBridgeClick?: () => void;
 }
 
 type ConfirmAction =
@@ -42,9 +44,11 @@ export const GoogleDriveModal: React.FC<GoogleDriveModalProps> = ({
   isOpen,
   onClose,
   drive,
+  onOpenAuthBridgeClick,
 }) => {
   const elements = useBoardStore((s) => s.elements);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
+  const isFileProtocol = typeof window !== 'undefined' && window.location.protocol === 'file:';
 
   useEffect(() => {
     if (isOpen && !drive.needsAuth) {
@@ -168,23 +172,56 @@ export const GoogleDriveModal: React.FC<GoogleDriveModalProps> = ({
           )}
 
           {drive.needsAuth ? (
-            <div className="py-6 flex flex-col items-center text-center space-y-4">
-              <div className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
-                <CloudUpload className="w-7 h-7" />
-              </div>
-              <div className="max-w-sm space-y-1.5">
-                <h3 className="text-sm font-bold">Kết nối tài khoản Google của bạn</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                  Ứng dụng chỉ truy cập các tệp bảng trắng do chính bạn tạo và lưu qua ứng dụng này trên Google Drive.
-                </p>
-              </div>
+            isFileProtocol ? (
+              <div className="py-6 flex flex-col items-center text-center space-y-4">
+                <div className="w-14 h-14 rounded-2xl bg-amber-50 dark:bg-amber-950/60 flex items-center justify-center text-amber-600 dark:text-amber-400">
+                  <AlertTriangle className="w-7 h-7" />
+                </div>
+                <div className="max-w-md space-y-1.5">
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                    Bản cài đặt tệp cục bộ hoạt động ngoại tuyến
+                  </h3>
+                  <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                    Theo quy định an toàn bảo mật của Google OAuth, giao thức tệp cục bộ (file://) không được phép thực hiện đăng nhập Google. Bảng vẽ của bạn vẫn được lưu trữ tự động trên ổ cứng máy tính.
+                  </p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                    Để đồng bộ dữ liệu lên Google Drive, bạn hãy bấm nút bên dưới để mở trình duyệt lấy mã kết nối an toàn về máy.
+                  </p>
+                </div>
 
-              <GoogleSignInButton
-                testId="google-signin-button"
-                onClick={() => void drive.signIn()}
-                isLoading={drive.isLoggingIn}
-              />
-            </div>
+                <div className="flex flex-wrap items-center justify-center gap-2.5 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      onOpenAuthBridgeClick?.();
+                    }}
+                    className="inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-colors cursor-pointer shadow-xs"
+                  >
+                    <KeyRound className="w-4 h-4" />
+                    <span>Đăng nhập qua trình duyệt</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="py-6 flex flex-col items-center text-center space-y-4">
+                <div className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                  <CloudUpload className="w-7 h-7" />
+                </div>
+                <div className="max-w-sm space-y-1.5">
+                  <h3 className="text-sm font-bold">Kết nối tài khoản Google của bạn</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                    Ứng dụng chỉ truy cập các tệp bảng trắng do chính bạn tạo và lưu qua ứng dụng này trên Google Drive.
+                  </p>
+                </div>
+
+                <GoogleSignInButton
+                  testId="google-signin-button"
+                  onClick={() => void drive.signIn()}
+                  isLoading={drive.isLoggingIn}
+                />
+              </div>
+            )
           ) : (
             <>
               {/* Account strip */}

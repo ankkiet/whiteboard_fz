@@ -166,6 +166,12 @@ export function formatDriveErrorMessage(rawMessage: string): FormattedDriveError
 
 export function getGoogleAuthErrorMessage(err: unknown): string {
   const code = (err as { code?: string })?.code;
+  if (
+    code === 'auth/operation-not-supported-in-this-environment' ||
+    (typeof window !== 'undefined' && window.location.protocol === 'file:')
+  ) {
+    return 'Bản cài đặt chạy từ tệp cục bộ (file://) không hỗ trợ đăng nhập Google do chính sách bảo mật của Google OAuth. Dữ liệu bảng của bạn vẫn được lưu tự động và an toàn trên máy tính. Để đồng bộ Google Drive, vui lòng mở bản web hoặc cài đặt qua tính năng PWA trên trình duyệt.';
+  }
   if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
     return 'Bạn đã đóng cửa sổ đăng nhập Google.';
   }
@@ -174,6 +180,9 @@ export function getGoogleAuthErrorMessage(err: unknown): string {
   }
   if (code === 'auth/unauthorized-domain') {
     const host = typeof window !== 'undefined' ? window.location.hostname : '';
+    if (!host) {
+      return 'Bản cài đặt tệp cục bộ không có tên miền web hợp lệ để đăng nhập Google OAuth. Hãy mở bản web trên trình duyệt hoặc cài đặt qua PWA để đồng bộ Google Drive.';
+    }
     return `Tên miền "${host}" chưa được cấp phép trong Firebase Console (Authentication → Settings → Authorized domains). Hãy thêm tên miền này rồi thử lại.`;
   }
   if (code === 'auth/operation-not-allowed') {
