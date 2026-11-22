@@ -1,0 +1,11 @@
+/app-version.json
+  Access-Control-Allow-Origin: *
+  Cache-Control: no-cache, no-store, must-revalidate
+
+/app-version.js
+  Access-Control-Allow-Origin: *
+  Cache-Control: no-cache, no-store, must-revalidate
+
+/desktop-app-bundle.html
+  Access-Control-Allow-Origin: *
+  Cache-Control: no-cache, no-store, must-revalidate
