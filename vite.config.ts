@@ -1,5 +1,6 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
+import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import {defineConfig} from 'vite';
@@ -54,9 +55,24 @@ export default defineConfig(() => {
                 .readFileSync(path.resolve(assetsDir, jsFile), 'utf-8')
                 .replace(/<\/script/gi, '<\\/script');
 
+              const buildId = crypto
+                .createHash('sha256')
+                .update(rawCss)
+                .update(rawJs)
+                .digest('hex')
+                .slice(0, 12);
+
+              const versionManifest = {
+                version: `1.2.${buildId.slice(0, 4)}`,
+                buildId,
+                notes: 'Bản cập nhật Bảng Trắng Thông Minh mới nhất (Windows .exe & macOS .app)',
+              };
+
+              const versionMetaScript = `<script>window.__BTTM_EMBEDDED_BUILD__=${JSON.stringify(versionManifest)};</script>`;
+
               html = html.replace(
                 /<link[^>]+rel="stylesheet"[^>]+href="\/assets\/index-[^"]+\.css"[^>]*>/i,
-                () => `<style>\n${rawCss}\n</style>`
+                () => `${versionMetaScript}\n<style>\n${rawCss}\n</style>`
               );
               html = html.replace(
                 /<script[^>]+src="\/assets\/index-[^"]+\.js"[^>]*><\/script>/i,
@@ -67,6 +83,14 @@ export default defineConfig(() => {
               const distBundlePath = path.resolve(distDir, 'desktop-app-bundle.html');
               fs.writeFileSync(publicBundlePath, html, 'utf-8');
               fs.writeFileSync(distBundlePath, html, 'utf-8');
+
+              const versionJson = JSON.stringify(versionManifest, null, 2);
+              fs.writeFileSync(path.resolve(__dirname, 'public/app-version.json'), versionJson, 'utf-8');
+              fs.writeFileSync(path.resolve(distDir, 'app-version.json'), versionJson, 'utf-8');
+
+              const versionJsonp = `window.__BTTM_VERSION_CALLBACK__&&window.__BTTM_VERSION_CALLBACK__(${JSON.stringify(versionManifest)});\n`;
+              fs.writeFileSync(path.resolve(__dirname, 'public/app-version.js'), versionJsonp, 'utf-8');
+              fs.writeFileSync(path.resolve(distDir, 'app-version.js'), versionJsonp, 'utf-8');
             }
           }
         },
@@ -83,6 +107,18 @@ export default defineConfig(() => {
       hmr: process.env.DISABLE_HMR !== 'true',
       // Disable file watching when DISABLE_HMR is true to save CPU during agent edits.
       watch: process.env.DISABLE_HMR === 'true' ? null : {},
+      cors: true,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
+      },
+    },
+    preview: {
+      cors: true,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
+      },
     },
   };
 });

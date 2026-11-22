@@ -198,6 +198,14 @@ export function buildWindowsExeInstaller(bundledHtml: string): Uint8Array {
   writeAscii(out, rdata + 0x1d0, 'BangTrangThongMinh-App.html\0');
   // 0x21f0: "open" verb for ShellExecuteA
   writeAscii(out, rdata + 0x1f0, 'open\0');
+  // 0x2200: "msedge.exe" (registered in App Paths on all Windows 10/11 machines -> opens standalone chromeless app window)
+  writeAscii(out, rdata + 0x200, 'msedge.exe\0');
+  // 0x2210: "chrome.exe" (fallback if Edge is unavailable)
+  writeAscii(out, rdata + 0x210, 'chrome.exe\0');
+  // 0x2220: prefix for standalone desktop window arguments: --window-size=1440,900 --app="
+  writeAscii(out, rdata + 0x220, '--window-size=1440,900 --app="\0');
+  // 0x2248: closing quote
+  writeAscii(out, rdata + 0x248, '"\0');
 
   // 6. Populate .text at file offset 0x200 (RVA 0x1000)
   const code: number[] = [];
@@ -218,8 +226,21 @@ export function buildWindowsExeInstaller(bundledHtml: string): Uint8Array {
     new DataView(tmp.buffer).setInt32(0, disp, true);
     emit(0x48, 0x8d, 0x15, tmp[0], tmp[1], tmp[2], tmp[3]);
   };
+  const emitLeaR8Rip = (targetRva: number) => {
+    const disp = targetRva - (pc + 7);
+    const tmp = new Uint8Array(4);
+    new DataView(tmp.buffer).setInt32(0, disp, true);
+    emit(0x4c, 0x8d, 0x05, tmp[0], tmp[1], tmp[2], tmp[3]);
+  };
 
-  emit(0x48, 0x81, 0xec, 0x68, 0x24, 0x00, 0x00); // sub rsp, 0x2468
+  // Stack layout (sub rsp, 0x2868):
+  //   [rsp + 0x00 .. 0x37] : 7-arg call frame + shadow space
+  //   [rsp + 0x38]         : DWORD bytesTransferred
+  //   [rsp + 0x40 .. 0x23F]: char selfPath[512]
+  //   [rsp + 0x240.. 0x43F]: char outPath[512]
+  //   [rsp + 0x440.. 0x83F]: char appArgs[1024]  (--window-size=1440,900 --app="C:\...\BangTrangThongMinh-App.html")
+  //   [rsp + 0x840..0x283F]: uint8_t copyBuf[8192]
+  emit(0x48, 0x81, 0xec, 0x68, 0x28, 0x00, 0x00); // sub rsp, 0x2868
 
   // 1) GetModuleFileNameA(NULL, &rsp[0x40], 500)
   emit(0x31, 0xc9); // xor ecx, ecx
@@ -269,7 +290,7 @@ export function buildWindowsExeInstaller(bundledHtml: string): Uint8Array {
   // 7) Copy loop: ReadFile -> WriteFile
   const loopStartPc = pc;
   emit(0x4c, 0x89, 0xe1); // mov rcx, r12 (hIn)
-  emit(0x48, 0x8d, 0x94, 0x24, 0x40, 0x04, 0x00, 0x00); // lea rdx, [rsp+0x440]
+  emit(0x48, 0x8d, 0x94, 0x24, 0x40, 0x08, 0x00, 0x00); // lea rdx, [rsp+0x840]
   emit(0x41, 0xb8, 0x00, 0x20, 0x00, 0x00); // mov r8d, 8192
   emit(0x4c, 0x8d, 0x4c, 0x24, 0x38); // lea r9, [rsp+0x38]
   emit(0x48, 0xc7, 0x44, 0x24, 0x20, 0x00, 0x00, 0x00, 0x00); // mov qword ptr [rsp+0x20], 0
@@ -280,7 +301,7 @@ export function buildWindowsExeInstaller(bundledHtml: string): Uint8Array {
   emit(0x74, 0x21); // jz loopDone (+33 bytes)
 
   emit(0x4c, 0x89, 0xe9); // mov rcx, r13 (hOut)
-  emit(0x48, 0x8d, 0x94, 0x24, 0x40, 0x04, 0x00, 0x00); // lea rdx, [rsp+0x440]
+  emit(0x48, 0x8d, 0x94, 0x24, 0x40, 0x08, 0x00, 0x00); // lea rdx, [rsp+0x840]
   emit(0x4c, 0x8d, 0x4c, 0x24, 0x38); // lea r9, [rsp+0x38]
   emit(0x48, 0xc7, 0x44, 0x24, 0x20, 0x00, 0x00, 0x00, 0x00); // mov qword ptr [rsp+0x20], 0
   emitRipCall(0x20d0); // WriteFile
@@ -294,16 +315,44 @@ export function buildWindowsExeInstaller(bundledHtml: string): Uint8Array {
   emit(0x4c, 0x89, 0xe1); // mov rcx, r12 (hIn)
   emitRipCall(0x20d8); // CloseHandle
 
-  // 9) ShellExecuteA(NULL, "open", &rsp[0x240], NULL, NULL, SW_SHOWNORMAL(1))
+  // 9) Build standalone app argument string at &rsp[0x440]:
+  //    --window-size=1440,900 --app="C:\...\BangTrangThongMinh-App.html"
+  emit(0xc6, 0x84, 0x24, 0x40, 0x04, 0x00, 0x00, 0x00); // mov byte ptr [rsp+0x440], 0
+  emit(0x48, 0x8d, 0x8c, 0x24, 0x40, 0x04, 0x00, 0x00); // lea rcx, [rsp+0x440]
+  emitLeaRdxRip(0x2220); // '--window-size=1440,900 --app="'
+  emitRipCall(0x20b0); // lstrcatA
+
+  emit(0x48, 0x8d, 0x8c, 0x24, 0x40, 0x04, 0x00, 0x00); // lea rcx, [rsp+0x440]
+  emit(0x48, 0x8d, 0x94, 0x24, 0x40, 0x02, 0x00, 0x00); // lea rdx, [rsp+0x240] (outPath)
+  emitRipCall(0x20b0); // lstrcatA
+
+  emit(0x48, 0x8d, 0x8c, 0x24, 0x40, 0x04, 0x00, 0x00); // lea rcx, [rsp+0x440]
+  emitLeaRdxRip(0x2248); // '"'
+  emitRipCall(0x20b0); // lstrcatA
+
+  // 10) Launch standalone frameless desktop application window via msedge.exe --app="..."
+  //     ShellExecuteA(NULL, "open", "msedge.exe", &rsp[0x440], NULL, SW_SHOWNORMAL(1))
   emit(0x31, 0xc9); // xor ecx, ecx
   emitLeaRdxRip(0x21f0); // "open"
-  emit(0x4c, 0x8d, 0x84, 0x24, 0x40, 0x02, 0x00, 0x00); // lea r8, [rsp+0x240]
-  emit(0x45, 0x31, 0xc9); // xor r9d, r9d
+  emitLeaR8Rip(0x2200); // "msedge.exe"
+  emit(0x4c, 0x8d, 0x8c, 0x24, 0x40, 0x04, 0x00, 0x00); // lea r9, [rsp+0x440] (lpParameters)
   emit(0x48, 0xc7, 0x44, 0x24, 0x20, 0x00, 0x00, 0x00, 0x00); // [rsp+0x20] = NULL
   emit(0xc7, 0x44, 0x24, 0x28, 0x01, 0x00, 0x00, 0x00); // [rsp+0x28] = SW_SHOWNORMAL (1)
   emitRipCall(0x20f0); // ShellExecuteA
 
-  // 10) ExitProcess(0)
+  // If ShellExecuteA returns <= 32 (e.g. msedge.exe not found), fallback to chrome.exe --app="..."
+  emit(0x48, 0x83, 0xf8, 0x20); // cmp rax, 32
+  emit(0x7f, 0x2f); // jg +47 bytes (to ExitProcess)
+
+  emit(0x31, 0xc9); // xor ecx, ecx
+  emitLeaRdxRip(0x21f0); // "open"
+  emitLeaR8Rip(0x2210); // "chrome.exe"
+  emit(0x4c, 0x8d, 0x8c, 0x24, 0x40, 0x04, 0x00, 0x00); // lea r9, [rsp+0x440]
+  emit(0x48, 0xc7, 0x44, 0x24, 0x20, 0x00, 0x00, 0x00, 0x00); // [rsp+0x20] = NULL
+  emit(0xc7, 0x44, 0x24, 0x28, 0x01, 0x00, 0x00, 0x00); // [rsp+0x28] = SW_SHOWNORMAL (1)
+  emitRipCall(0x20f0); // ShellExecuteA
+
+  // 11) ExitProcess(0)
   emit(0x31, 0xc9); // xor ecx, ecx
   emitRipCall(0x20e0);
   emit(0xc3);

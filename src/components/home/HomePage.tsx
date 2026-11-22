@@ -17,7 +17,7 @@ import { BOARD_TEMPLATES, getBoardTypeLabel } from '../../engine/boardTemplates'
 import { BoardType } from '../../types/board';
 import { BoardTemplatePreview } from './BoardTemplatePreview';
 import { CreateBoardModal } from '../modals/CreateBoardModal';
-import { PWAInstallTriggerButton } from '../modals/DesktopAppModal';
+import { HomeSettingsMenu, PWAInstallTriggerButton } from '../modals/DesktopAppModal';
 import { GoogleSignInButton } from './GoogleSignInButton';
 import {
   Plus,
@@ -368,6 +368,12 @@ export const HomePage: React.FC<HomePageProps> = ({
                 )}
               </div>
             )}
+
+            <HomeSettingsMenu
+              onOpenDesktopModal={onOpenDesktopAppClick}
+              theme={theme}
+              onToggleTheme={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            />
 
             <PWAInstallTriggerButton onOpenModal={onOpenDesktopAppClick} />
 
