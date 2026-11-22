@@ -30,8 +30,26 @@ describe('versionCheck — update origin resolution and honest failure classific
     );
   });
 
-  it('returns empty candidates when file:// build has no embedded updateOrigin', () => {
+  it('returns empty candidates when file:// build has no embedded updateOrigin and no fallback', () => {
     assert.deepEqual(buildUpdateOriginCandidates('file:', 'null', ''), []);
+  });
+
+  it('appends production Cloudflare fallback origin when provided for file:// builds', () => {
+    assert.deepEqual(
+      buildUpdateOriginCandidates('file:', 'null', 'https://ais-dev-demo.run.app', 'https://whiteboardfz.pages.dev'),
+      [
+        'https://ais-dev-demo.run.app',
+        'https://ais-pre-demo.run.app',
+        'https://whiteboardfz.pages.dev',
+      ]
+    );
+  });
+
+  it('uses fallback origin directly when file:// build has empty embedded updateOrigin', () => {
+    assert.deepEqual(
+      buildUpdateOriginCandidates('file:', 'null', '', 'https://whiteboardfz.pages.dev'),
+      ['https://whiteboardfz.pages.dev']
+    );
   });
 
   it('never classifies as offline when navigator.onLine is true and AI Studio 403/CORS blocks file://', () => {

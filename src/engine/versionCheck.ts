@@ -38,31 +38,46 @@ export function isAiStudioPreviewOrigin(origin: string): boolean {
   return /^https:\/\/ais-(dev|pre)-[^/]+\.run\.app$/i.test(origin);
 }
 
+export const PRODUCTION_UPDATE_ORIGIN = 'https://whiteboardfz.pages.dev';
+
 /**
  * Builds ordered origin candidates for fetching app-version manifest / bundle.
  * When running from a local file:// desktop app pointing at an ais-dev-* origin,
- * also appends the sibling ais-pre-* origin in case a public shared preview exists.
+ * also appends the sibling ais-pre-* origin in case a public shared preview exists,
+ * and accepts an optional fallbackOrigin (e.g. production Cloudflare Pages).
  */
 export function buildUpdateOriginCandidates(
   protocol: string,
   currentOrigin?: string | null,
-  embeddedOrigin?: string | null
+  embeddedOrigin?: string | null,
+  fallbackOrigin?: string | null
 ): string[] {
   if (protocol !== 'file:') {
     const clean = normalizeOriginUrl(currentOrigin);
-    return clean ? [clean] : [];
+    if (clean) return [clean];
+    const cleanFallback = normalizeOriginUrl(fallbackOrigin);
+    return cleanFallback ? [cleanFallback] : [];
   }
 
   const primary = normalizeOriginUrl(embeddedOrigin);
-  if (!primary) return [];
-
-  const candidates = [primary];
-  if (/^https:\/\/ais-dev-/i.test(primary)) {
-    const sharedCandidate = primary.replace(/^https:\/\/ais-dev-/i, 'https://ais-pre-');
-    if (sharedCandidate !== primary) {
-      candidates.push(sharedCandidate);
+  const candidates: string[] = [];
+  if (primary) {
+    candidates.push(primary);
+    if (/^https:\/\/ais-dev-/i.test(primary)) {
+      const sharedCandidate = primary.replace(/^https:\/\/ais-dev-/i, 'https://ais-pre-');
+      if (sharedCandidate !== primary) {
+        candidates.push(sharedCandidate);
+      }
     }
   }
+
+  if (fallbackOrigin) {
+    const cleanFallback = normalizeOriginUrl(fallbackOrigin);
+    if (cleanFallback && !candidates.includes(cleanFallback)) {
+      candidates.push(cleanFallback);
+    }
+  }
+
   return candidates;
 }
 
