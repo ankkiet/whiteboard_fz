@@ -199,7 +199,7 @@ export const GoogleDriveModal: React.FC<GoogleDriveModalProps> = ({
                     className="inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-colors cursor-pointer shadow-xs"
                   >
                     <KeyRound className="w-4 h-4" />
-                    <span>Đăng nhập qua trình duyệt</span>
+                    <span>Đăng nhập tự động qua trình duyệt</span>
                   </button>
                 </div>
               </div>

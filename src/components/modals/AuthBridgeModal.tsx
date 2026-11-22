@@ -16,6 +16,9 @@ import {
   ShieldCheck,
   AlertCircle,
   Copy,
+  Loader2,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 
 interface AuthBridgeModalProps {
@@ -38,6 +41,9 @@ export const AuthBridgeModal: React.FC<AuthBridgeModalProps> = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [copiedCode, setCopiedCode] = useState(false);
   const [generatedToken, setGeneratedToken] = useState<string | null>(null);
+  const [isWaitingBrowser, setIsWaitingBrowser] = useState(false);
+  const [autoSentToOpener, setAutoSentToOpener] = useState(false);
+  const [showManualInput, setShowManualInput] = useState(false);
 
   // Generate bridge token when in export mode on web with authenticated user
   useEffect(() => {
@@ -57,6 +63,24 @@ export const AuthBridgeModal: React.FC<AuthBridgeModalProps> = ({
             accessToken
           );
           setGeneratedToken(code);
+
+          // 1. Automatically communicate back to the desktop opener window
+          if (typeof window !== 'undefined' && window.opener && !window.opener.closed) {
+            try {
+              window.opener.postMessage({ type: 'BTTM_AUTH_SUCCESS', token: code }, '*');
+              setAutoSentToOpener(true);
+              setTimeout(() => {
+                window.close();
+              }, 1200);
+            } catch {
+              // cross-origin restriction fallback
+            }
+          }
+
+          // 2. Silently copy to clipboard as seamless fallback
+          if (navigator.clipboard?.writeText) {
+            navigator.clipboard.writeText(code).catch(() => {});
+          }
         } catch {
           setGeneratedToken(null);
         }
@@ -68,7 +92,25 @@ export const AuthBridgeModal: React.FC<AuthBridgeModalProps> = ({
     }
   }, [isOpen, effectiveMode, drive.needsAuth, drive.user]);
 
-  // When desktop modal is open, listen to window focus to check clipboard for auto-fill
+  // When desktop modal is open, listen for postMessage from browser popup
+  useEffect(() => {
+    if (!isOpen || effectiveMode !== 'connect') return;
+
+    const handleWindowMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'BTTM_AUTH_SUCCESS' && typeof event.data.token === 'string') {
+        const ok = drive.applyBridgeToken(event.data.token);
+        if (ok) {
+          setIsWaitingBrowser(false);
+          onClose();
+        }
+      }
+    };
+
+    window.addEventListener('message', handleWindowMessage);
+    return () => window.removeEventListener('message', handleWindowMessage);
+  }, [isOpen, effectiveMode, drive, onClose]);
+
+  // When desktop modal is open, auto-read clipboard on window focus for 1-click zero-paste handshake
   useEffect(() => {
     if (!isOpen || effectiveMode !== 'connect') return;
 
@@ -76,24 +118,36 @@ export const AuthBridgeModal: React.FC<AuthBridgeModalProps> = ({
       try {
         if (!navigator.clipboard?.readText) return;
         const text = await navigator.clipboard.readText();
-        if (text && text.trim().startsWith('BTTM-')) {
-          setInputToken(text.trim());
+        const trimmed = text ? text.trim() : '';
+        if (trimmed && trimmed.startsWith('BTTM-')) {
+          setInputToken(trimmed);
+          const ok = drive.applyBridgeToken(trimmed);
+          if (ok) {
+            setIsWaitingBrowser(false);
+            onClose();
+          }
         }
       } catch {
-        // clipboard permission might not be granted; ignore silently
+        // clipboard access might be restricted; ignore
       }
     };
 
     window.addEventListener('focus', checkClipboardOnFocus);
     return () => window.removeEventListener('focus', checkClipboardOnFocus);
-  }, [isOpen, effectiveMode]);
+  }, [isOpen, effectiveMode, drive, onClose]);
 
   if (!isOpen) return null;
 
   const handleOpenBrowserForCode = () => {
+    setIsWaitingBrowser(true);
+    setErrorMessage(null);
     const portal = getWebPortalOrigin();
     const targetUrl = `${portal}?auth_bridge=1`;
-    window.open(targetUrl, '_blank');
+    window.open(
+      targetUrl,
+      'bttm_auth_bridge',
+      'width=540,height=700,menubar=no,toolbar=no,location=no,status=no'
+    );
   };
 
   const handlePasteFromClipboard = async () => {
@@ -123,6 +177,7 @@ export const AuthBridgeModal: React.FC<AuthBridgeModalProps> = ({
 
     const success = drive.applyBridgeToken(trimmed);
     if (success) {
+      setIsWaitingBrowser(false);
       onClose();
     }
   };
@@ -143,7 +198,7 @@ export const AuthBridgeModal: React.FC<AuthBridgeModalProps> = ({
       setCopiedCode(true);
       setTimeout(() => setCopiedCode(false), 3000);
     } catch {
-      // ignore copy errors
+      // ignore
     }
   };
 
@@ -168,12 +223,12 @@ export const AuthBridgeModal: React.FC<AuthBridgeModalProps> = ({
             <div className="min-w-0">
               <h2 className="text-base font-bold truncate">
                 {effectiveMode === 'connect'
-                  ? 'Kết nối Google Drive qua trình duyệt'
+                  ? 'Đăng nhập Google qua trình duyệt'
                   : 'Cầu nối đăng nhập cho ứng dụng máy tính'}
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
                 {effectiveMode === 'connect'
-                  ? 'Đăng nhập an toàn trên Chrome / Edge rồi chuyển mã về máy'
+                  ? 'Tự động xác thực tài khoản an toàn từ trình duyệt về ứng dụng'
                   : 'Cấp quyền truy cập Google Drive an toàn cho bản tải về máy'}
               </p>
             </div>
@@ -194,85 +249,135 @@ export const AuthBridgeModal: React.FC<AuthBridgeModalProps> = ({
           {effectiveMode === 'connect' ? (
             /* Desktop Connect Flow */
             <>
-              {/* Step 1 Card */}
-              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 space-y-2.5">
-                <div className="flex items-center gap-2 text-xs font-bold text-slate-900 dark:text-slate-100">
-                  <span className="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[11px] shrink-0 font-mono">
-                    1
-                  </span>
-                  <span>Mở trình duyệt để đăng nhập Google</span>
-                </div>
-                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                  Bấm nút bên dưới để mở trang web trên trình duyệt Google Chrome hoặc Edge của bạn. Bạn chọn tài khoản Google cần đồng bộ để lấy mã kết nối.
-                </p>
-                <button
-                  type="button"
-                  onClick={handleOpenBrowserForCode}
-                  className="w-full h-10 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer"
-                >
-                  <ExternalLink className="w-4 h-4 shrink-0" />
-                  <span>Mở trang lấy mã trên trình duyệt</span>
-                </button>
-              </div>
-
-              {/* Step 2 Card */}
-              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 space-y-2.5">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 text-xs font-bold text-slate-900 dark:text-slate-100">
-                    <span className="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[11px] shrink-0 font-mono">
-                      2
-                    </span>
-                    <span>Dán mã kết nối vào ô bên dưới</span>
+              {isWaitingBrowser ? (
+                /* Auto-Waiting State */
+                <div className="p-4 rounded-2xl bg-indigo-50/60 dark:bg-indigo-950/40 border border-indigo-200/80 dark:border-indigo-800/60 flex flex-col items-center text-center space-y-3">
+                  <div className="w-12 h-12 rounded-2xl bg-white dark:bg-slate-900 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shadow-xs">
+                    <Loader2 className="w-6 h-6 animate-spin" />
                   </div>
+                  <div className="space-y-1">
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                      Đang chờ bạn đăng nhập trên trình duyệt...
+                    </h3>
+                    <p className="text-xs text-slate-600 dark:text-slate-300 max-w-sm leading-relaxed">
+                      Cửa sổ Google đã được mở. Bạn chỉ cần chọn tài khoản Google của mình, hệ thống sẽ <strong>tự động nhận diện và hoàn tất đăng nhập</strong> vào ứng dụng.
+                    </p>
+                  </div>
+
+                  <div className="pt-1 flex flex-wrap items-center justify-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleOpenBrowserForCode}
+                      className="px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      <span>Mở lại cửa sổ trình duyệt</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowManualInput(!showManualInput)}
+                      className="px-3 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium flex items-center gap-1 transition-colors cursor-pointer"
+                    >
+                      {showManualInput ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                      <span>Dán mã thủ công (dự phòng)</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* Initial Action Card */
+                <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 space-y-3">
+                  <div className="space-y-1">
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                      Đăng nhập tự động qua trình duyệt
+                    </h3>
+                    <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                      Bấm nút bên dưới để mở cửa sổ đăng nhập Google trên trình duyệt. Sau khi bạn chọn tài khoản, ứng dụng sẽ <strong>tự động kết nối và chuyển về đây</strong> ngay lập tức.
+                    </p>
+                  </div>
+
                   <button
                     type="button"
-                    onClick={() => void handlePasteFromClipboard()}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 text-indigo-600 dark:text-indigo-400 text-[11px] font-semibold transition-colors cursor-pointer"
+                    onClick={handleOpenBrowserForCode}
+                    className="w-full h-11 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer"
                   >
-                    <Clipboard className="w-3 h-3" />
-                    <span>Dán từ bộ nhớ tạm</span>
+                    <ExternalLink className="w-4 h-4 shrink-0" />
+                    <span>Mở trình duyệt để đăng nhập ngay</span>
                   </button>
                 </div>
+              )}
 
-                <div className="space-y-1.5">
-                  <textarea
-                    rows={3}
-                    value={inputToken}
-                    onChange={(e) => {
-                      setInputToken(e.target.value);
-                      setErrorMessage(null);
-                    }}
-                    placeholder="Dán mã bắt đầu bằng BTTM-... vào đây"
-                    className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-mono text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all resize-none"
-                  />
-                  {errorMessage && (
-                    <div className="flex items-start gap-1.5 text-xs text-red-600 dark:text-red-400">
-                      <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                      <span>{errorMessage}</span>
-                    </div>
-                  )}
+              {/* Collapsible Manual Fallback (Optional) */}
+              {showManualInput && (
+                <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 space-y-2.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                      Dán mã kết nối thủ công
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => void handlePasteFromClipboard()}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 text-indigo-600 dark:text-indigo-400 text-[11px] font-semibold transition-colors cursor-pointer"
+                    >
+                      <Clipboard className="w-3 h-3" />
+                      <span>Dán từ bộ nhớ tạm</span>
+                    </button>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <textarea
+                      rows={2}
+                      value={inputToken}
+                      onChange={(e) => {
+                        setInputToken(e.target.value);
+                        setErrorMessage(null);
+                      }}
+                      placeholder="Dán mã bắt đầu bằng BTTM-... vào đây"
+                      className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-mono text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all resize-none"
+                    />
+                    {errorMessage && (
+                      <div className="flex items-start gap-1.5 text-xs text-red-600 dark:text-red-400">
+                        <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                        <span>{errorMessage}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleConfirmConnect}
+                    disabled={!inputToken.trim()}
+                    className="w-full h-9 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer"
+                  >
+                    <Check className="w-4 h-4 shrink-0" />
+                    <span>Xác nhận kết nối</span>
+                  </button>
                 </div>
+              )}
 
-                <button
-                  type="button"
-                  onClick={handleConfirmConnect}
-                  disabled={!inputToken.trim()}
-                  className="w-full h-10 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer"
-                >
-                  <Check className="w-4 h-4 shrink-0" />
-                  <span>Xác nhận kết nối</span>
-                </button>
-              </div>
-
-              <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400">
+              <div className="flex items-center gap-2 text-[11.5px] text-slate-500 dark:text-slate-400">
                 <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                <span>Mã kết nối được mã hóa an toàn và chỉ cấp quyền lưu trữ bảng trắng trên Google Drive cá nhân.</span>
+                <span>Hoàn toàn tự động và an toàn theo chuẩn bảo mật Google OAuth. Bạn chỉ cần thực hiện một lần.</span>
               </div>
             </>
           ) : (
             /* Web Export Flow */
             <>
-              {drive.needsAuth || !drive.user ? (
+              {autoSentToOpener ? (
+                /* Auto-Closed State */
+                <div className="py-8 flex flex-col items-center text-center space-y-3">
+                  <div className="w-14 h-14 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shadow-xs">
+                    <Check className="w-7 h-7" />
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
+                      Đăng nhập thành công!
+                    </h3>
+                    <p className="text-xs text-slate-600 dark:text-slate-300">
+                      Đang tự động chuyển về ứng dụng máy tính...
+                    </p>
+                  </div>
+                </div>
+              ) : drive.needsAuth || !drive.user ? (
                 <div className="py-6 flex flex-col items-center text-center space-y-4">
                   <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
                     <Laptop className="w-6 h-6" />
@@ -280,13 +385,13 @@ export const AuthBridgeModal: React.FC<AuthBridgeModalProps> = ({
                   <div className="max-w-sm space-y-1.5">
                     <h3 className="text-sm font-bold">Đăng nhập tài khoản Google của bạn</h3>
                     <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                      Đăng nhập tài khoản Google trên trình duyệt này một lần để tạo mã kết nối cho ứng dụng máy tính.
+                      Bấm nút bên dưới để chọn tài khoản Google của bạn. Sau khi đăng nhập, hệ thống sẽ tự động hoàn tất kết nối cho ứng dụng máy tính.
                     </p>
                   </div>
                   <GoogleSignInButton
                     onClick={() => void drive.signIn()}
                     isLoading={drive.isLoggingIn}
-                    label="Đăng nhập Google để lấy mã"
+                    label="Đăng nhập Google để kết nối app"
                   />
                 </div>
               ) : (
@@ -347,8 +452,8 @@ export const AuthBridgeModal: React.FC<AuthBridgeModalProps> = ({
                       </button>
                     </div>
 
-                    <div className="p-2.5 rounded-lg bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200/70 dark:border-indigo-800/60 text-[11px] text-indigo-900 dark:text-indigo-200 leading-relaxed">
-                      <strong>Bước tiếp theo:</strong> Sau khi bấm <strong>Sao chép</strong>, hãy mở ứng dụng Bảng Trắng Thông Minh trên máy tính của bạn và bấm <strong>&ldquo;Dán từ bộ nhớ tạm&rdquo;</strong> rồi bấm <strong>Xác nhận kết nối</strong>.
+                    <div className="p-2.5 rounded-lg bg-emerald-50/70 dark:bg-emerald-950/40 border border-emerald-200/70 dark:border-emerald-800/60 text-[11px] text-emerald-900 dark:text-emerald-200 leading-relaxed">
+                      Đã tự động gửi mã về ứng dụng máy tính. Bạn chỉ cần mở lại cửa sổ ứng dụng Bảng Trắng Thông Minh là đã hoàn tất!
                     </div>
                   </div>
 

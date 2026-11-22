@@ -64,6 +64,21 @@ export default function App() {
     void loadFromStorage();
   }, [loadFromStorage]);
 
+  // Global listener for automatic 1-click Browser Auth Bridge
+  useEffect(() => {
+    const handleAuthMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'BTTM_AUTH_SUCCESS' && typeof event.data.token === 'string') {
+        const ok = drive.applyBridgeToken(event.data.token);
+        if (ok) {
+          setIsAuthBridgeOpen(false);
+          setIsDriveOpen(false);
+        }
+      }
+    };
+    window.addEventListener('message', handleAuthMessage);
+    return () => window.removeEventListener('message', handleAuthMessage);
+  }, [drive]);
+
   useEffect(() => {
     if (boardType === 'math') {
       setIsMathPanelOpen(true);

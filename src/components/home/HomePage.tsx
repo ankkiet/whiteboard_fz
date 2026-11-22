@@ -735,19 +735,20 @@ export const HomePage: React.FC<HomePageProps> = ({
                           portal
                             ? `${portal}?auth_bridge=1`
                             : 'https://whiteboard-34d4d.web.app?auth_bridge=1',
-                          '_blank'
+                          'bttm_auth_bridge',
+                          'width=540,height=700'
                         );
                       }
                     }}
                     className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-colors cursor-pointer shadow-xs"
                   >
                     <KeyRound className="w-4 h-4" />
-                    <span>Đăng nhập qua trình duyệt</span>
+                    <span>Đăng nhập tự động qua trình duyệt</span>
                   </button>
                 </div>
 
                 <div className="mt-4 text-[11px] text-slate-500 dark:text-slate-400 max-w-md leading-relaxed">
-                  Để đồng bộ Google Drive: Bấm <strong>&ldquo;Đăng nhập qua trình duyệt&rdquo;</strong> để mở trình duyệt lấy mã kết nối an toàn về máy (chỉ cần làm một lần duy nhất).
+                  Để đồng bộ Google Drive: Bấm <strong>&ldquo;Đăng nhập tự động qua trình duyệt&rdquo;</strong> — bạn chỉ cần chọn tài khoản Google trên trình duyệt, hệ thống sẽ tự động hoàn tất và đưa bạn quay lại ứng dụng.
                 </div>
               </div>
             ) : (
