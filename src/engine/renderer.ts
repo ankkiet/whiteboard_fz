@@ -467,40 +467,6 @@ export function drawNotebookLayout(
     ctx.lineTo(config.width, pageBottom);
     ctx.stroke();
     ctx.setLineDash([]);
-
-    // Page break badge centered on divider
-    const badgeText = `Hết trang ${p + 1}`;
-    ctx.font = '600 10.5px system-ui, -apple-system, sans-serif';
-    const textMetrics = ctx.measureText(badgeText);
-    const badgeW = textMetrics.width + 20;
-    const badgeH = 18;
-    const badgeX = (config.width - badgeW) / 2;
-    const badgeY = pageBottom - badgeH / 2;
-
-    ctx.fillStyle = isDarkMode ? '#0f172a' : '#f1f5f9';
-    ctx.strokeStyle = isDarkMode ? 'rgba(148, 163, 184, 0.4)' : 'rgba(148, 163, 184, 0.5)';
-    ctx.lineWidth = 1 / safeZoom;
-
-    // Rounded pill rect
-    const r = 9;
-    ctx.beginPath();
-    ctx.moveTo(badgeX + r, badgeY);
-    ctx.lineTo(badgeX + badgeW - r, badgeY);
-    ctx.quadraticCurveTo(badgeX + badgeW, badgeY, badgeX + badgeW, badgeY + r);
-    ctx.lineTo(badgeX + badgeW, badgeY + badgeH - r);
-    ctx.quadraticCurveTo(badgeX + badgeW, badgeY + badgeH, badgeX + badgeW - r, badgeY + badgeH);
-    ctx.lineTo(badgeX + r, badgeY + badgeH);
-    ctx.quadraticCurveTo(badgeX, badgeY + badgeH, badgeX, badgeY + badgeH - r);
-    ctx.lineTo(badgeX, badgeY + r);
-    ctx.quadraticCurveTo(badgeX, badgeY, badgeX + r, badgeY);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-
-    ctx.fillStyle = isDarkMode ? '#94a3b8' : '#64748b';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(badgeText, config.width / 2, pageBottom);
   }
 
   ctx.restore();
