@@ -59,3 +59,43 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Casio LCD screen authentic typography and scrollbar suppression */
+.casio-lcd-no-scrollbar {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+.casio-lcd-no-scrollbar::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+.casio-lcd-screen {
+  font-family: var(--font-mono), ui-monospace, SFMono-Regular, monospace;
+  font-feature-settings: "tnum" 1, "zero" 1;
+}
+
+.casio-lcd-screen .katex {
+  font-family: var(--font-mono), ui-monospace, SFMono-Regular, monospace;
+  color: #090d0b;
+}
+
+.casio-lcd-screen .katex .mord:not(.delimsizing) {
+  font-family: var(--font-mono), monospace !important;
+  font-style: normal;
+  font-weight: 600;
+}
+
+.casio-lcd-screen .katex .mord.mathnormal {
+  font-family: var(--font-mono), monospace !important;
+  font-style: italic;
+  font-weight: 500;
+}
+
+.casio-lcd-screen .katex .mbin,
+.casio-lcd-screen .katex .mrel {
+  font-family: var(--font-mono), monospace !important;
+  font-weight: 600;
+}
+

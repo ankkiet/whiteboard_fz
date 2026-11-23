@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="c3-bg" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#4338CA" />
+      <stop offset="60%" stop-color="#3730A3" />
+      <stop offset="100%" stop-color="#1E1B4B" />
+    </linearGradient>
+    <filter id="c3-shadow" x="60" y="70" width="392" height="340" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="14" stdDeviation="16" flood-color="#0F172A" flood-opacity="0.38" />
+    </filter>
+  </defs>
+
+  <rect width="512" height="512" rx="116" fill="url(#c3-bg)" />
+
+  <!-- Modern Whiteboard Screen Card -->
+  <g filter="url(#c3-shadow)">
+    <rect x="92" y="104" width="328" height="236" rx="28" fill="#FFFFFF" />
+
+    <!-- Minimalist Dotted Canvas Grid -->
+    <line x1="132" y1="264" x2="380" y2="264" stroke="#E2E8F0" stroke-width="3" stroke-dasharray="6 6" />
+    <line x1="132" y1="204" x2="380" y2="204" stroke="#E2E8F0" stroke-width="3" stroke-dasharray="6 6" />
+
+    <!-- Dynamic Math Sine Curve in Indigo -->
+    <path d="M132 254 C 180 180, 230 292, 290 208 C 330 152, 360 172, 380 162" stroke="#4F46E5" stroke-width="12" stroke-linecap="round" />
+
+    <!-- Geometry Compass Arc in Cyan -->
+    <path d="M226 270 A 58 58 0 0 1 306 196" stroke="#06B6D4" stroke-width="7" stroke-linecap="round" stroke-dasharray="4 4" />
+  </g>
+
+  <!-- Marker / Stylus Tray Base -->
+  <rect x="136" y="364" width="240" height="16" rx="8" fill="#94A3B8" />
+  <polygon points="186,380 164,446 190,446 206,380" fill="#64748B" />
+  <polygon points="326,380 306,380 322,446 348,446" fill="#64748B" />
+
+  <!-- Golden 4-Point Smart Sparkle at top-right -->
+  <path
+    d="M404 76 C 404 96, 416 108, 436 108 C 416 108, 404 120, 404 140 C 404 120, 392 108, 372 108 C 392 108, 404 96, 404 76 Z"
+    fill="#F59E0B"
+  />
+</svg>

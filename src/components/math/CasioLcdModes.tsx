@@ -147,7 +147,7 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
     return (
       <div className="p-2 min-h-[120px] space-y-1.5 text-slate-900">
         <div className="flex items-center justify-between text-[10px] font-bold">
-          <span>CÀI ĐẶT MÁY TÍNH (SETUP)</span>
+          <span>Cài đặt máy tính (SETUP)</span>
           <button type="button" onClick={() => setOverlay(null)} className="underline cursor-pointer">
             Đóng
           </button>
@@ -222,12 +222,12 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
     return (
       <div className="p-2 min-h-[120px] space-y-1 text-slate-900">
         <div className="flex items-center justify-between text-[10px] font-bold">
-          <span>HẰNG SỐ VẬT LÝ & HÓA HỌC (CONST)</span>
+          <span>Hằng số vật lý & hóa học (CONST)</span>
           <button type="button" onClick={() => setOverlay(null)} className="underline cursor-pointer">
             Đóng
           </button>
         </div>
-        <div className="max-h-[96px] overflow-y-auto grid grid-cols-2 gap-1">
+        <div className="max-h-[96px] overflow-y-auto casio-lcd-no-scrollbar grid grid-cols-2 gap-1">
           {CASIO_CONSTANTS.map((c) => (
             <button
               key={c.id}
@@ -254,12 +254,12 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
     return (
       <div className="p-2 min-h-[120px] space-y-1 text-slate-900">
         <div className="flex items-center justify-between text-[10px] font-bold">
-          <span>CHUYỂN ĐỔI ĐƠN VỊ (CONV · Ans = {Number(props.ansVal.toFixed(4))})</span>
+          <span>Chuyển đổi đơn vị (CONV · Ans = {Number(props.ansVal.toFixed(4))})</span>
           <button type="button" onClick={() => setOverlay(null)} className="underline cursor-pointer">
             Đóng
           </button>
         </div>
-        <div className="max-h-[96px] overflow-y-auto grid grid-cols-2 gap-1">
+        <div className="max-h-[96px] overflow-y-auto casio-lcd-no-scrollbar grid grid-cols-2 gap-1">
           {CASIO_CONVERSIONS.map((conv) => {
             const converted = conv.convert(props.ansVal);
             return (
@@ -289,7 +289,7 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
     return (
       <div className="p-2 min-h-[120px] space-y-1 text-slate-900">
         <div className="flex items-center justify-between text-[10px] font-bold">
-          <span>BIẾN NHỚ (RECALL · Bấm để chèn)</span>
+          <span>Biến nhớ (RECALL · Bấm để chèn)</span>
           <button type="button" onClick={() => setOverlay(null)} className="underline cursor-pointer">
             Đóng
           </button>
@@ -332,7 +332,7 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
     return (
       <div className="p-2 min-h-[120px] space-y-1 text-slate-900">
         <div className="flex items-center justify-between text-[10px] font-bold">
-          <span>TÙY CHỌN NHANH (OPTN)</span>
+          <span>Tùy chọn nhanh (OPTN)</span>
           <button type="button" onClick={() => setOverlay(null)} className="underline cursor-pointer">
             Đóng
           </button>
@@ -360,12 +360,12 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
     return (
       <div className="p-2 min-h-[120px] space-y-1.5 text-slate-900">
         <div className="flex items-center justify-between text-[10px] font-bold">
-          <span>CALC · NHẬP GIÁ TRỊ BIẾN (Bấm phím số Casio hoặc gõ)</span>
+          <span>CALC · Nhập giá trị biến (Bấm phím số Casio hoặc gõ)</span>
           <button type="button" onClick={() => setOverlay(null)} className="underline cursor-pointer">
             Hủy
           </button>
         </div>
-        <div className="grid grid-cols-3 gap-1 max-h-[68px] overflow-y-auto">
+        <div className="grid grid-cols-3 gap-1 max-h-[68px] overflow-y-auto casio-lcd-no-scrollbar">
           {props.calcVarsList.map((k, idx) => (
             <label
               key={k}
@@ -402,7 +402,7 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
     return (
       <div className="p-2 min-h-[120px] space-y-1 text-slate-900 text-[9.5px] leading-snug">
         <div className="flex items-center justify-between font-bold text-[10px]">
-          <span>HƯỚNG DẪN CASIO fx-580VN X</span>
+          <span>Hướng dẫn Casio fx-580VN X</span>
           <button type="button" onClick={() => setOverlay(null)} className="underline cursor-pointer">
             Đóng
           </button>
@@ -423,7 +423,7 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
       { id: 'vector', num: '4', title: 'Vectơ' },
       { id: 'table', num: '5', title: 'Bảng f(x)' },
       { id: 'equation', num: '6', title: 'Phương trình' },
-      { id: 'ineq', num: '7', title: 'Bất PT' },
+      { id: 'ineq', num: '7', title: 'Bất phương trình' },
       { id: 'stats', num: '8', title: 'Thống kê' },
     ];
     return (
@@ -452,7 +452,7 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
     return (
       <div className="p-2 min-h-[120px] flex flex-col justify-between gap-1 text-slate-900">
         <div className="flex items-center justify-between text-[10px] font-bold">
-          <span>2: SỐ PHỨC (a + bi)</span>
+          <span>2: Số phức (a + bi)</span>
           <div className="flex items-center gap-1">
             <button
               type="button"
@@ -541,7 +541,7 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
       <div className="p-2 min-h-[120px] space-y-1 text-slate-900">
         <div className="flex items-center justify-between text-[9.5px] font-bold">
           <div className="flex items-center gap-1">
-            <span>MA TRẬN</span>
+            <span>Ma trận</span>
             <button
               type="button"
               onClick={() => resizeMat(matSize === 2 ? 3 : 2)}
@@ -609,7 +609,7 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
         </div>
         <div
           data-testid="calculator-display-result"
-          className="px-2 py-0.5 rounded bg-[#e5eee0] border border-[#a5b89d] text-[10.5px] flex justify-end overflow-x-auto"
+          className="px-2 py-0.5 rounded bg-[#e5eee0] border border-[#a5b89d] text-[10.5px] flex justify-end overflow-x-auto casio-lcd-no-scrollbar"
         >
           {matOp === 'det' && <MathTex latex={`\\det(A) = ${formatCasioExact(detA).exactLatex}`} />}
           {matOp === 'inv' &&
@@ -630,7 +630,7 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
     return (
       <div className="p-2 min-h-[120px] space-y-1 text-slate-900">
         <div className="flex items-center justify-between text-[9.5px] font-bold">
-          <span>4: VECTƠ ({vecDim}D)</span>
+          <span>4: Vectơ ({vecDim}D)</span>
           <button
             type="button"
             onClick={() => props.setVecDim(vecDim === 2 ? 3 : 2)}
@@ -762,7 +762,7 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
         </div>
         <div
           data-testid="calculator-display-result"
-          className="max-h-[76px] overflow-y-auto rounded border border-[#9eb096] bg-[#e5eee0]"
+          className="max-h-[76px] overflow-y-auto casio-lcd-no-scrollbar rounded border border-[#9eb096] bg-[#e5eee0]"
         >
           <table className="w-full text-[10px] font-mono tabular-nums">
             <tbody>
@@ -896,7 +896,7 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
 
         <div
           data-testid="calculator-display-result"
-          className="px-2 py-1 rounded bg-[#e5eee0] border border-[#a5b89d] text-[10.5px] text-slate-950 flex justify-end overflow-x-auto"
+          className="px-2 py-1 rounded bg-[#e5eee0] border border-[#a5b89d] text-[10.5px] text-slate-950 flex justify-end overflow-x-auto casio-lcd-no-scrollbar"
         >
           {eqSubMode === 'quad' && quadRes && <span className="font-mono font-bold">{quadRes.summary}</span>}
           {eqSubMode === 'cubic' && cubicRes && <MathTex latex={cubicRes.summaryLatex} />}
@@ -913,7 +913,7 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
     return (
       <div className="p-2 min-h-[120px] space-y-1.5 text-slate-900">
         <div className="flex items-center justify-between text-[9.5px] font-bold">
-          <span>7: BẤT PT BẬC 2</span>
+          <span>7: Bất phương trình bậc 2</span>
           <div className="flex items-center gap-0.5">
             {(['>', '<', '>=', '<='] as const).map((op) => (
               <button
@@ -966,7 +966,7 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
   return (
     <div className="p-2 min-h-[120px] space-y-1 text-slate-900">
       <div className="flex items-center justify-between text-[9.5px] font-bold">
-        <span>8: THỐNG KÊ 1 BIẾN (nhập dãy số)</span>
+        <span>8: Thống kê 1 biến (nhập dãy số)</span>
         <div className="flex items-center gap-1">
           <button
             type="button"

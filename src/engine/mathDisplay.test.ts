@@ -13,6 +13,8 @@ describe('mathDisplay — friendly math to standard LaTeX', () => {
     assert.equal(friendlyMathToLatex('x^3 - 3*m*x + 1'), 'x^{3} - 3mx + 1');
     assert.equal(friendlyMathToLatex('(2*x+1)/(x-1)'), '\\frac{2x+1}{x-1}');
     assert.equal(friendlyMathToLatex('2*sqrt(x + 1)'), '2\\sqrt{x + 1}');
+    assert.equal(friendlyMathToLatex('3sqrt(5)'), '3\\sqrt{5}');
+    assert.equal(friendlyMathToLatex('3sin(x)'), '3\\sin(x)');
     assert.equal(friendlyMathToLatex('sin(30) + sqrt(16)'), '\\sin(30) + \\sqrt{16}');
     assert.equal(friendlyMathToLatex('0.25*x^2 - 2'), '0.25x^{2} - 2');
   });

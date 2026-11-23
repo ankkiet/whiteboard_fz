@@ -6,10 +6,15 @@ on:
       - 'v*'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build-windows-installer:
     name: Build Windows NSIS Setup (.exe)
     runs-on: windows-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

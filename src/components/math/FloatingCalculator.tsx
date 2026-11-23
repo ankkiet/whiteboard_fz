@@ -116,6 +116,7 @@ export const FloatingCalculator: React.FC = () => {
   // Mode 1: Calculate state
   const [expr, setExpr] = useState('sin(30) + sqrt(16)');
   const [undoStack, setUndoStack] = useState<string[]>([]);
+  const [isEvaluated, setIsEvaluated] = useState(true);
   const [lastResult, setLastResult] = useState<CasioExactRepresentation>({
     numeric: 4.5,
     decimalText: '4.5',
@@ -307,6 +308,7 @@ export const FloatingCalculator: React.FC = () => {
   const applyCalcExprEdit = (nextExpr: string, targetAbsCaret: number) => {
     setErrorMsg(null);
     setInfoBanner(null);
+    setIsEvaluated(false);
     setExpr((prev) => {
       if (nextExpr !== prev) setUndoStack((st) => [...st.slice(-19), prev]);
       return nextExpr;
@@ -906,6 +908,16 @@ export const FloatingCalculator: React.FC = () => {
 
     setUndoStack((st) => (expr ? [...st.slice(-19), expr] : st));
     setExpr('');
+    setIsEvaluated(false);
+    setLastResult({
+      numeric: 0,
+      decimalText: '0',
+      exactLatex: '0',
+      mixedLatex: '0',
+      dmsText: `0°0'0"`,
+      engLatex: '0',
+      hasExactForm: true,
+    });
     focusFieldAtCaret('slot-root', 0);
   };
 
@@ -957,10 +969,12 @@ export const FloatingCalculator: React.FC = () => {
       );
       if (!solved) {
         setErrorMsg("Can't Solve");
+        setIsEvaluated(false);
         clearModifiers();
         return;
       }
       setErrorMsg(null);
+      setIsEvaluated(true);
       setInfoBanner('SOLVE: L − R = 0');
       setPreAns(lastResult.numeric);
       setLastResult({
@@ -984,10 +998,12 @@ export const FloatingCalculator: React.FC = () => {
     });
     if (!res) {
       setErrorMsg('Syntax ERROR');
+      setIsEvaluated(false);
       clearModifiers();
       return;
     }
     setErrorMsg(null);
+    setIsEvaluated(true);
     setInfoBanner(null);
     setPreAns(lastResult.numeric);
     setLastResult(res);
@@ -1138,16 +1154,33 @@ export const FloatingCalculator: React.FC = () => {
     } else if (mode === 'stats' && statsResult) {
       fullLatex = `n=${statsResult.n},\\; \\bar{x}=${Number(statsResult.mean.toFixed(3))},\\; M_e=${Number(statsResult.median.toFixed(3))},\\; \\sigma=${Number(statsResult.popStd.toFixed(3))}`;
     } else {
+      let currentResult = lastResult;
+      if (!isEvaluated && expr.trim()) {
+        const evaluated = evaluateCasioExpression(expr.trim(), {
+          angleUnit,
+          ans: lastResult.numeric,
+          preAns,
+          mem: vars.M ?? 0,
+          vars,
+          normMode,
+          fixDigits,
+        });
+        if (evaluated) {
+          currentResult = evaluated;
+          setLastResult(evaluated);
+          setIsEvaluated(true);
+        }
+      }
       const exprTex = casioExprToNaturalLatex(expr);
       const ansTex =
-        lastResult.specialSummaryLatex ??
-        (displayFormat === 'mixed' && lastResult.mixedLatex
-          ? lastResult.mixedLatex
-          : displayFormat === 'eng' && lastResult.engLatex
-            ? lastResult.engLatex
-            : displayFormat === 'exact' && lastResult.hasExactForm
-              ? lastResult.exactLatex
-              : lastResult.decimalText);
+        currentResult.specialSummaryLatex ??
+        (displayFormat === 'mixed' && currentResult.mixedLatex
+          ? currentResult.mixedLatex
+          : displayFormat === 'eng' && currentResult.engLatex
+            ? currentResult.engLatex
+            : displayFormat === 'exact' && currentResult.hasExactForm
+              ? currentResult.exactLatex
+              : currentResult.decimalText);
       fullLatex = `${exprTex} = ${ansTex}`;
     }
 
@@ -1479,7 +1512,7 @@ export const FloatingCalculator: React.FC = () => {
         shiftLabel: 'nPr',
         alphaLabel: 'GCD',
         title: 'Nhân (SHIFT: Chỉnh hợp P, ALPHA: ƯCLN GCD)',
-        onPress: () => insertTokenToActiveField('*'),
+        onPress: () => insertTokenToActiveField('×'),
         onShiftPress: () => insertTokenToActiveField('P'),
         onAlphaPress: () => insertTokenToActiveField('GCD(;)', 4),
       },
@@ -1489,7 +1522,7 @@ export const FloatingCalculator: React.FC = () => {
         shiftLabel: 'nCr',
         alphaLabel: 'LCM',
         title: 'Chia (SHIFT: Tổ hợp C, ALPHA: BCNN LCM)',
-        onPress: () => insertTokenToActiveField('/'),
+        onPress: () => insertTokenToActiveField('÷'),
         onShiftPress: () => insertTokenToActiveField('C'),
         onAlphaPress: () => insertTokenToActiveField('LCM(;)', 4),
       },
@@ -1524,7 +1557,7 @@ export const FloatingCalculator: React.FC = () => {
         shiftLabel: 'Rec',
         alphaLabel: 'Intg',
         title: 'Trừ (SHIFT: Tọa độ Descartes Rec, ALPHA: Phần nguyên Intg)',
-        onPress: () => insertTokenToActiveField('-'),
+        onPress: () => insertTokenToActiveField('−'),
         onShiftPress: () => insertTokenToActiveField('Rec(;)', 4),
         onAlphaPress: () => insertTokenToActiveField('Intg('),
       },
@@ -1547,7 +1580,7 @@ export const FloatingCalculator: React.FC = () => {
         shiftLabel: 'π',
         alphaLabel: 'e',
         title: 'Nhân 10 mũ x (SHIFT: Số π, ALPHA: Số e)',
-        onPress: () => insertTokenToActiveField('*10^'),
+        onPress: () => insertTokenToActiveField('×10^'),
         onShiftPress: () => insertTokenToActiveField('pi'),
         onAlphaPress: () => insertTokenToActiveField('e'),
       },
@@ -1580,9 +1613,9 @@ export const FloatingCalculator: React.FC = () => {
     vector: '4: Vectơ',
     table: '5: Bảng f(x)',
     equation: '6: Phương trình',
-    ineq: '7: Bất PT',
+    ineq: '7: Bất phương trình',
     stats: '8: Thống kê',
-    menu: 'MENU CHÍNH',
+    menu: 'Menu chính',
   };
 
   const chassisClass =
@@ -1690,7 +1723,7 @@ export const FloatingCalculator: React.FC = () => {
       {/* Authentic Natural-V.P.A.M. LCD Screen */}
       <div className="px-2.5 pt-1.5 pb-1">
         <div className="rounded-xl p-[2.5px] bg-gradient-to-b from-slate-700 to-slate-800 shadow-inner border border-slate-600/70">
-          <div className="rounded-[8px] bg-[#d6e2d0] text-slate-900 shadow-inner border border-[#9eb098] overflow-hidden">
+          <div className="casio-lcd-screen rounded-[8px] bg-[#d6e2d0] text-slate-900 shadow-inner border border-[#9eb098] overflow-hidden">
             {/* LCD Status Indicator Bar */}
             <div className="px-2 py-0.5 bg-[#c5d3be] border-b border-[#adbd9f] flex items-center justify-between text-[9px] font-mono font-bold">
               <div className="flex items-center gap-1">
@@ -1720,7 +1753,7 @@ export const FloatingCalculator: React.FC = () => {
             </div>
 
             {mode === 'calc' && overlay === null ? (
-              <div className="px-2 py-1 min-h-[96px] flex flex-col justify-between gap-1">
+              <div className="px-2 py-1 min-h-[96px] flex flex-col justify-between gap-1 overflow-hidden">
                 <CasioNaturalEditor
                   expr={expr}
                   activeFieldId={activeFieldId}
@@ -1730,6 +1763,7 @@ export const FloatingCalculator: React.FC = () => {
                   }}
                   onChangeSlotValue={(slot, nextVal, nextCaret) => {
                     setErrorMsg(null);
+                    setIsEvaluated(false);
                     const nextExpr = expr.slice(0, slot.start) + nextVal + expr.slice(slot.end);
                     setExpr((prev) => {
                       if (nextExpr !== prev) setUndoStack((st) => [...st.slice(-19), prev]);
@@ -1751,27 +1785,29 @@ export const FloatingCalculator: React.FC = () => {
                 )}
                 <div
                   data-testid="calculator-display-result"
-                  className="min-h-[26px] border-t border-[#b8c8b0]/70 pt-0.5 flex items-center justify-end gap-1.5 overflow-x-auto"
+                  className="min-h-[26px] border-t border-[#b8c8b0]/70 pt-0.5 flex items-center justify-end gap-1.5 overflow-x-auto overflow-y-hidden casio-lcd-no-scrollbar"
                 >
                   {errorMsg ? (
                     <span className="text-xs font-mono font-bold text-rose-700">{errorMsg}</span>
-                  ) : displayFormat === 'dms' && lastResult.dmsText ? (
-                    <span className="text-[15px] font-mono font-bold text-slate-950">
-                      {lastResult.dmsText}
-                    </span>
-                  ) : (
-                    <>
-                      {displayFormat === 'exact' && lastResult.hasExactForm && !lastResult.specialSummaryLatex && (
-                        <span className="text-[9px] font-mono text-slate-600 mr-auto">
-                          S⇔D ({lastResult.decimalText})
-                        </span>
-                      )}
-                      <MathTex
-                        latex={renderResultLatex()}
-                        className="text-[16px] font-bold text-slate-950"
-                      />
-                    </>
-                  )}
+                  ) : isEvaluated ? (
+                    displayFormat === 'dms' && lastResult.dmsText ? (
+                      <span className="text-[15px] font-mono font-bold text-slate-950">
+                        {lastResult.dmsText}
+                      </span>
+                    ) : (
+                      <>
+                        {displayFormat === 'exact' && lastResult.hasExactForm && !lastResult.specialSummaryLatex && (
+                          <span className="text-[9.5px] font-mono text-slate-600 mr-auto select-none">
+                            S⇔D ({lastResult.decimalText})
+                          </span>
+                        )}
+                        <MathTex
+                          latex={renderResultLatex()}
+                          className="text-[16px] font-bold text-slate-950"
+                        />
+                      </>
+                    )
+                  ) : null}
                 </div>
               </div>
             ) : (

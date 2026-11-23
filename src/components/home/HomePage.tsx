@@ -19,6 +19,7 @@ import { BoardTemplatePreview } from './BoardTemplatePreview';
 import { CreateBoardModal } from '../modals/CreateBoardModal';
 import { HomeSettingsMenu, PWAInstallTriggerButton } from '../modals/DesktopAppModal';
 import { GoogleSignInButton } from './GoogleSignInButton';
+import { AppLogo } from '../ui/AppLogo';
 import {
   Plus,
   Search,
@@ -277,14 +278,9 @@ export const HomePage: React.FC<HomePageProps> = ({
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
           {/* Brand */}
           <div className="flex items-center gap-2.5 whitespace-nowrap shrink-0">
-            <div
-              aria-hidden="true"
-              className="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0"
-            >
-              <PenTool className="w-3.5 h-3.5" />
-            </div>
+            <AppLogo size={30} concept="infinite" />
             <span className="text-sm sm:text-[15px] font-bold tracking-tight text-slate-900 dark:text-slate-100 whitespace-nowrap shrink-0">
-              Bảng Trắng
+              Bảng Trắng Thông Minh
             </span>
           </div>
 

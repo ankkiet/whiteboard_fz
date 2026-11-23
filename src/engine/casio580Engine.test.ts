@@ -139,6 +139,14 @@ describe('casio580Engine — Natural-V.P.A.M., S⇔D & Real-Life fx-580VN X', ()
     const nestedNodes = parseCasio2dNodes('int(frac(1;2);0;3;x)');
     const nestedSlots = flattenCasio2dSlots(nestedNodes).filter((s) => s.role === 'arg');
     assert.equal(nestedSlots.length, 5); // num(1), den(2), lower(0), upper(3), var(x)
+
+    // Number or variable preceding 2D templates (e.g. 3sqrt(), 3sqrt(5), 3frac(1;2))
+    const sqrtPrefixed = parseCasio2dNodes('3sqrt()');
+    assert.equal(sqrtPrefixed.length, 3); // gap('3'), template('sqrt'), gap('')
+    assert.equal(sqrtPrefixed[0].type, 'slot');
+    assert.equal(sqrtPrefixed[0].value, '3');
+    assert.equal(sqrtPrefixed[1].type, 'template');
+    assert.equal(sqrtPrefixed[1].kind, 'sqrt');
   });
 
   it('formats expressions including calculus and custom roots to Natural-V.P.A.M. LaTeX', () => {
@@ -150,6 +158,15 @@ describe('casio580Engine — Natural-V.P.A.M., S⇔D & Real-Life fx-580VN X', ()
     const intTex = casioExprToNaturalLatex('int(pow(x;2); 0; 1; x)');
     assert.ok(intTex.includes('\\int_{0}^{1}'));
     assert.ok(intTex.includes('{x}^{2}'));
+
+    const sqrt3Tex = casioExprToNaturalLatex('3sqrt(5)');
+    assert.equal(sqrt3Tex, '3\\sqrt{5}');
+
+    const frac3Tex = casioExprToNaturalLatex('3frac(1;2)');
+    assert.equal(frac3Tex, '3\\frac{1}{2}');
+
+    const pow3Tex = casioExprToNaturalLatex('3pow(2;3)');
+    assert.equal(pow3Tex, '3{2}^{3}');
   });
 
   it('computes Complex numbers, 2x2/3x3 Matrices, Vectors, Cubic, Systems, Inequalities, and Stats', () => {

@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="c2-bg" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0F172A" />
+      <stop offset="50%" stop-color="#1E1B4B" />
+      <stop offset="100%" stop-color="#020617" />
+    </linearGradient>
+    <linearGradient id="c2-stroke" x1="120" y1="100" x2="420" y2="420" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#6366F1" />
+      <stop offset="50%" stop-color="#38BDF8" />
+      <stop offset="100%" stop-color="#4F46E5" />
+    </linearGradient>
+    <filter id="c2-glow" x="60" y="60" width="392" height="392" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#4F46E5" flood-opacity="0.35" />
+    </filter>
+  </defs>
+
+  <!-- Deep Obsidian Canvas Base -->
+  <rect width="512" height="512" rx="116" fill="url(#c2-bg)" />
+  <rect x="8" y="8" width="496" height="496" rx="108" stroke="#6366F1" stroke-opacity="0.2" stroke-width="4" />
+
+  <!-- Monogram 'B' (Whiteboard Board & Precision Curves) -->
+  <g filter="url(#c2-glow)">
+    <!-- Left Whiteboard Column / Spine -->
+    <rect x="116" y="108" width="60" height="296" rx="20" fill="#FFFFFF" />
+
+    <!-- Top Bowl of B -->
+    <path
+      d="M160 118 H 270 C 326 118, 360 148, 360 196 C 360 240, 326 268, 270 268 H 160"
+      stroke="url(#c2-stroke)"
+      stroke-width="40"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+
+    <!-- Bottom Bowl of B (Expansive Drawing Loop) -->
+    <path
+      d="M160 252 H 284 C 348 252, 392 288, 392 346 C 392 400, 344 438, 278 438 H 160"
+      stroke="url(#c2-stroke)"
+      stroke-width="40"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+
+    <!-- Golden Focal Dot inside Upper Loop -->
+    <circle cx="268" cy="192" r="15" fill="#FBBF24" />
+
+    <!-- Cyan Smart Spark inside Lower Loop -->
+    <path
+      d="M328 334 C 328 346, 336 354, 348 354 C 336 354, 328 362, 328 374 C 328 362, 320 354, 308 354 C 320 354, 328 346, 328 334 Z"
+      fill="#38BDF8"
+    />
+  </g>
+</svg>

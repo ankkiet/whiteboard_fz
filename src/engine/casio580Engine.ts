@@ -351,7 +351,11 @@ function findBalancedFunctionCall(
   input: string,
   fnName: string
 ): { start: number; end: number; args: string[] } | null {
-  const regex = new RegExp(`\\b${fnName}\\s*\\(`, 'i');
+  // Allow function calls preceded by numbers, signs, or variables (e.g. 3frac(1;2), 3sqrt(16), 3pow(2;3))
+  const patternStr = fnName.toLowerCase() === 'int'
+    ? '(?<![a-zA-Z])int\\s*\\('
+    : `${fnName}\\s*\\(`;
+  const regex = new RegExp(patternStr, 'i');
   const match = regex.exec(input);
   if (!match) return null;
   const start = match.index;
@@ -993,8 +997,8 @@ export function casioExprToNaturalLatex(expr: string): string {
   } else {
     // Even if LaTeX commands already exist from multi-arg calls, still convert surrounding sin/cos/sqrt/fractions
     s = s
-      .replace(/\bsqrt\s*\(([^()]*)\)/gi, (_, inner: string) => `\\sqrt{${inner.trim() || '\\square'}}`)
-      .replace(/\b(sin|cos|tan|cot|ln|log)\b/gi, (m) => `\\${m.toLowerCase()}`)
+      .replace(/(?<![a-zA-Z])sqrt\s*\(([^()]*)\)/gi, (_, inner: string) => `\\sqrt{${inner.trim() || '\\square'}}`)
+      .replace(/(?:(?<=[0-9])|\b)(sin|cos|tan|cot|ln|log)\b/gi, (m) => `\\${m.toLowerCase()}`)
       .replace(/(\d+)\s*\/\s*(\d+)/g, '\\frac{$1}{$2}');
   }
 
@@ -1004,7 +1008,11 @@ export function casioExprToNaturalLatex(expr: string): string {
     .replace(/(\d+)\s*P\s*(\d+)/g, 'A_{$1}^{$2}')
     .replace(/\bPreAns\b/g, '\\text{PreAns}')
     .replace(/\bAns\b/g, '\\text{Ans}')
-    .replace(/(?:\*|\\cdot)\s*10\^/g, ' \\times 10^');
+    .replace(/×/g, ' \\times ')
+    .replace(/\*/g, ' \\times ')
+    .replace(/÷/g, ' \\div ')
+    .replace(/−/g, '-')
+    .replace(/(?:\\times|\\cdot)\s*10\^/g, ' \\times 10^');
 
   return s.replace(/\s{2,}/g, ' ').trim();
 }

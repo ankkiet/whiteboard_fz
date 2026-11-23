@@ -109,13 +109,21 @@ function findEarliestTemplateInRange(
   rangeEnd: number
 ): EarliestCallMatch | null {
   const slice = expr.slice(rangeStart, rangeEnd);
-  const pattern = new RegExp(`\\b(${TEMPLATE_NAMES.join('|')})\\s*\\(`, 'g');
+  // Match template calls like sqrt(...), 3sqrt(...), frac(...), pow(...)
+  // Never require word-boundary before template name because in mathematical notation,
+  // coefficients, digits, or variables directly precede templates (e.g. 3sqrt(), 2frac(;), xpow(;))
+  const pattern = new RegExp(`(${TEMPLATE_NAMES.join('|')})\\s*\\(`, 'g');
   let match: RegExpExecArray | null = null;
 
   while ((match = pattern.exec(slice)) !== null) {
     const rawName = match[1];
     const kind = TEMPLATE_NAMES.find((t) => t.toLowerCase() === rawName.toLowerCase());
     if (!kind) continue;
+
+    // Prevent matching 'int' inside 'RanInt'
+    if (kind === 'int' && match.index >= 3 && slice.slice(match.index - 3, match.index).toLowerCase() === 'ran') {
+      continue;
+    }
 
     const callStart = rangeStart + match.index;
     const openParenIdx = rangeStart + match.index + match[0].length - 1;

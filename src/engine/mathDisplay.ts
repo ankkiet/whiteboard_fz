@@ -88,7 +88,7 @@ function replaceSqrtCalls(input: string): string {
   let out = input;
   let guard = 0;
   while (guard < 24) {
-    const match = /\bsqrt\s*\(/i.exec(out);
+    const match = /(?<![a-zA-Z])sqrt\s*\(/i.exec(out);
     if (!match) break;
     const start = match.index;
     const openParen = start + match[0].length - 1;
@@ -254,7 +254,7 @@ export function friendlyMathToLatex(raw: string): string {
 
   // Convert standard functions & constants before fractions so sin(x)/x works nicely
   s = s
-    .replace(/\b(sin|cos|tan|cot|ln|log|lim|exp)\b/gi, (m) => `\\${m.toLowerCase()}`)
+    .replace(/(?:(?<=[0-9])|\b)(sin|cos|tan|cot|ln|log|lim|exp)\b/gi, (m) => `\\${m.toLowerCase()}`)
     .replace(/\bpi\b/gi, '\\pi')
     .replace(/\binfinity\b/gi, '\\infty')
     .replace(/\bDelta\b/g, '\\Delta');

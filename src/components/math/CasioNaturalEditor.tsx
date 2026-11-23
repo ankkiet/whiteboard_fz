@@ -57,6 +57,26 @@ function getSlotAriaLabel(templateKind?: Casio2dTemplateKind, argIndex?: number,
   }
 }
 
+function normalizeSlotInput(raw: string, caret: number | null): { val: string; caret: number | null } {
+  let val = raw.replace(/\*/g, '×');
+  let nextCaret = caret;
+  if (val.includes('√')) {
+    const vIdx = val.indexOf('√');
+    val = val.replace(/√/g, 'sqrt()');
+    if (nextCaret !== null && nextCaret > vIdx) {
+      nextCaret = vIdx + 5; // place caret inside sqrt()
+    }
+  }
+  if (val.includes('sqrt(') && !val.includes('sqrt()')) {
+    const sIdx = val.indexOf('sqrt(');
+    val = val.replace(/sqrt\(/g, 'sqrt()');
+    if (nextCaret !== null && nextCaret > sIdx) {
+      nextCaret = sIdx + 5; // place caret inside sqrt()
+    }
+  }
+  return { val, caret: nextCaret };
+}
+
 export const CasioNaturalEditor: React.FC<CasioNaturalEditorProps> = ({
   expr,
   activeFieldId,
@@ -126,11 +146,22 @@ export const CasioNaturalEditor: React.FC<CasioNaturalEditorProps> = ({
           }
           onFocus={(e) => onSelectSlot(slot.id, e.currentTarget.selectionStart)}
           onClick={(e) => onSelectSlot(slot.id, e.currentTarget.selectionStart)}
-          onChange={(e) => onChangeSlotValue(slot, e.target.value, e.target.selectionStart)}
+          onChange={(e) => {
+            const { val, caret } = normalizeSlotInput(e.target.value, e.target.selectionStart);
+            onChangeSlotValue(slot, val, caret);
+          }}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
               e.preventDefault();
               onEvaluate();
+              return;
+            }
+            if (e.key === '*') {
+              e.preventDefault();
+              const selStart = e.currentTarget.selectionStart ?? slot.value.length;
+              const selEnd = e.currentTarget.selectionEnd ?? selStart;
+              const nextVal = slot.value.slice(0, selStart) + '×' + slot.value.slice(selEnd);
+              onChangeSlotValue(slot, nextVal, selStart + 1);
               return;
             }
             if (e.key === '^') {
@@ -170,34 +201,30 @@ export const CasioNaturalEditor: React.FC<CasioNaturalEditorProps> = ({
           }}
           className={
             slot.role === 'root'
-              ? 'w-full min-w-[120px] h-7 px-1 rounded bg-transparent font-serif text-[16px] text-slate-950 placeholder:font-sans placeholder:text-[10.5px] placeholder:text-slate-600/80 outline-none'
-              : 'inline-block h-6 px-0.5 bg-transparent font-serif text-[16px] text-slate-950 outline-none'
+              ? 'w-full min-w-[120px] h-7 px-1 rounded bg-transparent font-mono text-[16px] font-medium tracking-tight text-slate-950 placeholder:font-sans placeholder:text-[10.5px] placeholder:text-slate-600/80 outline-none'
+              : 'inline-block h-6 px-0.5 bg-transparent font-mono text-[16px] font-medium tracking-tight text-slate-950 outline-none'
           }
         />
       );
     }
 
-    // Template Argument Box (`role === 'arg'`) — Matches uploaded Casio Natural-V.P.A.M. reference screenshot!
+    // Template Argument Box (`role === 'arg'`) — Authentic Casio Natural display placeholder / seamless filled value
     const isSub = slot.size === 'sub';
     const boxSizeClass = isEmpty
       ? isSub
-        ? 'w-[14px] h-[15px]'
-        : 'w-[17px] h-[22px]'
-      : isSub
-        ? 'min-w-[14px] h-[16px] px-[2px]'
-        : 'min-w-[18px] h-[23px] px-[3px]';
+        ? 'w-[13px] h-[15px]'
+        : 'w-[16px] h-[20px]'
+      : 'min-w-0 h-auto p-0';
 
     const boxStyleClass = isEmpty
       ? isActive
-        ? 'border-[1.5px] border-[#1b6ec2] bg-[#82b1df]/75 shadow-[0_0_0_1px_rgba(27,110,194,0.22)]'
-        : 'border border-[#6c9bc3] bg-[#bdd2e2]/45 hover:border-[#1b6ec2] hover:bg-[#95bee3]/55'
-      : isActive
-        ? 'border-[1.5px] border-[#1b6ec2] bg-[#82b1df]/55 shadow-[0_0_0_1px_rgba(27,110,194,0.2)]'
-        : 'border border-dashed border-[#4378a8] bg-[#b2c9dc]/40 hover:border-solid hover:border-[#1b6ec2]';
+        ? 'border border-slate-800 bg-slate-900/15 rounded-[1px]'
+        : 'border border-dashed border-slate-700/70 bg-black/[0.03] rounded-[1px]'
+      : 'border-0 bg-transparent shadow-none';
 
     const inputWidthStyle = isEmpty
       ? { width: '100%' }
-      : { width: `${Math.max(1.1, slot.value.length * 0.72 + 0.35)}em` };
+      : { width: `${Math.max(1, slot.value.length)}ch` };
 
     return (
       <span
@@ -206,7 +233,7 @@ export const CasioNaturalEditor: React.FC<CasioNaturalEditorProps> = ({
           const el = document.querySelector<HTMLInputElement>(`input[data-casio-field="${slot.id}"]`);
           el?.focus();
         }}
-        className={`relative inline-flex items-center justify-center align-middle rounded-[2.5px] transition-colors cursor-text ${boxSizeClass} ${boxStyleClass}`}
+        className={`relative inline-flex items-center justify-center align-middle transition-colors cursor-text ${boxSizeClass} ${boxStyleClass}`}
       >
         <input
           type="text"
@@ -226,11 +253,22 @@ export const CasioNaturalEditor: React.FC<CasioNaturalEditorProps> = ({
             e.stopPropagation();
             onSelectSlot(slot.id, e.currentTarget.selectionStart);
           }}
-          onChange={(e) => onChangeSlotValue(slot, e.target.value, e.target.selectionStart)}
+          onChange={(e) => {
+            const { val, caret } = normalizeSlotInput(e.target.value, e.target.selectionStart);
+            onChangeSlotValue(slot, val, caret);
+          }}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
               e.preventDefault();
               onEvaluate();
+              return;
+            }
+            if (e.key === '*') {
+              e.preventDefault();
+              const selStart = e.currentTarget.selectionStart ?? slot.value.length;
+              const selEnd = e.currentTarget.selectionEnd ?? selStart;
+              const nextVal = slot.value.slice(0, selStart) + '×' + slot.value.slice(selEnd);
+              onChangeSlotValue(slot, nextVal, selStart + 1);
               return;
             }
             if (e.key === 'Tab') {
@@ -273,8 +311,8 @@ export const CasioNaturalEditor: React.FC<CasioNaturalEditorProps> = ({
               onNavigateVertical('down', slot);
             }
           }}
-          className={`bg-transparent text-center font-serif italic font-semibold text-slate-950 outline-none leading-none ${
-            isSub ? 'text-[11px]' : 'text-[15.5px]'
+          className={`bg-transparent text-center font-mono font-medium text-slate-950 outline-none leading-none ${
+            isSub ? 'text-[11.5px]' : 'text-[16px]'
           }`}
         />
       </span>
@@ -309,12 +347,12 @@ export const CasioNaturalEditor: React.FC<CasioNaturalEditorProps> = ({
             data-testid="casio-2d-integral"
             className="inline-flex items-center align-middle my-0.5 mx-0.5"
           >
-            {/* Integral symbol ∫ + Upper limit (arg 2) & Lower limit (arg 1) matching user screenshot */}
+            {/* Integral symbol ∫ + Upper limit (arg 2) & Lower limit (arg 1) */}
             <span className="inline-flex items-center mr-1">
-              <span className="font-serif italic text-[34px] leading-none text-slate-950 select-none">
+              <span className="font-serif italic text-[32px] leading-none text-slate-950 select-none">
                 ∫
               </span>
-              <span className="flex flex-col justify-between h-[38px] -ml-1 py-[1px]">
+              <span className="flex flex-col justify-between h-[36px] -ml-1 py-[1px]">
                 <span className="-mt-1 ml-1">{renderArgNodes(node, 2)}</span>
                 <span className="-mb-1 -ml-0.5">{renderArgNodes(node, 1)}</span>
               </span>
@@ -324,8 +362,8 @@ export const CasioNaturalEditor: React.FC<CasioNaturalEditorProps> = ({
             <span className="inline-flex items-center">{renderArgNodes(node, 0)}</span>
 
             {/* Differential d[x] (arg 3) */}
-            <span className="inline-flex items-center ml-[2px] font-serif text-[16px] text-slate-950">
-              <span className="not-italic font-medium select-none">d</span>
+            <span className="inline-flex items-center ml-[2px] font-mono text-[15px] text-slate-950">
+              <span className="font-medium select-none">d</span>
               <span className="text-slate-600 font-normal select-none">[</span>
               {renderArgNodes(node, 3)}
               <span className="text-slate-600 font-normal select-none">]</span>
@@ -340,9 +378,9 @@ export const CasioNaturalEditor: React.FC<CasioNaturalEditorProps> = ({
             data-testid="casio-2d-fraction"
             className="inline-flex flex-col items-center justify-center align-middle mx-1 my-0.5"
           >
-            <span className="px-1 pb-[2px]">{renderArgNodes(node, 0)}</span>
-            <span className="w-full min-w-[20px] h-[1.5px] bg-slate-900" />
-            <span className="px-1 pt-[2px]">{renderArgNodes(node, 1)}</span>
+            <span className="px-0.5 pb-[1px] inline-flex items-center justify-center">{renderArgNodes(node, 0)}</span>
+            <span className="w-full min-w-[16px] h-[1.5px] bg-slate-900" />
+            <span className="px-0.5 pt-[1px] inline-flex items-center justify-center">{renderArgNodes(node, 1)}</span>
           </span>
         );
 
@@ -353,11 +391,11 @@ export const CasioNaturalEditor: React.FC<CasioNaturalEditorProps> = ({
             data-testid="casio-2d-mixfrac"
             className="inline-flex items-center align-middle mx-1 my-0.5 gap-0.5"
           >
-            <span>{renderArgNodes(node, 0)}</span>
+            <span className="inline-flex items-center">{renderArgNodes(node, 0)}</span>
             <span className="inline-flex flex-col items-center justify-center">
-              <span className="px-1 pb-[2px]">{renderArgNodes(node, 1)}</span>
-              <span className="w-full min-w-[18px] h-[1.5px] bg-slate-900" />
-              <span className="px-1 pt-[2px]">{renderArgNodes(node, 2)}</span>
+              <span className="px-0.5 pb-[1px] inline-flex items-center justify-center">{renderArgNodes(node, 1)}</span>
+              <span className="w-full min-w-[16px] h-[1.5px] bg-slate-900" />
+              <span className="px-0.5 pt-[1px] inline-flex items-center justify-center">{renderArgNodes(node, 2)}</span>
             </span>
           </span>
         );
@@ -369,18 +407,33 @@ export const CasioNaturalEditor: React.FC<CasioNaturalEditorProps> = ({
           <span
             key={node.id}
             data-testid="casio-2d-root"
-            className="inline-flex items-center align-middle mx-0.5 my-0.5"
+            className="inline-flex items-stretch align-middle mx-0.5 my-0.5"
           >
             {node.kind === 'cbrt' && (
-              <span className="text-[10px] font-serif font-bold text-slate-900 -mr-1 -mt-3 select-none">
+              <span className="text-[10px] font-mono font-bold text-slate-900 -mr-1 -mt-2 self-start select-none">
                 3
               </span>
             )}
             {node.kind === 'nroot' && (
-              <span className="-mr-1 -mt-3.5 z-10">{renderArgNodes(node, 0)}</span>
+              <span className="-mr-1 -mt-2.5 z-10 self-start">{renderArgNodes(node, 0)}</span>
             )}
-            <span className="font-serif text-[23px] leading-none text-slate-950 select-none">√</span>
-            <span className="border-t-[1.5px] border-slate-900 pt-[2px] px-0.5 inline-flex items-center">
+            <span className="inline-flex items-center self-stretch flex-shrink-0">
+              <svg
+                className="w-[10px] h-full min-h-[22px] text-slate-950 flex-shrink-0"
+                viewBox="0 0 10 24"
+                preserveAspectRatio="none"
+                fill="none"
+              >
+                <path
+                  d="M1 14.5 L3.2 14.5 L6 22 L9.5 1"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </span>
+            <span className="border-t-[1.8px] border-slate-950 pt-[1px] px-0.5 inline-flex items-center min-h-[22px]">
               {renderArgNodes(node, node.kind === 'nroot' ? 1 : 0)}
             </span>
           </span>
@@ -394,7 +447,7 @@ export const CasioNaturalEditor: React.FC<CasioNaturalEditorProps> = ({
             className="inline-flex items-start align-middle mx-0.5"
           >
             <span className="inline-flex items-center">{renderArgNodes(node, 0)}</span>
-            <span className="-mt-2 ml-[1px]">{renderArgNodes(node, 1)}</span>
+            <span className="-mt-2.5 ml-[0.5px] inline-flex items-center">{renderArgNodes(node, 1)}</span>
           </span>
         );
 
@@ -405,11 +458,11 @@ export const CasioNaturalEditor: React.FC<CasioNaturalEditorProps> = ({
             data-testid="casio-2d-logb"
             className="inline-flex items-center align-middle mx-0.5 my-0.5"
           >
-            <span className="font-serif font-semibold text-[15px] text-slate-950 select-none">log</span>
-            <span className="mt-3 mr-0.5">{renderArgNodes(node, 0)}</span>
-            <span className="font-serif text-[16px] text-slate-800 select-none">(</span>
+            <span className="font-mono font-bold text-[14px] text-slate-950 select-none">log</span>
+            <span className="mt-2.5 mr-0.5 inline-flex items-center">{renderArgNodes(node, 0)}</span>
+            <span className="font-mono text-[15px] text-slate-800 select-none">(</span>
             {renderArgNodes(node, 1)}
-            <span className="font-serif text-[16px] text-slate-800 select-none">)</span>
+            <span className="font-mono text-[15px] text-slate-800 select-none">)</span>
           </span>
         );
 
@@ -420,18 +473,16 @@ export const CasioNaturalEditor: React.FC<CasioNaturalEditorProps> = ({
             data-testid="casio-2d-ddx"
             className="inline-flex items-center align-middle mx-0.5 my-0.5"
           >
-            <span className="inline-flex flex-col items-center justify-center mr-0.5 text-[10.5px] font-serif leading-tight select-none text-slate-950">
+            <span className="inline-flex flex-col items-center justify-center mr-0.5 text-[10px] font-mono leading-tight select-none text-slate-950">
               <span className="px-0.5">d</span>
               <span className="w-full h-[1.2px] bg-slate-900" />
-              <span className="px-0.5">
-                d<i className="italic">x</i>
-              </span>
+              <span className="px-0.5">dx</span>
             </span>
-            <span className="font-serif text-[16px] text-slate-800 select-none">(</span>
+            <span className="font-mono text-[15px] text-slate-800 select-none">(</span>
             {renderArgNodes(node, 0)}
-            <span className="font-serif text-[16px] text-slate-800 select-none">)</span>
-            <span className="inline-flex items-end border-l-[1.5px] border-slate-800 h-[25px] ml-0.5 pl-0.5">
-              <span className="text-[10.5px] font-serif italic text-slate-900 mr-0.5 mb-0.5 select-none">
+            <span className="font-mono text-[15px] text-slate-800 select-none">)</span>
+            <span className="inline-flex items-end border-l-[1.5px] border-slate-800 h-[24px] ml-0.5 pl-0.5">
+              <span className="text-[10px] font-mono text-slate-900 mr-0.5 mb-0.5 select-none">
                 x=
               </span>
               <span className="mb-0.5">{renderArgNodes(node, 1)}</span>
@@ -452,14 +503,14 @@ export const CasioNaturalEditor: React.FC<CasioNaturalEditorProps> = ({
               <span className="font-serif text-[21px] leading-none text-slate-950 select-none my-[1px]">
                 {node.kind === 'sum' ? '∑' : '∏'}
               </span>
-              <span className="inline-flex items-center text-[10px] font-serif text-slate-950">
-                <i className="italic mr-0.5 select-none">x=</i>
+              <span className="inline-flex items-center text-[10px] font-mono text-slate-950">
+                <span className="mr-0.5 select-none">x=</span>
                 {renderArgNodes(node, 1)}
               </span>
             </span>
-            <span className="font-serif text-[16px] text-slate-800 select-none">(</span>
+            <span className="font-mono text-[15px] text-slate-800 select-none">(</span>
             {renderArgNodes(node, 0)}
-            <span className="font-serif text-[16px] text-slate-800 select-none">)</span>
+            <span className="font-mono text-[15px] text-slate-800 select-none">)</span>
           </span>
         );
 
@@ -471,17 +522,17 @@ export const CasioNaturalEditor: React.FC<CasioNaturalEditorProps> = ({
             className="inline-flex items-center align-middle mx-0.5 my-0.5"
           >
             <span className="inline-flex flex-col items-center mr-1">
-              <span className="font-serif font-semibold text-[13.5px] leading-tight text-slate-950 select-none">
+              <span className="font-mono font-bold text-[13px] leading-tight text-slate-950 select-none">
                 lim
               </span>
-              <span className="inline-flex items-center text-[9.5px] font-serif text-slate-950">
-                <i className="italic select-none">x→</i>
+              <span className="inline-flex items-center text-[9.5px] font-mono text-slate-950">
+                <span className="select-none">x→</span>
                 {renderArgNodes(node, 1)}
               </span>
             </span>
-            <span className="font-serif text-[16px] text-slate-800 select-none">(</span>
+            <span className="font-mono text-[15px] text-slate-800 select-none">(</span>
             {renderArgNodes(node, 0)}
-            <span className="font-serif text-[16px] text-slate-800 select-none">)</span>
+            <span className="font-mono text-[15px] text-slate-800 select-none">)</span>
           </span>
         );
 
@@ -493,13 +544,13 @@ export const CasioNaturalEditor: React.FC<CasioNaturalEditorProps> = ({
             data-testid={`casio-2d-${node.kind}`}
             className="inline-flex items-center align-middle mx-0.5 my-0.5"
           >
-            <span className="font-serif font-bold text-[13.5px] text-slate-950 select-none">
+            <span className="font-mono font-bold text-[13.5px] text-slate-950 select-none">
               {node.kind === 'RanInt' ? 'RanInt#' : node.kind}(
             </span>
             {renderArgNodes(node, 0)}
-            <span className="font-serif font-bold text-[14px] text-slate-800 mx-0.5 select-none">;</span>
+            <span className="font-mono font-bold text-[14px] text-slate-800 mx-0.5 select-none">;</span>
             {renderArgNodes(node, 1)}
-            <span className="font-serif font-bold text-[13.5px] text-slate-950 select-none">)</span>
+            <span className="font-mono font-bold text-[13.5px] text-slate-950 select-none">)</span>
           </span>
         );
     }
@@ -534,7 +585,7 @@ export const CasioNaturalEditor: React.FC<CasioNaturalEditorProps> = ({
           }
         }
       }}
-      className="min-h-[54px] w-full flex flex-wrap items-center gap-y-1 overflow-x-auto py-1 px-0.5 cursor-text"
+      className="min-h-[50px] w-full flex flex-wrap items-center gap-y-1 overflow-x-auto overflow-y-hidden casio-lcd-no-scrollbar py-1 px-0.5 cursor-text select-none"
     >
       {nodes.map((node, idx) => renderNode(node, idx === nodes.length - 1))}
     </div>

@@ -1,26 +1,17 @@
 import React, { useState } from 'react';
-import { detectUserOS, useOnlineStatus } from '../../hooks/usePWAInstall';
-import {
-  buildMacOSDesktopAppZip,
-  buildMacOSSelfExtractingCommand,
-  buildWindowsDesktopZip,
-  buildWindowsExeInstaller,
-} from '../../engine/desktopPackager';
+import { detectUserOS, useOnlineStatus, usePWAInstall } from '../../hooks/usePWAInstall';
 import { useBoardStore } from '../../store/useBoardStore';
+import { AppLogo } from '../ui/AppLogo';
 import {
   Download,
   X,
   Laptop,
   WifiOff,
   CheckCircle2,
-  Monitor,
-  Apple,
   Loader2,
   ShieldCheck,
   ExternalLink,
   Info,
-  FileText,
-  Shield,
   RefreshCw,
 } from 'lucide-react';
 import {
@@ -733,189 +724,94 @@ export const HomeSettingsMenu: React.FC<{
   );
 };
 
-function triggerBlobDownload(blob: Blob, fileName: string) {
-  const url = URL.createObjectURL(blob);
+export const GITHUB_REPO = 'ankkiet/whiteboard_fz';
+export const DESKTOP_RELEASE_BASE = `https://github.com/${GITHUB_REPO}/releases/latest/download`;
+export const DESKTOP_RELEASES_PAGE = `https://github.com/${GITHUB_REPO}/releases`;
+
+export const DOWNLOAD_LINKS = {
+  windowsSetup: `${DESKTOP_RELEASE_BASE}/BangTrangThongMinh-Setup.exe`,
+  windowsPortable: `${DESKTOP_RELEASE_BASE}/BangTrangThongMinh-Portable.exe`,
+  macosDmg: `${DESKTOP_RELEASE_BASE}/BangTrangThongMinh-macOS.dmg`,
+  macosZip: `${DESKTOP_RELEASE_BASE}/BangTrangThongMinh-macOS.zip`,
+};
+
+// Standard market SVG logos for Windows & macOS (matching official branding specs)
+const WindowsLogoIcon: React.FC<{ className?: string }> = ({ className = 'w-6 h-6' }) => (
+  <svg
+    viewBox="0 0 1024 1024"
+    className={className}
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    aria-hidden="true"
+  >
+    <path fill="#0078D4" d="M0 0h486v485H0zM538 0h486v485H538zM0 538h486v486H0zM538 538h486v486H538z" />
+  </svg>
+);
+
+const AppleLogoIcon: React.FC<{ className?: string }> = ({ className = 'w-6 h-6' }) => (
+  <svg
+    viewBox="0 0 814 1000"
+    className={className}
+    fill="currentColor"
+    xmlns="http://www.w3.org/2000/svg"
+    aria-hidden="true"
+  >
+    <path d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76.5 0-103.7 40.8-165.9 40.8s-105.6-57-155.5-127C46.7 790.7 0 663 0 541.8c0-194.4 126.4-297.5 250.8-297.5 66.1 0 121.2 43.4 162.7 43.4 39.5 0 101.1-46 176.3-46 28.5 0 130.9 2.6 198.3 99.2zm-234-181.5c31.1-36.9 53.1-88.1 53.1-139.3 0-7.1-.6-14.3-1.9-20.1-50.6 1.9-110.8 33.7-147.1 75.8-28.5 32.4-55.1 83.6-55.1 135.5 0 7.8 1.3 15.6 1.9 18.1 3.2.6 8.4 1.3 13.6 1.3 45.4 0 102.5-30.4 135.5-71.3z" />
+  </svg>
+);
+
+function triggerDirectDownload(url: string, fileName: string) {
   const a = document.createElement('a');
+  a.style.display = 'none';
   a.href = url;
   a.download = fileName;
   document.body.appendChild(a);
   a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
-
-let cachedOfflineBundleHtml: string | null = null;
-
-async function fetchOfflineAppBundleWithOrigin(): Promise<{
-  html: string;
-  manifest: AppVersionManifest | null;
-}> {
-  const versionResult = await checkLatestVersionStatus();
-  const manifest = versionResult.ok ? versionResult.manifest : null;
-  const embeddedOrigin = typeof window !== 'undefined' ? window.__BTTM_EMBEDDED_BUILD__?.updateOrigin : undefined;
-  const isFileProtocol = typeof window !== 'undefined' && window.location.protocol === 'file:';
-
-  if (!cachedOfflineBundleHtml) {
-    const bundleCandidates = isFileProtocol
-      ? buildUpdateOriginCandidates('file:', '', embeddedOrigin, PRODUCTION_UPDATE_ORIGIN)
-      : [''];
-    let fetchedText: string | null = null;
-    for (const origin of bundleCandidates) {
-      try {
-        const res = await fetch(`${origin}/desktop-app-bundle.html?t=${Date.now()}`, {
-          cache: 'no-store',
-        });
-        if (res.ok) {
-          fetchedText = await res.text();
-          break;
-        }
-      } catch {
-        // try next candidate
-      }
+  setTimeout(() => {
+    if (a.parentNode) {
+      a.parentNode.removeChild(a);
     }
-    if (!fetchedText) {
-      throw new Error(
-        isFileProtocol && embeddedOrigin
-          ? 'PORTAL_REQUIRED'
-          : 'Không thể tải gói ứng dụng độc lập.'
-      );
-    }
-    cachedOfflineBundleHtml = fetchedText;
-  }
-
-  let html = cachedOfflineBundleHtml;
-  const targetOrigin =
-    typeof window !== 'undefined' && window.location.protocol.startsWith('http')
-      ? window.location.origin
-      : embeddedOrigin;
-
-  if (targetOrigin) {
-    const enrichedManifest: AppVersionManifest = {
-      version: manifest?.version || '1.2.0',
-      buildId: manifest?.buildId || 'latest',
-      notes: manifest?.notes,
-      updateOrigin: targetOrigin,
-    };
-    html = html.replace(
-      /window\.__BTTM_EMBEDDED_BUILD__=\{[^<]*\};/,
-      `window.__BTTM_EMBEDDED_BUILD__=${JSON.stringify(enrichedManifest)};`
-    );
-  }
-  return { html, manifest };
+  }, 1000);
 }
-
-const EULA_TEXT = `THỎA THUẬN CẤP PHÉP NGƯỜI DÙNG CUỐI (EULA) & CHÍNH SÁCH BẢO VỆ DỮ LIỆU CÁ NHÂN
-Phần mềm: Bảng Trắng Thông Minh (Smart Whiteboard) - Bản quyền © 2026.
-
-1. Phạm vi cấp phép:
-Tác giả cấp quyền sử dụng phi độc quyền cho mục đích học tập, giảng dạy, làm việc cá nhân hoặc doanh nghiệp. Bạn được phép cài đặt trên các máy tính thuộc quyền quản lý của mình.
-
-2. Bảo vệ dữ liệu cá nhân (Tuân thủ Nghị định 13/2023/NĐ-CP):
-Ứng dụng hoạt động theo kiến trúc lưu trữ cục bộ (Offline-first). Toàn bộ nét vẽ, tài liệu và ghi chú được lưu trên máy của bạn (IndexedDB / LocalStorage). Ứng dụng không thu thập, không theo dõi và không chia sẻ bất kỳ dữ liệu cá nhân nào cho bên thứ ba.
-
-3. Quyền sở hữu trí tuệ:
-Mã nguồn ứng dụng được bảo hộ theo Luật Sở hữu trí tuệ Việt Nam. Bạn có toàn quyền sở hữu đối với các tác phẩm, bài học do bạn tạo ra trên bảng.
-
-4. Miễn trừ trách nhiệm pháp lý:
-Phần mềm được cung cấp "nguyên trạng" (as is). Người dùng tự chịu trách nhiệm sao lưu dữ liệu của mình trên máy.`;
 
 export const DesktopAppModal: React.FC<DesktopAppModalProps> = ({ isOpen, onClose }) => {
   const addToast = useBoardStore((s) => s.addToast);
-  const [busyTarget, setBusyTarget] = useState<'win-exe' | 'win-zip' | 'mac-cmd' | 'mac-app' | null>(null);
-  const [portalRequiredUrl, setPortalRequiredUrl] = useState<string | null>(null);
-  const [agreeEula, setAgreeEula] = useState<boolean>(true);
-  const [showEulaText, setShowEulaText] = useState<boolean>(false);
+  const { isInstallable, install } = usePWAInstall();
 
   if (!isOpen) return null;
 
   const os = detectUserOS();
 
-  const handleDownloadFailure = (err: unknown, fallbackMsg: string) => {
-    const embeddedOrigin =
-      typeof window !== 'undefined' ? window.__BTTM_EMBEDDED_BUILD__?.updateOrigin : undefined;
-    if (err instanceof Error && err.message === 'PORTAL_REQUIRED' && embeddedOrigin) {
-      setPortalRequiredUrl(embeddedOrigin);
-      addToast('Hãy mở trang web gốc trên trình duyệt để tải bộ cài mới nhất.', 'info');
-      return;
-    }
-    addToast(fallbackMsg, 'error');
+  const handleDownloadWindowsSetup = () => {
+    addToast('Đang tải bộ cài đặt BangTrangThongMinh-Setup.exe...', 'info');
+    triggerDirectDownload(DOWNLOAD_LINKS.windowsSetup, 'BangTrangThongMinh-Setup.exe');
+    markDesktopAppAsDownloaded();
   };
 
-  const handleDownloadWindowsExe = async () => {
-    try {
-      setPortalRequiredUrl(null);
-      setBusyTarget('win-exe');
-      const { html, manifest } = await fetchOfflineAppBundleWithOrigin();
-      const exeBytes = buildWindowsExeInstaller(html);
-      const blob = new Blob([exeBytes.buffer as ArrayBuffer], {
-        type: 'application/vnd.microsoft.portable-executable',
-      });
-      triggerBlobDownload(blob, 'BangTrangThongMinh-Setup.exe');
-      markDesktopAppAsDownloaded(manifest);
-      addToast('Đã tải BangTrangThongMinh-Setup.exe phiên bản mới nhất!', 'success');
-      onClose();
-    } catch (err) {
-      handleDownloadFailure(err, 'Có lỗi khi tạo bộ cài .exe, vui lòng thử lại.');
-    } finally {
-      setBusyTarget(null);
-    }
+  const handleDownloadWindowsPortable = () => {
+    addToast('Đang tải bản Portable (BangTrangThongMinh-Portable.exe)...', 'info');
+    triggerDirectDownload(DOWNLOAD_LINKS.windowsPortable, 'BangTrangThongMinh-Portable.exe');
+    markDesktopAppAsDownloaded();
   };
 
-  const handleDownloadWindowsZip = async () => {
-    try {
-      setPortalRequiredUrl(null);
-      setBusyTarget('win-zip');
-      const { html, manifest } = await fetchOfflineAppBundleWithOrigin();
-      const zipBytes = buildWindowsDesktopZip(html);
-      const blob = new Blob([zipBytes.buffer as ArrayBuffer], {
-        type: 'application/zip',
-      });
-      triggerBlobDownload(blob, 'BangTrangThongMinh-Windows-Portable.zip');
-      markDesktopAppAsDownloaded(manifest);
-      addToast('Đã tải gói BangTrangThongMinh-Windows-Portable.zip phiên bản mới nhất!', 'success');
-      onClose();
-    } catch (err) {
-      handleDownloadFailure(err, 'Có lỗi khi đóng gói bản Windows .zip, vui lòng thử lại.');
-    } finally {
-      setBusyTarget(null);
-    }
+  const handleDownloadMacDmg = () => {
+    addToast('Đang tải ứng dụng macOS (BangTrangThongMinh-macOS.dmg)...', 'info');
+    triggerDirectDownload(DOWNLOAD_LINKS.macosDmg, 'BangTrangThongMinh-macOS.dmg');
+    markDesktopAppAsDownloaded();
   };
 
-  const handleDownloadMacInstallerCommand = async () => {
-    try {
-      setPortalRequiredUrl(null);
-      setBusyTarget('mac-cmd');
-      const { html, manifest } = await fetchOfflineAppBundleWithOrigin();
-      const cmdBytes = buildMacOSSelfExtractingCommand(html);
-      const blob = new Blob([cmdBytes.buffer as ArrayBuffer], {
-        type: 'application/x-sh',
-      });
-      triggerBlobDownload(blob, 'BangTrangThongMinh-Installer.command');
-      markDesktopAppAsDownloaded(manifest);
-      addToast('Đã tải bộ cài tự động BangTrangThongMinh-Installer.command mới nhất!', 'success');
-      onClose();
-    } catch (err) {
-      handleDownloadFailure(err, 'Có lỗi khi tạo bộ cài macOS, vui lòng thử lại.');
-    } finally {
-      setBusyTarget(null);
-    }
+  const handleDownloadMacZip = () => {
+    addToast('Đang tải bản nén macOS (BangTrangThongMinh-macOS.zip)...', 'info');
+    triggerDirectDownload(DOWNLOAD_LINKS.macosZip, 'BangTrangThongMinh-macOS.zip');
+    markDesktopAppAsDownloaded();
   };
 
-  const handleDownloadMacAppZip = async () => {
-    try {
-      setPortalRequiredUrl(null);
-      setBusyTarget('mac-app');
-      const { html, manifest } = await fetchOfflineAppBundleWithOrigin();
-      const bytes = buildMacOSDesktopAppZip(html);
-      const blob = new Blob([bytes.buffer as ArrayBuffer], { type: 'application/zip' });
-      triggerBlobDownload(blob, 'BangTrangThongMinh-macOS.app.zip');
-      markDesktopAppAsDownloaded(manifest);
-      addToast('Đã tải gói ứng dụng BangTrangThongMinh.app mới nhất!', 'success');
+  const handleInstallPWA = async () => {
+    const success = await install();
+    if (success) {
+      addToast('Đã bắt đầu cài đặt ứng dụng vào máy tính!', 'success');
+      markDesktopAppAsDownloaded();
       onClose();
-    } catch (err) {
-      handleDownloadFailure(err, 'Có lỗi khi đóng gói bản macOS, vui lòng thử lại.');
-    } finally {
-      setBusyTarget(null);
     }
   };
 
@@ -924,26 +820,24 @@ export const DesktopAppModal: React.FC<DesktopAppModalProps> = ({ isOpen, onClos
       data-testid="desktop-app-modal"
       role="dialog"
       aria-modal="true"
-      aria-label="Tải ứng dụng về máy tính Windows (.exe) hoặc macOS (.app / .command)"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs select-text"
+      aria-label="Tải ứng dụng máy tính"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm select-text"
       onClick={onClose}
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-2xl flex flex-col rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden text-slate-900 dark:text-slate-100"
+        className="relative w-full max-w-xl flex flex-col rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-2xl overflow-hidden text-slate-900 dark:text-slate-100"
       >
         {/* Header */}
-        <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3 bg-slate-50/70 dark:bg-slate-950/50">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-sm">
-              <Laptop className="w-5 h-5" />
-            </div>
-            <div className="min-w-0">
-              <h2 className="text-base font-bold tracking-tight truncate">
-                Tải ứng dụng máy tính (Windows .exe & macOS .app)
+        <div className="px-6 pt-6 pb-4 flex items-start justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <AppLogo size={44} className="rounded-2xl shadow-md shadow-indigo-600/20" />
+            <div>
+              <h2 className="text-lg font-bold tracking-tight text-slate-900 dark:text-white">
+                Tải ứng dụng máy tính
               </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                Bộ cài đặt chuẩn, bảo mật tuyệt đối và tuân thủ đầy đủ quy định pháp luật
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                Ứng dụng máy tính độc lập chính thức cho Windows và macOS, hoạt động hoàn toàn ngoại tuyến
               </p>
             </div>
           </div>
@@ -951,230 +845,158 @@ export const DesktopAppModal: React.FC<DesktopAppModalProps> = ({ isOpen, onClos
             type="button"
             data-testid="close-desktop-app-modal-button"
             onClick={onClose}
-            aria-label="Đóng hộp thoại"
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 hover:bg-slate-200/70 dark:hover:bg-slate-800 transition-colors cursor-pointer shrink-0"
+            aria-label="Đóng"
+            className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer shrink-0"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Direct Download Cards */}
-        <div className="p-5 space-y-4">
-          {portalRequiredUrl && (
+        {/* Content */}
+        <div className="px-6 pb-6 space-y-4">
+          {/* 2 Platform Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Windows Card */}
             <div
-              data-testid="modal-portal-required-banner"
-              className="p-3.5 rounded-xl bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800/70 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
-            >
-              <div className="text-sky-900 dark:text-sky-200">
-                <strong>Cần mở từ trình duyệt đã đăng nhập:</strong> Tệp chạy trên máy không thể tự tải gói cập nhật từ máy chủ riêng tư.
-              </div>
-              <a
-                href={portalRequiredUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="h-8 px-3 rounded-lg bg-sky-600 hover:bg-sky-700 text-white font-semibold inline-flex items-center justify-center gap-1.5 shrink-0 transition-colors"
-              >
-                <ExternalLink className="w-3.5 h-3.5" />
-                <span>Mở trang web gốc để tải</span>
-              </a>
-            </div>
-          )}
-
-          {/* Legal Compliance & EULA Section */}
-          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 space-y-2 text-xs">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5 font-semibold text-slate-800 dark:text-slate-200">
-                <Shield className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
-                <span>Cam kết pháp lý & bảo vệ quyền riêng tư (Nghị định 13/2023/NĐ-CP)</span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowEulaText(!showEulaText)}
-                className="text-[11px] text-indigo-600 dark:text-indigo-400 hover:underline inline-flex items-center gap-1 cursor-pointer font-medium"
-              >
-                <FileText className="w-3 h-3" />
-                <span>{showEulaText ? 'Thu gọn điều khoản' : 'Xem toàn văn thỏa thuận EULA'}</span>
-              </button>
-            </div>
-
-            {showEulaText && (
-              <div className="p-3 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 max-h-44 overflow-y-auto text-[11px] leading-relaxed text-slate-600 dark:text-slate-300 font-mono whitespace-pre-line">
-                {EULA_TEXT}
-              </div>
-            )}
-
-            <label className="flex items-start gap-2 pt-1 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={agreeEula}
-                onChange={(e) => setAgreeEula(e.target.checked)}
-                className="mt-0.5 rounded border-slate-300 dark:border-slate-700 text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5 cursor-pointer"
-              />
-              <span className="text-[11px] text-slate-600 dark:text-slate-300">
-                Tôi đồng ý với <strong>Thỏa thuận cấp phép người dùng cuối (EULA)</strong>, chính sách bản quyền và xác nhận ứng dụng chỉ lưu trữ dữ liệu cục bộ trên máy.
-              </span>
-            </label>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-            {/* Windows .EXE Card */}
-            <div
-              className={`p-4 rounded-2xl border flex flex-col justify-between gap-4 transition-all ${
+              className={`p-5 rounded-2xl border flex flex-col justify-between transition-all ${
                 os !== 'macos'
-                  ? 'border-indigo-500/80 bg-indigo-50/40 dark:bg-indigo-950/30 ring-1 ring-indigo-500/30'
-                  : 'border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-950/40'
+                  ? 'border-indigo-500/60 bg-gradient-to-b from-indigo-50/50 to-white dark:from-indigo-950/30 dark:to-slate-900/90 shadow-sm ring-1 ring-indigo-500/20'
+                  : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 hover:border-slate-300 dark:hover:border-slate-700'
               }`}
             >
-              <div className="space-y-2.5">
+              <div>
                 <div className="flex items-center justify-between">
-                  <div className="w-10 h-10 rounded-xl bg-sky-600 text-white flex items-center justify-center shadow-xs">
-                    <Monitor className="w-5 h-5" />
+                  <div className="w-11 h-11 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 shadow-xs flex items-center justify-center shrink-0">
+                    <WindowsLogoIcon className="w-6 h-6" />
                   </div>
                   {os !== 'macos' && (
-                    <span className="px-2 py-0.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold">
+                    <span className="px-2.5 py-0.5 rounded-full bg-indigo-600 text-white text-[10px] font-semibold tracking-wide">
                       Hệ điều hành của bạn
                     </span>
                   )}
                 </div>
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
-                    Windows 10 / 11 (64-bit)
+
+                <div className="mt-4">
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                    Windows
                   </h3>
-                  <p className="text-[11px] font-mono text-indigo-600 dark:text-indigo-400 font-semibold mt-0.5">
-                    BangTrangThongMinh-Setup.exe
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    Windows 10 / 11 (64-bit)
                   </p>
                 </div>
-                <ul className="space-y-1 text-[11px] text-slate-600 dark:text-slate-300">
-                  <li className="flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                    <span>Bộ cài đặt tự động tạo biểu tượng màn hình chính</span>
-                  </li>
-                  <li className="flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                    <span>Có mã PE CheckSum chuẩn Microsoft, 100% ngoại tuyến</span>
-                  </li>
-                  <li className="flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                    <span>Có kèm bản Portable (.zip) không cần cài đặt</span>
-                  </li>
-                </ul>
               </div>
 
-              <div className="space-y-2">
+              <div className="mt-5 space-y-2">
                 <button
                   type="button"
                   data-testid="download-windows-exe-button"
-                  disabled={busyTarget !== null || !agreeEula}
-                  onClick={() => void handleDownloadWindowsExe()}
-                  className="w-full h-10 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-colors cursor-pointer"
+                  onClick={handleDownloadWindowsSetup}
+                  className="w-full h-10 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-[0.99] text-white font-semibold text-xs inline-flex items-center justify-center gap-2 shadow-sm shadow-indigo-600/20 transition-all cursor-pointer"
                 >
-                  {busyTarget === 'win-exe' ? (
-                    <Loader2 className="w-4 h-4 animate-spin shrink-0" />
-                  ) : (
-                    <Download className="w-4 h-4 shrink-0" />
-                  )}
-                  <span>Tải bộ cài đặt Windows (.exe)</span>
+                  <Download className="w-4 h-4 shrink-0" />
+                  <span>Tải bộ cài đặt (.exe Setup)</span>
                 </button>
                 <button
                   type="button"
-                  data-testid="download-windows-zip-button"
-                  disabled={busyTarget !== null || !agreeEula}
-                  onClick={() => void handleDownloadWindowsZip()}
-                  className="w-full h-8 px-2.5 rounded-lg bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-[11px] flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                  onClick={handleDownloadWindowsPortable}
+                  className="w-full h-8 px-3 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium text-[11px] inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                 >
-                  {busyTarget === 'win-zip' ? (
-                    <Loader2 className="w-3 h-3 animate-spin shrink-0" />
-                  ) : (
-                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                  )}
-                  <span>Tải gói chạy ngay (.zip — không cần quyền admin)</span>
+                  <span>Bản chạy ngay (.exe Portable)</span>
                 </button>
+                <div className="text-[11px] font-mono text-center text-slate-400 dark:text-slate-500">
+                  BangTrangThongMinh-Setup.exe
+                </div>
               </div>
             </div>
 
-            {/* macOS .APP / .COMMAND Card */}
+            {/* macOS Card */}
             <div
-              className={`p-4 rounded-2xl border flex flex-col justify-between gap-4 transition-all ${
+              className={`p-5 rounded-2xl border flex flex-col justify-between transition-all ${
                 os === 'macos'
-                  ? 'border-indigo-500/80 bg-indigo-50/40 dark:bg-indigo-950/30 ring-1 ring-indigo-500/30'
-                  : 'border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-950/40'
+                  ? 'border-indigo-500/60 bg-gradient-to-b from-indigo-50/50 to-white dark:from-indigo-950/30 dark:to-slate-900/90 shadow-sm ring-1 ring-indigo-500/20'
+                  : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 hover:border-slate-300 dark:hover:border-slate-700'
               }`}
             >
-              <div className="space-y-2.5">
+              <div>
                 <div className="flex items-center justify-between">
-                  <div className="w-10 h-10 rounded-xl bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 flex items-center justify-center shadow-xs">
-                    <Apple className="w-5 h-5" />
+                  <div className="w-11 h-11 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 shadow-xs flex items-center justify-center shrink-0">
+                    <AppleLogoIcon className="w-6 h-6 text-slate-900 dark:text-white" />
                   </div>
                   {os === 'macos' && (
-                    <span className="px-2 py-0.5 rounded-full bg-indigo-600 text-white text-[10px] font-bold">
+                    <span className="px-2.5 py-0.5 rounded-full bg-indigo-600 text-white text-[10px] font-semibold tracking-wide">
                       Hệ điều hành của bạn
                     </span>
                   )}
                 </div>
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
-                    macOS (Apple Silicon & Intel)
+
+                <div className="mt-4">
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                    macOS
                   </h3>
-                  <p className="text-[11px] font-mono text-indigo-600 dark:text-indigo-400 font-semibold mt-0.5">
-                    BangTrangThongMinh.app
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    Apple Silicon & Intel (Universal)
                   </p>
                 </div>
-                <ul className="space-y-1 text-[11px] text-slate-600 dark:text-slate-300">
-                  <li className="flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                    <span>Ứng dụng gốc chuẩn macOS (.app)</span>
-                  </li>
-                  <li className="flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                    <span>Tự động chép vào Desktop & thư mục Applications</span>
-                  </li>
-                </ul>
               </div>
 
-              <div className="space-y-2">
+              <div className="mt-5 space-y-2">
                 <button
                   type="button"
                   data-testid="download-macos-app-button"
-                  disabled={busyTarget !== null || !agreeEula}
-                  onClick={() => void handleDownloadMacAppZip()}
-                  className="w-full h-10 px-3 rounded-xl bg-slate-900 dark:bg-slate-100 hover:bg-slate-800 dark:hover:bg-white disabled:opacity-50 text-white dark:text-slate-900 font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-colors cursor-pointer"
+                  onClick={handleDownloadMacDmg}
+                  className="w-full h-10 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 dark:text-slate-900 active:scale-[0.99] text-white font-semibold text-xs inline-flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer"
                 >
-                  {busyTarget === 'mac-app' ? (
-                    <Loader2 className="w-4 h-4 animate-spin shrink-0" />
-                  ) : (
-                    <Download className="w-4 h-4 shrink-0" />
-                  )}
-                  <span>Tải gói ứng dụng macOS (.app.zip)</span>
+                  <Download className="w-4 h-4 shrink-0" />
+                  <span>Tải gói cài đặt (.dmg)</span>
                 </button>
                 <button
                   type="button"
-                  data-testid="download-macos-command-button"
-                  disabled={busyTarget !== null || !agreeEula}
-                  onClick={() => void handleDownloadMacInstallerCommand()}
-                  className="w-full h-8 px-2.5 rounded-lg bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-[11px] flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                  onClick={handleDownloadMacZip}
+                  className="w-full h-8 px-3 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium text-[11px] inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                 >
-                  {busyTarget === 'mac-cmd' ? (
-                    <Loader2 className="w-3 h-3 animate-spin shrink-0" />
-                  ) : (
-                    <Download className="w-3 h-3 shrink-0" />
-                  )}
-                  <span>Tải bộ cài đặt macOS (.command)</span>
+                  <span>Gói ứng dụng (.zip)</span>
                 </button>
+                <div className="text-[11px] font-mono text-center text-slate-400 dark:text-slate-500">
+                  BangTrangThongMinh-macOS.dmg
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="p-3.5 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/60 text-[11.5px] text-slate-700 dark:text-slate-200 space-y-1.5">
-            <div className="flex items-center gap-1.5 font-bold text-emerald-800 dark:text-emerald-300">
-              <ShieldCheck className="w-4 h-4 shrink-0" />
-              <span>Chứng nhận an toàn & giải thích cảnh báo bảo mật hệ thống:</span>
+          {/* Quick PWA Option */}
+          {isInstallable && (
+            <div className="p-3.5 rounded-2xl bg-indigo-50/60 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/50 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2.5">
+                <Laptop className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                <span className="text-slate-700 dark:text-slate-300">
+                  Dùng ngay không cần tải bộ cài đặt 145 MB?
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => void handleInstallPWA()}
+                className="h-8 px-3.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer shrink-0"
+              >
+                <span>Cài đặt nhanh (PWA)</span>
+              </button>
             </div>
-            <div>
-              • <strong>Đã loại bỏ hoàn toàn lệnh ngầm:</strong> Tệp <code>.exe</code> chỉ sử dụng giao diện lập trình ứng dụng (API) chuẩn của Windows (<code>CreateFileA</code>, <code>ShellExecuteA</code>) và có mã kiểm tra <code>PE CheckSum</code> chuẩn — <strong>không sử dụng PowerShell hay CMD ẩn</strong>, đảm bảo an toàn và không bị phần mềm diệt virus nhận diện nhầm.
+          )}
+
+          {/* Minimalist Trust & Privacy Footer */}
+          <div className="pt-3 border-t border-slate-100 dark:border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+              <span>Ứng dụng máy tính độc lập • Tự tạo icon Desktop • Hoạt động 100% ngoại tuyến</span>
             </div>
-            <div>
-              • <strong>Cách xử lý cảnh báo &ldquo;Nhà phát hành không xác định&rdquo;:</strong> Các phần mềm chưa đăng ký mua chứng chỉ số EV hàng năm của Microsoft đều sẽ hiển thị bảng xác nhận an toàn của Windows SmartScreen khi tải từ trình duyệt. Bạn có thể tải <strong>Gói chạy ngay (.zip)</strong> ở trên hoặc bấm <strong>More info (Thêm thông tin)</strong> → <strong>Run anyway (Vẫn chạy)</strong>.
-            </div>
+            <a
+              href={DESKTOP_RELEASES_PAGE}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[11px] text-indigo-600 dark:text-indigo-400 hover:underline inline-flex items-center gap-1"
+            >
+              <span>GitHub Releases</span>
+              <ExternalLink className="w-3 h-3" />
+            </a>
           </div>
         </div>
       </div>
