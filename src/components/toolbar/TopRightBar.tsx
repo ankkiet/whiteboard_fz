@@ -11,8 +11,15 @@ import {
   Check,
   Maximize2,
   Focus,
+  BookOpen,
 } from 'lucide-react';
-import { BoardPattern } from '../../types/board';
+import { BoardPattern, NotebookPaperSize } from '../../types/board';
+import {
+  clampNotebookCamera,
+  computeTotalNotebookPages,
+  getNotebookConfig,
+  getNotebookFitCamera,
+} from '../../engine/notebookEngine';
 
 interface TopRightBarProps {
   onPresentClick: () => void;
@@ -29,15 +36,23 @@ export const TopRightBar: React.FC<TopRightBarProps> = ({
   const setTheme = useBoardStore((s) => s.setTheme);
   const boardPattern = useBoardStore((s) => s.boardPattern);
   const setBoardPattern = useBoardStore((s) => s.setBoardPattern);
+  const boardType = useBoardStore((s) => s.boardType);
+  const notebookPaperSize = useBoardStore((s) => s.notebookPaperSize);
+  const setNotebookPaperSize = useBoardStore((s) => s.setNotebookPaperSize);
   const elements = useBoardStore((s) => s.elements);
 
   const [showPatternMenu, setShowPatternMenu] = useState(false);
+  const [showPaperMenu, setShowPaperMenu] = useState(false);
   const patternMenuRef = useRef<HTMLDivElement>(null);
+  const paperMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (patternMenuRef.current && !patternMenuRef.current.contains(event.target as Node)) {
         setShowPatternMenu(false);
+      }
+      if (paperMenuRef.current && !paperMenuRef.current.contains(event.target as Node)) {
+        setShowPaperMenu(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -49,23 +64,49 @@ export const TopRightBar: React.FC<TopRightBarProps> = ({
   const handleZoomIn = () => {
     const cx = window.innerWidth / 2;
     const cy = window.innerHeight / 2;
-    setCamera((prev) => zoomCameraAtPoint(prev, prev.zoom * 1.2, cx, cy));
+    setCamera((prev) => {
+      const next = zoomCameraAtPoint(prev, prev.zoom * 1.2, cx, cy);
+      if (boardType === 'notebook') {
+        const config = getNotebookConfig(notebookPaperSize);
+        const totalPages = computeTotalNotebookPages(elements, next, window.innerHeight, config);
+        return clampNotebookCamera(next, { width: window.innerWidth, height: window.innerHeight }, config, totalPages);
+      }
+      return next;
+    });
   };
 
   const handleZoomOut = () => {
     const cx = window.innerWidth / 2;
     const cy = window.innerHeight / 2;
-    setCamera((prev) => zoomCameraAtPoint(prev, prev.zoom / 1.2, cx, cy));
+    setCamera((prev) => {
+      const next = zoomCameraAtPoint(prev, prev.zoom / 1.2, cx, cy);
+      if (boardType === 'notebook') {
+        const config = getNotebookConfig(notebookPaperSize);
+        const totalPages = computeTotalNotebookPages(elements, next, window.innerHeight, config);
+        return clampNotebookCamera(next, { width: window.innerWidth, height: window.innerHeight }, config, totalPages);
+      }
+      return next;
+    });
   };
 
   const handleResetZoom = () => {
-    const cx = window.innerWidth / 2;
-    const cy = window.innerHeight / 2;
-    setCamera((prev) => zoomCameraAtPoint(prev, 1, cx, cy));
+    if (boardType === 'notebook') {
+      const config = getNotebookConfig(notebookPaperSize);
+      setCamera(getNotebookFitCamera({ width: window.innerWidth, height: window.innerHeight }, config));
+    } else {
+      const cx = window.innerWidth / 2;
+      const cy = window.innerHeight / 2;
+      setCamera((prev) => zoomCameraAtPoint(prev, 1, cx, cy));
+    }
   };
 
   const handleFitToScreen = () => {
-    setCamera(computeFitCamera(elements, window.innerWidth, window.innerHeight, 100));
+    if (boardType === 'notebook') {
+      const config = getNotebookConfig(notebookPaperSize);
+      setCamera(getNotebookFitCamera({ width: window.innerWidth, height: window.innerHeight }, config));
+    } else {
+      setCamera(computeFitCamera(elements, window.innerWidth, window.innerHeight, 100));
+    }
   };
 
   const patterns: { id: BoardPattern; label: string }[] = [
@@ -125,54 +166,121 @@ export const TopRightBar: React.FC<TopRightBarProps> = ({
 
       <div className="h-5 w-px bg-slate-200 dark:bg-slate-800 shrink-0" />
 
-      {/* Background Pattern Selector */}
-      <div className="relative" ref={patternMenuRef}>
-        <button
-          type="button"
-          onClick={() => setShowPatternMenu((v) => !v)}
-          title="Chọn nền bảng"
-          aria-label="Chọn nền bảng"
-          aria-expanded={showPatternMenu}
-          className={`p-1.5 sm:p-2 rounded-xl transition-colors flex items-center gap-1.5 ${
-            showPatternMenu
-              ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400'
-              : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200'
-          }`}
-        >
-          <Grid className="w-4 h-4" />
-        </button>
-
-        {showPatternMenu && (
-          <div
-            role="menu"
-            className="absolute right-0 mt-2 w-44 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 p-1.5 z-30"
+      {/* Notebook Paper Size Selector */}
+      {boardType === 'notebook' && (
+        <div className="relative" ref={paperMenuRef}>
+          <button
+            type="button"
+            onClick={() => setShowPaperMenu((v) => !v)}
+            title="Chọn khổ giấy vở ghi chú"
+            aria-label="Chọn khổ giấy vở ghi chú"
+            aria-expanded={showPaperMenu}
+            className={`px-2 py-1.5 rounded-xl transition-colors flex items-center gap-1.5 text-xs font-semibold cursor-pointer ${
+              showPaperMenu
+                ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400'
+                : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200'
+            }`}
           >
-            <div className="text-xs font-medium px-2.5 py-1.5 text-slate-500 dark:text-slate-400">
-              Nền bảng
+            <BookOpen className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+            <span>{getNotebookConfig(notebookPaperSize).label}</span>
+          </button>
+
+          {showPaperMenu && (
+            <div
+              role="menu"
+              className="absolute right-0 mt-2 w-52 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 p-1.5 z-30"
+            >
+              <div className="text-xs font-medium px-2.5 py-1.5 text-slate-500 dark:text-slate-400">
+                Khổ giấy vở ghi chú
+              </div>
+              {[
+                { id: 'a4' as const, label: 'Khổ A4 (mặc định)', desc: '210 × 297 mm' },
+                { id: 'a3' as const, label: 'Khổ A3', desc: '297 × 420 mm' },
+                { id: 'b5' as const, label: 'Khổ B5', desc: '176 × 250 mm' },
+                { id: 'letter' as const, label: 'Khổ Letter', desc: '216 × 279 mm' },
+              ].map((paper) => {
+                const isSelected = notebookPaperSize === paper.id;
+                return (
+                  <button
+                    key={paper.id}
+                    type="button"
+                    role="menuitemradio"
+                    aria-checked={isSelected}
+                    onClick={() => {
+                      setNotebookPaperSize(paper.id);
+                      setShowPaperMenu(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-left text-xs transition-colors cursor-pointer ${
+                      isSelected
+                        ? 'bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 font-semibold'
+                        : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                    }`}
+                  >
+                    <div>
+                      <div>{paper.label}</div>
+                      <div className="text-[10.5px] text-slate-400 dark:text-slate-500 font-normal">
+                        {paper.desc}
+                      </div>
+                    </div>
+                    {isSelected && <Check className="w-3.5 h-3.5 shrink-0" />}
+                  </button>
+                );
+              })}
             </div>
-            {patterns.map((pat) => (
-              <button
-                type="button"
-                role="menuitemradio"
-                aria-checked={boardPattern === pat.id}
-                key={pat.id}
-                onClick={() => {
-                  setBoardPattern(pat.id);
-                  setShowPatternMenu(false);
-                }}
-                className={`w-full flex items-center justify-between px-2.5 py-2 text-xs rounded-xl transition-colors whitespace-nowrap ${
-                  boardPattern === pat.id
-                    ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 font-semibold'
-                    : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-medium'
-                }`}
-              >
-                <span>{pat.label}</span>
-                {boardPattern === pat.id && <Check className="w-3.5 h-3.5" />}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
+
+      {/* Background Pattern Selector */}
+      {boardType !== 'notebook' && (
+        <div className="relative" ref={patternMenuRef}>
+          <button
+            type="button"
+            onClick={() => setShowPatternMenu((v) => !v)}
+            title="Chọn nền bảng"
+            aria-label="Chọn nền bảng"
+            aria-expanded={showPatternMenu}
+            className={`p-1.5 sm:p-2 rounded-xl transition-colors flex items-center gap-1.5 ${
+              showPatternMenu
+                ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400'
+                : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200'
+            }`}
+          >
+            <Grid className="w-4 h-4" />
+          </button>
+
+          {showPatternMenu && (
+            <div
+              role="menu"
+              className="absolute right-0 mt-2 w-44 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 p-1.5 z-30"
+            >
+              <div className="text-xs font-medium px-2.5 py-1.5 text-slate-500 dark:text-slate-400">
+                Nền bảng
+              </div>
+              {patterns.map((pat) => (
+                <button
+                  type="button"
+                  role="menuitemradio"
+                  aria-checked={boardPattern === pat.id}
+                  key={pat.id}
+                  onClick={() => {
+                    setBoardPattern(pat.id);
+                    setShowPatternMenu(false);
+                  }}
+                  className={`w-full flex items-center justify-between px-2.5 py-2 text-xs rounded-xl transition-colors whitespace-nowrap ${
+                    boardPattern === pat.id
+                      ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 font-semibold'
+                      : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-medium'
+                  }`}
+                >
+                  <span>{pat.label}</span>
+                  {boardPattern === pat.id && <Check className="w-3.5 h-3.5" />}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Theme Toggle */}
       <button

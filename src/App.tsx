@@ -4,9 +4,7 @@ import { classifyFile } from './engine/documentUtils';
 import { readFileAsDataUrl } from './engine/documentProcessor';
 import { useGoogleDriveWorkspace } from './hooks/useGoogleDriveWorkspace';
 import { HomePage } from './components/home/HomePage';
-import { TopLeftBar } from './components/toolbar/TopLeftBar';
-import { TopRightBar } from './components/toolbar/TopRightBar';
-import { BottomDock } from './components/toolbar/BottomDock';
+import { UnifiedTopBar } from './components/toolbar/UnifiedTopBar';
 import { ContextualToolbar } from './components/toolbar/ContextualToolbar';
 import { WhiteboardCanvas } from './components/canvas/WhiteboardCanvas';
 import { MathFormulaLayer } from './components/canvas/MathFormulaLayer';
@@ -184,44 +182,43 @@ export default function App() {
           <PinnedProblemBar />
           <FloatingCalculator />
 
-          {/* Floating Chrome */}
+          {/* Floating Chrome: Giao diện thanh công cụ hợp nhất siêu tinh gọn trên đỉnh */}
           {!isFocusMode ? (
-            <div className="pointer-events-none absolute top-3 inset-x-2.5 sm:top-3.5 sm:inset-x-3.5 z-20 flex items-center justify-between gap-2">
-              <TopLeftBar
-                onHomeClick={handleReturnHome}
-                onExportClick={() => setIsExportOpen(true)}
-                onDriveClick={() => setIsDriveOpen(true)}
-                isDriveConnected={!drive.needsAuth && Boolean(drive.user)}
-                syncStatus={drive.syncStatus}
-                lastSyncedAt={drive.lastSyncedAt}
-                autoSaveEnabled={drive.autoSaveEnabled}
-                boardType={boardType}
-                isMathPanelOpen={isMathPanelOpen}
-                onToggleMathPanel={() => setIsMathPanelOpen((v) => !v)}
-              />
-              <TopRightBar
-                onPresentClick={() => setIsPresentOpen(true)}
-                onToggleFocusMode={handleToggleFocusMode}
-              />
-            </div>
+            <UnifiedTopBar
+              onHomeClick={handleReturnHome}
+              onExportClick={() => setIsExportOpen(true)}
+              onDriveClick={() => setIsDriveOpen(true)}
+              onPresentClick={() => setIsPresentOpen(true)}
+              onToggleFocusMode={handleToggleFocusMode}
+              onTriggerImageUpload={handleTriggerFileUpload}
+              isDriveConnected={!drive.needsAuth && Boolean(drive.user)}
+              syncStatus={drive.syncStatus}
+              lastSyncedAt={drive.lastSyncedAt}
+              autoSaveEnabled={drive.autoSaveEnabled}
+              boardType={boardType}
+              isMathPanelOpen={isMathPanelOpen}
+              onToggleMathPanel={() => setIsMathPanelOpen((v) => !v)}
+            />
           ) : (
             <button
               type="button"
               onClick={handleToggleFocusMode}
               title="Thoát chế độ tập trung (F)"
               aria-label="Thoát chế độ tập trung (F)"
-              className="absolute top-3.5 right-3.5 z-30 flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/92 dark:bg-slate-900/92 hover:bg-white dark:hover:bg-slate-800 backdrop-blur-md text-xs font-semibold text-slate-700 dark:text-slate-200 border border-slate-200/85 dark:border-slate-800 shadow-lg shadow-slate-900/8 dark:shadow-black/35 transition-colors whitespace-nowrap"
+              className="absolute top-3.5 right-3.5 z-30 flex items-center gap-1.5 px-3 py-2 rounded-full bg-white/92 dark:bg-slate-900/92 hover:bg-white dark:hover:bg-slate-800 backdrop-blur-md text-xs font-semibold text-slate-700 dark:text-slate-200 border border-slate-200/85 dark:border-slate-800 shadow-lg shadow-slate-900/8 dark:shadow-black/35 transition-colors whitespace-nowrap"
             >
               <Minimize2 className="w-3.5 h-3.5" />
               <span>Thoát tập trung (F)</span>
             </button>
           )}
+
           <MathPanel
             isOpen={boardType === 'math' && isMathPanelOpen && !isFocusMode}
             onClose={() => setIsMathPanelOpen(false)}
           />
+
+          {/* Contextual Selection Inspector (Chỉ xuất hiện khi có đối tượng được chọn) */}
           <ContextualToolbar />
-          <BottomDock onTriggerImageUpload={handleTriggerFileUpload} />
 
           {/* Modals, Document Viewer & Presentation */}
           <ExportModal

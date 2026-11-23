@@ -72,65 +72,141 @@ export const BoardTemplatePreview: React.FC<BoardTemplatePreviewProps> = ({
   if (type === 'notebook') {
     return (
       <div
-        className={`${className} relative overflow-hidden bg-slate-50 dark:bg-slate-950/80 flex items-center justify-center`}
+        className={`${className} relative overflow-hidden bg-slate-200/70 dark:bg-slate-950 flex items-center justify-center`}
       >
         <svg viewBox="0 0 220 110" className="w-full h-full" fill="none" aria-hidden="true">
-          {[22, 40, 58, 76, 94].map((y) => (
-            <line
-              key={`line-${y}`}
-              x1="0"
-              y1={y}
-              x2="220"
-              y2={y}
-              className="stroke-blue-200/85 dark:stroke-slate-800"
-              strokeWidth="1"
-            />
-          ))}
-          {/* Margin rule */}
-          <line
-            x1="34"
-            y1="0"
-            x2="34"
-            y2="110"
-            className="stroke-rose-300/60 dark:stroke-rose-900/60"
-            strokeWidth="1"
-          />
-          {/* Clean handwriting / note lines */}
-          <line
-            x1="46"
-            y1="32"
-            x2="132"
-            y2="32"
-            className="stroke-slate-700 dark:stroke-slate-300"
-            strokeWidth="2.6"
-            strokeLinecap="round"
-          />
-          <line
-            x1="46"
-            y1="50"
-            x2="178"
-            y2="50"
-            className="stroke-slate-400 dark:stroke-slate-600"
-            strokeWidth="2"
-            strokeLinecap="round"
-          />
-          <line
-            x1="46"
-            y1="68"
-            x2="156"
-            y2="68"
-            className="stroke-slate-400 dark:stroke-slate-600"
-            strokeWidth="2"
-            strokeLinecap="round"
+          {/* Paper sheet shadow & background */}
+          <rect
+            x="28"
+            y="7"
+            width="164"
+            height="98"
+            rx="3"
+            className="fill-black/5 dark:fill-black/30"
           />
           <rect
-            x="46"
-            y="81"
-            width="64"
-            height="8"
-            rx="2"
-            className="fill-amber-300/60 dark:fill-amber-500/30"
+            x="26"
+            y="5"
+            width="164"
+            height="98"
+            rx="3"
+            className="fill-white dark:fill-slate-900 stroke-slate-300/80 dark:stroke-slate-800"
+            strokeWidth="0.8"
           />
+
+          {/* Notebook ruled lines */}
+          {[26, 42, 58, 74].map((y) => (
+            <line
+              key={`line-${y}`}
+              x1="26"
+              y1={y}
+              x2="178"
+              y2={y}
+              className="stroke-blue-200/80 dark:stroke-slate-800"
+              strokeWidth="0.8"
+            />
+          ))}
+
+          {/* Left red margin line */}
+          <line
+            x1="52"
+            y1="5"
+            x2="52"
+            y2="103"
+            className="stroke-rose-400/85 dark:stroke-rose-800/80"
+            strokeWidth="1"
+          />
+
+          {/* Right margin line (dashed) */}
+          <line
+            x1="178"
+            y1="5"
+            x2="178"
+            y2="103"
+            className="stroke-slate-300 dark:stroke-slate-700"
+            strokeWidth="0.8"
+            strokeDasharray="3 3"
+          />
+
+          {/* Header text watermark */}
+          <text
+            x="56"
+            y="17"
+            className="fill-slate-400 dark:fill-slate-600 font-sans"
+            fontSize="5.5"
+            fontWeight="500"
+          >
+            Vở ghi chú • A4
+          </text>
+          <text
+            x="174"
+            y="17"
+            textAnchor="end"
+            className="fill-slate-400 dark:fill-slate-600 font-sans"
+            fontSize="5.5"
+            fontWeight="500"
+          >
+            Trang 1
+          </text>
+
+          {/* Handwriting sample */}
+          <line
+            x1="58"
+            y1="37"
+            x2="136"
+            y2="37"
+            className="stroke-slate-800 dark:stroke-slate-200"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+          />
+          <line
+            x1="58"
+            y1="53"
+            x2="162"
+            y2="53"
+            className="stroke-slate-500 dark:stroke-slate-400"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+          />
+          <line
+            x1="58"
+            y1="69"
+            x2="128"
+            y2="69"
+            className="stroke-slate-500 dark:stroke-slate-400"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+          />
+
+          {/* Horizontal dividing line (ngăn cách trang) */}
+          <line
+            x1="26"
+            y1="90"
+            x2="190"
+            y2="90"
+            className="stroke-slate-400/70 dark:stroke-slate-600"
+            strokeWidth="1"
+            strokeDasharray="4 3"
+          />
+          <rect
+            x="84"
+            y="85"
+            width="48"
+            height="10"
+            rx="5"
+            className="fill-slate-100 dark:fill-slate-800 stroke-slate-300 dark:stroke-slate-700"
+            strokeWidth="0.6"
+          />
+          <text
+            x="108"
+            y="92"
+            textAnchor="middle"
+            className="fill-slate-500 dark:fill-slate-400 font-sans"
+            fontSize="4.8"
+            fontWeight="600"
+          >
+            Hết trang 1
+          </text>
         </svg>
       </div>
     );

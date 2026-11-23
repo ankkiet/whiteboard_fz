@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { jsPDF } from 'jspdf';
 import {
   computeBoardExportBounds,
   computeOptimalExportDimensions,
@@ -67,4 +68,29 @@ test('computeOptimalExportDimensions smoothly clamps huge boards without droppin
   assert.ok(dims.pixelWidth * dims.pixelHeight <= MAX_EXPORT_PIXELS + 20000);
   // Effective scale should still be well above 2x (around 2.4x), not 1x!
   assert.ok(dims.effectiveScale > 2.3);
+});
+
+test('jsPDF generates valid single-page and multi-page PDF documents', () => {
+  // Single page fit
+  const docFit = new jsPDF({
+    orientation: 'landscape',
+    unit: 'pt',
+    format: [800, 600],
+    compress: true,
+  });
+  docFit.setProperties({ title: 'Test Board' });
+  const fitBlob = docFit.output('blob');
+  assert.ok(fitBlob.size > 500, `Expected PDF blob size > 500, got ${fitBlob.size}`);
+
+  // Multi-page A4
+  const docA4 = new jsPDF({
+    orientation: 'portrait',
+    unit: 'pt',
+    format: 'a4',
+    compress: true,
+  });
+  docA4.addPage('a4', 'portrait');
+  docA4.addPage('a4', 'portrait');
+  const a4Blob = docA4.output('blob');
+  assert.ok(a4Blob.size > fitBlob.size, 'Multi-page PDF should have larger size than single page');
 });

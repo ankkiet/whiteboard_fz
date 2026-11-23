@@ -10,6 +10,7 @@ import {
   FileCategory,
   ImageElement,
   MathGradeMode,
+  NotebookPaperSize,
   ToastMessage,
   ToolType,
 } from '../types/board';
@@ -30,6 +31,11 @@ import {
 } from '../engine/boardTemplates';
 import { VirtualGeometryToolsState } from '../engine/mathCurriculum';
 import { computeVirtualToolSafePoses, getSafeMathViewport } from '../engine/mathViewport';
+import {
+  getNotebookConfig,
+  getNotebookFitCamera,
+  normalizeNotebookPaperSize,
+} from '../engine/notebookEngine';
 
 export interface PinnedProblemState {
   text: string;
@@ -75,6 +81,7 @@ interface BoardState {
   isDarkMode: boolean;
   boardType: BoardType;
   boardPattern: BoardPattern;
+  notebookPaperSize: NotebookPaperSize;
   mathGradeMode: MathGradeMode;
   virtualTools: VirtualGeometryToolsState;
   isCalculatorOpen: boolean;
@@ -115,6 +122,7 @@ interface BoardState {
   setTheme: (theme: 'light' | 'dark') => void;
   setBoardType: (boardType: BoardType) => void;
   setBoardPattern: (pattern: BoardPattern) => void;
+  setNotebookPaperSize: (size: NotebookPaperSize) => void;
   setMathGradeMode: (mode: MathGradeMode) => void;
   toggleVirtualTool: (tool: keyof VirtualGeometryToolsState) => void;
   updateVirtualTool: <K extends keyof VirtualGeometryToolsState>(
@@ -179,9 +187,10 @@ interface BoardState {
     assets?: Record<string, string>;
     boardType?: BoardType;
     boardPattern?: BoardPattern;
+    notebookPaperSize?: NotebookPaperSize;
     resetHistory?: boolean;
   }) => void;
-  startNewBoard: (options?: string | { title?: string; boardType?: BoardType }) => void;
+  startNewBoard: (options?: string | { title?: string; boardType?: BoardType; notebookPaperSize?: NotebookPaperSize }) => void;
   clearBoard: () => void;
 
   // Persistence
@@ -211,6 +220,7 @@ export const useBoardStore = create<BoardState>((set, get) => ({
   isDarkMode: false,
   boardType: 'basic',
   boardPattern: 'grid',
+  notebookPaperSize: 'a4',
   mathGradeMode: 'high',
   virtualTools: DEFAULT_VIRTUAL_TOOLS,
   isCalculatorOpen: false,
@@ -296,6 +306,12 @@ export const useBoardStore = create<BoardState>((set, get) => ({
 
   setBoardPattern: (boardPattern) => {
     set({ boardPattern });
+    get().scheduleSave();
+  },
+
+  setNotebookPaperSize: (notebookPaperSize) => {
+    const safeSize = normalizeNotebookPaperSize(notebookPaperSize);
+    set({ notebookPaperSize: safeSize });
     get().scheduleSave();
   },
 
@@ -795,7 +811,15 @@ export const useBoardStore = create<BoardState>((set, get) => ({
     get().addToast(`Đã đính kèm thẻ tài liệu "${payload.fileName}"`, 'success');
   },
 
-  importBoardData: ({ title, elements, assets, boardType, boardPattern, resetHistory = false }) => {
+  importBoardData: ({
+    title,
+    elements,
+    assets,
+    boardType,
+    boardPattern,
+    notebookPaperSize,
+    resetHistory = false,
+  }) => {
     const safeElements = Array.isArray(elements) ? elements : [];
     const resolvedType = boardType ? normalizeBoardType(boardType) : 'basic';
     const template = getBoardTemplate(resolvedType);
@@ -804,17 +828,32 @@ export const useBoardStore = create<BoardState>((set, get) => ({
       : boardType
       ? template.pattern
       : get().boardPattern;
+    const resolvedPaperSize = notebookPaperSize
+      ? normalizeNotebookPaperSize(notebookPaperSize)
+      : get().notebookPaperSize;
 
-    const centeredCamera: Camera =
-      template.centerOriginCamera && typeof window !== 'undefined'
-        ? { x: Math.round(window.innerWidth / 2), y: Math.round(window.innerHeight / 2), zoom: 1 }
-        : { x: 0, y: 0, zoom: 1 };
+    const viewW = typeof window !== 'undefined' ? window.innerWidth : 1280;
+    const viewH = typeof window !== 'undefined' ? window.innerHeight : 800;
+    let centeredCamera: Camera;
+    if (resolvedType === 'notebook') {
+      const config = getNotebookConfig(resolvedPaperSize);
+      centeredCamera = getNotebookFitCamera({ width: viewW, height: viewH }, config);
+    } else if (template.centerOriginCamera && typeof window !== 'undefined') {
+      centeredCamera = {
+        x: Math.round(window.innerWidth / 2),
+        y: Math.round(window.innerHeight / 2),
+        zoom: 1,
+      };
+    } else {
+      centeredCamera = { x: 0, y: 0, zoom: 1 };
+    }
 
     if (resetHistory) {
       set({
         title: title || template.defaultTitle,
         boardType: resolvedType,
         boardPattern: resolvedPattern,
+        notebookPaperSize: resolvedPaperSize,
         elements: safeElements,
         assets: assets || {},
         selectedIds: [],
@@ -831,6 +870,7 @@ export const useBoardStore = create<BoardState>((set, get) => ({
         title: title || get().title,
         boardType: boardType ? resolvedType : get().boardType,
         boardPattern: boardPattern ? resolvedPattern : get().boardPattern,
+        notebookPaperSize: notebookPaperSize ? resolvedPaperSize : get().notebookPaperSize,
         elements: safeElements,
         assets: { ...get().assets, ...(assets || {}) },
         selectedIds: [],
@@ -847,6 +887,10 @@ export const useBoardStore = create<BoardState>((set, get) => ({
       typeof options === 'object' && options?.boardType
         ? normalizeBoardType(options.boardType)
         : 'basic';
+    const resolvedPaperSize: NotebookPaperSize =
+      typeof options === 'object' && options?.notebookPaperSize
+        ? normalizeNotebookPaperSize(options.notebookPaperSize)
+        : 'a4';
     const template = getBoardTemplate(resolvedType);
     const resolvedTitle =
       typeof options === 'string'
@@ -863,18 +907,25 @@ export const useBoardStore = create<BoardState>((set, get) => ({
       isMathPanelCollapsed: false,
       isCalculatorOpen: false,
     });
-    const initialCamera: Camera = template.centerOriginCamera
-      ? {
-          x: resolvedType === 'math' ? safeMathRect.centerX : Math.round(viewW / 2),
-          y: resolvedType === 'math' ? safeMathRect.centerY : Math.round(viewH / 2),
-          zoom: 1,
-        }
-      : { x: 0, y: 0, zoom: 1 };
+    let initialCamera: Camera;
+    if (resolvedType === 'notebook') {
+      const config = getNotebookConfig(resolvedPaperSize);
+      initialCamera = getNotebookFitCamera({ width: viewW, height: viewH }, config);
+    } else if (template.centerOriginCamera) {
+      initialCamera = {
+        x: resolvedType === 'math' ? safeMathRect.centerX : Math.round(viewW / 2),
+        y: resolvedType === 'math' ? safeMathRect.centerY : Math.round(viewH / 2),
+        zoom: 1,
+      };
+    } else {
+      initialCamera = { x: 0, y: 0, zoom: 1 };
+    }
 
     set({
       title: resolvedTitle,
       boardType: resolvedType,
       boardPattern: template.pattern,
+      notebookPaperSize: resolvedPaperSize,
       elements: starterElements,
       assets: {},
       selectedIds: [],
@@ -902,23 +953,41 @@ export const useBoardStore = create<BoardState>((set, get) => ({
       const savedData =
         (await idbGet<any>(STORAGE_KEY)) || (await idbGet<any>(LEGACY_STORAGE_KEY));
       if (savedData) {
-        const { elements, title, theme, boardType, boardPattern, mathGradeMode, assets } = savedData;
+        const {
+          elements,
+          title,
+          theme,
+          boardType,
+          boardPattern,
+          notebookPaperSize,
+          mathGradeMode,
+          assets,
+        } = savedData;
         const safeElements: BoardElement[] = Array.isArray(elements) ? elements : [];
         const safeTheme: 'light' | 'dark' = theme === 'dark' ? 'dark' : 'light';
         const safeType = normalizeBoardType(boardType);
         const safePattern = normalizeBoardPattern(boardPattern || getBoardTemplate(safeType).pattern);
+        const safePaperSize = normalizeNotebookPaperSize(notebookPaperSize);
         const safeGradeMode = normalizeMathGradeMode(mathGradeMode);
         if (typeof document !== 'undefined') {
           document.documentElement.classList.toggle('dark', safeTheme === 'dark');
         }
-        const initialCamera: Camera =
-          safeType === 'math' && typeof window !== 'undefined'
-            ? {
-                x: Math.round(window.innerWidth / 2),
-                y: Math.round(window.innerHeight / 2),
-                zoom: 1,
-              }
-            : { x: 0, y: 0, zoom: 1 };
+        let initialCamera: Camera;
+        if (safeType === 'notebook' && typeof window !== 'undefined') {
+          const config = getNotebookConfig(safePaperSize);
+          initialCamera = getNotebookFitCamera(
+            { width: window.innerWidth, height: window.innerHeight },
+            config
+          );
+        } else if (safeType === 'math' && typeof window !== 'undefined') {
+          initialCamera = {
+            x: Math.round(window.innerWidth / 2),
+            y: Math.round(window.innerHeight / 2),
+            zoom: 1,
+          };
+        } else {
+          initialCamera = { x: 0, y: 0, zoom: 1 };
+        }
         set({
           elements: safeElements,
           history: [safeElements],
@@ -928,6 +997,7 @@ export const useBoardStore = create<BoardState>((set, get) => ({
           isDarkMode: safeTheme === 'dark',
           boardType: safeType,
           boardPattern: safePattern,
+          notebookPaperSize: safePaperSize,
           mathGradeMode: safeGradeMode,
           camera: initialCamera,
           assets: assets || {},
@@ -951,7 +1021,16 @@ export const useBoardStore = create<BoardState>((set, get) => ({
 
   saveToStorageNow: async () => {
     try {
-      const { elements, title, theme, boardType, boardPattern, mathGradeMode, assets } = get();
+      const {
+        elements,
+        title,
+        theme,
+        boardType,
+        boardPattern,
+        notebookPaperSize,
+        mathGradeMode,
+        assets,
+      } = get();
       // Prune unreferenced assets to keep IndexedDB lean
       const usedAssetIds = new Set(
         elements
@@ -972,6 +1051,7 @@ export const useBoardStore = create<BoardState>((set, get) => ({
         theme,
         boardType,
         boardPattern,
+        notebookPaperSize,
         mathGradeMode,
         assets: prunedAssets,
       });

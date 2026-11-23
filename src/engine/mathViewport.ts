@@ -61,8 +61,8 @@ export function getSafeMathViewport(opts: SafeViewportOptions): SafeViewportRect
     top = opts.isPinnedProblemCollapsed ? 104 : 168;
   }
 
-  // Bottom inset: BottomDock (~64px) + ContextualToolbar (~52px if visible)
-  const bottomMargin = opts.hasContextualToolbar ? 118 : 72;
+  // Bottom inset: ContextualToolbar (~64px when elements are selected) or minimal padding (20px)
+  const bottomMargin = opts.hasContextualToolbar ? 64 : 20;
   const bottom = Math.max(top + 180, viewH - bottomMargin);
 
   const width = Math.max(200, right - left);

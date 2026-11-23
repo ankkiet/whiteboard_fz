@@ -19,9 +19,17 @@ import {
   drawFreehandPoints,
   drawLaserTrail,
   drawMarqueeRect,
+  drawNotebookLayout,
   drawWorldBackgroundPattern,
   getCanvasBackgroundColor,
 } from '../../engine/renderer';
+import {
+  clampNotebookCamera,
+  clampPointToNotebookMargins,
+  computeTotalNotebookPages,
+  getNotebookConfig,
+  getNotebookFitCamera,
+} from '../../engine/notebookEngine';
 import {
   buildStraightStrokePoints,
   computeBrushRadiusWorld,
@@ -75,6 +83,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
   const camera = useBoardStore((s) => s.camera);
   const boardType = useBoardStore((s) => s.boardType);
   const boardPattern = useBoardStore((s) => s.boardPattern);
+  const notebookPaperSize = useBoardStore((s) => s.notebookPaperSize);
   const isDarkMode = useBoardStore((s) => s.isDarkMode);
   const selectedIds = useBoardStore((s) => s.selectedIds);
   const editingElementId = useBoardStore((s) => s.editingElementId);
@@ -154,6 +163,15 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
     return () => observer.disconnect();
   }, []);
 
+  // Keep notebook page centered and clamped when viewport or paper size changes
+  useEffect(() => {
+    if (boardType === 'notebook') {
+      const config = getNotebookConfig(notebookPaperSize);
+      const totalPages = computeTotalNotebookPages(elements, camera, viewportSize.height, config);
+      useBoardStore.getState().setCamera((prev) => clampNotebookCamera(prev, viewportSize, config, totalPages));
+    }
+  }, [viewportSize, boardType, notebookPaperSize]);
+
   const drawFrame = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -175,21 +193,34 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
     const state = useBoardStore.getState();
 
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.fillStyle = getCanvasBackgroundColor(state.isDarkMode);
+    ctx.fillStyle = getCanvasBackgroundColor(state.isDarkMode, state.boardType);
     ctx.fillRect(0, 0, width, height);
 
     ctx.save();
     ctx.translate(state.camera.x, state.camera.y);
     ctx.scale(state.camera.zoom, state.camera.zoom);
 
-    drawWorldBackgroundPattern(
-      ctx,
-      state.camera,
-      width,
-      height,
-      state.boardPattern,
-      state.isDarkMode
-    );
+    if (state.boardType === 'notebook') {
+      drawNotebookLayout(
+        ctx,
+        state.camera,
+        width,
+        height,
+        state.isDarkMode,
+        state.elements,
+        state.notebookPaperSize,
+        state.title
+      );
+    } else {
+      drawWorldBackgroundPattern(
+        ctx,
+        state.camera,
+        width,
+        height,
+        state.boardPattern,
+        state.isDarkMode
+      );
+    }
 
     const sorted = [...state.elements].sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
     const erasingIds = erasingIdsRef.current;
@@ -247,6 +278,8 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
     elements,
     camera,
     boardPattern,
+    boardType,
+    notebookPaperSize,
     isDarkMode,
     selectedIds,
     editingElementId,
@@ -466,23 +499,44 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
         }
         if (key === '0') {
           e.preventDefault();
-          const cx = viewportSize.width / 2;
-          const cy = viewportSize.height / 2;
-          store.setCamera((prev) => zoomCameraAtPoint(prev, 1, cx, cy));
+          if (store.boardType === 'notebook') {
+            const config = getNotebookConfig(store.notebookPaperSize);
+            store.setCamera(getNotebookFitCamera(viewportSize, config));
+          } else {
+            const cx = viewportSize.width / 2;
+            const cy = viewportSize.height / 2;
+            store.setCamera((prev) => zoomCameraAtPoint(prev, 1, cx, cy));
+          }
           return;
         }
         if (key === '=' || key === '+') {
           e.preventDefault();
           const cx = viewportSize.width / 2;
           const cy = viewportSize.height / 2;
-          store.setCamera((prev) => zoomCameraAtPoint(prev, prev.zoom * 1.2, cx, cy));
+          store.setCamera((prev) => {
+            const next = zoomCameraAtPoint(prev, prev.zoom * 1.2, cx, cy);
+            if (store.boardType === 'notebook') {
+              const config = getNotebookConfig(store.notebookPaperSize);
+              const totalPages = computeTotalNotebookPages(store.elements, next, viewportSize.height, config);
+              return clampNotebookCamera(next, viewportSize, config, totalPages);
+            }
+            return next;
+          });
           return;
         }
         if (key === '-') {
           e.preventDefault();
           const cx = viewportSize.width / 2;
           const cy = viewportSize.height / 2;
-          store.setCamera((prev) => zoomCameraAtPoint(prev, prev.zoom / 1.2, cx, cy));
+          store.setCamera((prev) => {
+            const next = zoomCameraAtPoint(prev, prev.zoom / 1.2, cx, cy);
+            if (store.boardType === 'notebook') {
+              const config = getNotebookConfig(store.notebookPaperSize);
+              const totalPages = computeTotalNotebookPages(store.elements, next, viewportSize.height, config);
+              return clampNotebookCamera(next, viewportSize, config, totalPages);
+            }
+            return next;
+          });
           return;
         }
         return;
@@ -635,11 +689,42 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
       }
       normalizedDelta = Math.max(-300, Math.min(300, normalizedDelta));
 
+      const store = useBoardStore.getState();
+      if (store.boardType === 'notebook') {
+        const config = getNotebookConfig(store.notebookPaperSize);
+        const vp = {
+          width: canvas.clientWidth || window.innerWidth,
+          height: canvas.clientHeight || window.innerHeight,
+        };
+        const totalPages = computeTotalNotebookPages(
+          store.elements,
+          store.camera,
+          vp.height,
+          config
+        );
+
+        if (e.ctrlKey || e.metaKey) {
+          // Pinch or Ctrl+Wheel => Zoom anchored at cursor
+          const sensitivity = 0.005;
+          const factor = Math.exp(-normalizedDelta * sensitivity);
+          const nextCam = zoomCameraAtPoint(store.camera, store.camera.zoom * factor, anchorX, anchorY);
+          store.setCamera(clampNotebookCamera(nextCam, vp, config, totalPages));
+        } else {
+          // Normal Wheel => Vertical scroll through continuous notebook pages smoothly
+          const nextCam = {
+            ...store.camera,
+            y: store.camera.y - normalizedDelta,
+          };
+          store.setCamera(clampNotebookCamera(nextCam, vp, config, totalPages));
+        }
+        return;
+      }
+
       // Pinch-to-zoom on trackpads fires ctrlKey with small deltas; regular mouse notches are ~100px
       const sensitivity = e.ctrlKey || e.metaKey ? 0.006 : 0.0014;
       const factor = Math.exp(-normalizedDelta * sensitivity);
 
-      useBoardStore.getState().setCamera((prev) =>
+      store.setCamera((prev) =>
         zoomCameraAtPoint(prev, prev.zoom * factor, anchorX, anchorY)
       );
     };
@@ -712,10 +797,13 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
     if (store.currentTool === 'pen' || store.currentTool === 'highlighter') {
       modeRef.current = 'draw';
       const pressure = e.pointerType === 'pen' ? e.pressure : 0.5;
-      const snappedStart =
+      let snappedStart =
         store.currentTool === 'pen' && (store.virtualTools.ruler.active || store.virtualTools.setSquare.active)
           ? snapPointToVirtualToolEdge(worldPos, store.virtualTools, 16 / store.camera.zoom).point
           : worldPos;
+      if (store.boardType === 'notebook') {
+        snappedStart = clampPointToNotebookMargins(snappedStart, getNotebookConfig(store.notebookPaperSize));
+      }
       const startPt: [number, number, number] = [snappedStart.x, snappedStart.y, pressure];
       drawStartPointRef.current = startPt;
       brushCursorWorldRef.current = snappedStart;
@@ -771,20 +859,23 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
       store.currentTool === 'arrow'
     ) {
       modeRef.current = 'shape';
-      interactionStartWorldRef.current = worldPos;
+      const shapeStart = store.boardType === 'notebook'
+        ? clampPointToNotebookMargins(worldPos, getNotebookConfig(store.notebookPaperSize))
+        : worldPos;
+      interactionStartWorldRef.current = shapeStart;
       const maxZ = store.elements.reduce((max, el) => Math.max(max, el.zIndex || 0), 0);
       activeShapeRef.current = {
         id: `el_${Math.random().toString(36).slice(2, 10)}`,
         type: store.currentTool,
-        x: worldPos.x,
-        y: worldPos.y,
+        x: shapeStart.x,
+        y: shapeStart.y,
         width: 0,
         height: 0,
         color: store.color,
         fillColor: store.currentTool === 'arrow' ? 'transparent' : store.fillColor,
         strokeWidth: store.strokeWidth,
-        startPoint: store.currentTool === 'arrow' ? worldPos : undefined,
-        endPoint: store.currentTool === 'arrow' ? worldPos : undefined,
+        startPoint: store.currentTool === 'arrow' ? shapeStart : undefined,
+        endPoint: store.currentTool === 'arrow' ? shapeStart : undefined,
         zIndex: maxZ + 1,
       };
       drawFrame();
@@ -798,12 +889,15 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
       }
       const maxZ = store.elements.reduce((max, el) => Math.max(max, el.zIndex || 0), 0);
       const id = `el_${Math.random().toString(36).slice(2, 10)}`;
+      const textPos = store.boardType === 'notebook'
+        ? clampPointToNotebookMargins(worldPos, getNotebookConfig(store.notebookPaperSize))
+        : worldPos;
       store.addElement(
         {
           id,
           type: 'text',
-          x: worldPos.x,
-          y: worldPos.y,
+          x: textPos.x,
+          y: textPos.y,
           width: 240,
           height: 44,
           text: '',
@@ -942,11 +1036,18 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
     }
 
     if (mode === 'pan') {
-      store.setCamera((prev) => ({
-        ...prev,
+      const nextCam = {
+        ...store.camera,
         x: e.clientX - panOriginRef.current.x,
         y: e.clientY - panOriginRef.current.y,
-      }));
+      };
+      if (store.boardType === 'notebook') {
+        const config = getNotebookConfig(store.notebookPaperSize);
+        const totalPages = computeTotalNotebookPages(store.elements, nextCam, viewportSize.height, config);
+        store.setCamera(clampNotebookCamera(nextCam, viewportSize, config, totalPages));
+      } else {
+        store.setCamera(nextCam);
+      }
       return;
     }
 
@@ -963,16 +1064,26 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
 
     if (mode === 'draw') {
       updateCursorOverlayPos(e.clientX, e.clientY);
+      const isNotebook = store.boardType === 'notebook';
+      const notebookConfig = isNotebook ? getNotebookConfig(store.notebookPaperSize) : null;
+
       if (e.shiftKey && drawStartPointRef.current) {
         const startPt = drawStartPointRef.current;
+        let lineEnd = worldPos;
+        if (notebookConfig) {
+          lineEnd = clampPointToNotebookMargins(lineEnd, notebookConfig);
+        }
         const snapped = magneticSnapLineEnd(
           { x: startPt[0], y: startPt[1] },
-          worldPos
+          lineEnd
         );
-        brushCursorWorldRef.current = snapped.point;
+        const finalEnd = notebookConfig
+          ? clampPointToNotebookMargins(snapped.point, notebookConfig)
+          : snapped.point;
+        brushCursorWorldRef.current = finalEnd;
         activeStrokeRef.current = buildStraightStrokePoints(
           startPt,
-          [snapped.point.x, snapped.point.y, 0.5],
+          [finalEnd.x, finalEnd.y, 0.5],
           Math.max(3, 6 / store.camera.zoom)
         );
         requestRedraw();
@@ -984,9 +1095,14 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
         (store.virtualTools.ruler.active || store.virtualTools.setSquare.active);
       const snapThresh = 16 / store.camera.zoom;
 
-      brushCursorWorldRef.current = hasVirtualEdge
+      let rawCursorWorld = hasVirtualEdge
         ? snapPointToVirtualToolEdge(worldPos, store.virtualTools, snapThresh).point
         : worldPos;
+      if (notebookConfig) {
+        rawCursorWorld = clampPointToNotebookMargins(rawCursorWorld, notebookConfig);
+      }
+      brushCursorWorldRef.current = rawCursorWorld;
+
       const pts = activeStrokeRef.current;
       const minStep = 1.2 / store.camera.zoom;
       const coalesced = e.nativeEvent.getCoalescedEvents?.();
@@ -995,10 +1111,13 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
 
       for (const sample of samples) {
         const rawWorld = screenToWorld(sample.clientX, sample.clientY, store.camera, rect);
-        const sampleWorld = hasVirtualEdge
+        let sampleWorld = hasVirtualEdge
           ? snapPointToVirtualToolEdge(rawWorld, store.virtualTools, snapThresh).point
           : rawWorld;
         if (!Number.isFinite(sampleWorld.x) || !Number.isFinite(sampleWorld.y)) continue;
+        if (notebookConfig) {
+          sampleWorld = clampPointToNotebookMargins(sampleWorld, notebookConfig);
+        }
         const samplePressure = sample.pointerType === 'pen' ? sample.pressure : 0.5;
         const last = pts[pts.length - 1];
         if (!last || Math.hypot(sampleWorld.x - last[0], sampleWorld.y - last[1]) >= minStep) {
@@ -1066,7 +1185,11 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
     if (mode === 'shape' && activeShapeRef.current) {
       const start = interactionStartWorldRef.current;
       const shapeType = activeShapeRef.current.type;
-      const end = constrainShapeEndPoint(start, worldPos, shapeType, e.shiftKey);
+      let targetWorld = worldPos;
+      if (store.boardType === 'notebook') {
+        targetWorld = clampPointToNotebookMargins(targetWorld, getNotebookConfig(store.notebookPaperSize));
+      }
+      const end = constrainShapeEndPoint(start, targetWorld, shapeType, e.shiftKey);
 
       if (shapeType === 'arrow' || shapeType === 'line') {
         activeShapeRef.current = {

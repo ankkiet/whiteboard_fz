@@ -16,6 +16,21 @@ export type EraserMode = 'stroke' | 'area';
 
 export type BoardType = 'basic' | 'math' | 'notebook' | 'mindmap';
 
+export type NotebookPaperSize = 'a4' | 'a3' | 'b5' | 'letter';
+
+export interface NotebookPageConfig {
+  id: NotebookPaperSize;
+  name: string;
+  label: string;
+  width: number;
+  height: number;
+  marginLeft: number;
+  marginRight: number;
+  marginTop: number;
+  marginBottom: number;
+  lineSpacing: number;
+}
+
 export type MathGradeMode = 'primary' | 'middle' | 'high';
 
 export type BoardPattern =

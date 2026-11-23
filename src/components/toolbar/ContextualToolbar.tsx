@@ -123,14 +123,8 @@ export const ContextualToolbar: React.FC = () => {
   const isStickyTool = currentTool === 'sticky';
   const isEraserTool = currentTool === 'eraser';
 
-  if (
-    !isStrokeTool &&
-    !isShapeTool &&
-    !isTextTool &&
-    !isStickyTool &&
-    !isEraserTool &&
-    !hasSelection
-  ) {
+  // Thanh ngữ cảnh chỉ xuất hiện khi người dùng chủ động chọn 1 hoặc nhiều đối tượng trên bảng
+  if (!hasSelection) {
     return null;
   }
 
@@ -278,9 +272,9 @@ export const ContextualToolbar: React.FC = () => {
   return (
     <div
       role="toolbar"
-      aria-label="Thanh thuộc tính ngữ cảnh"
+      aria-label="Thanh công cụ đối tượng được chọn"
       data-testid="contextual-toolbar"
-      className="absolute bottom-[74px] sm:bottom-[76px] left-1/2 -translate-x-1/2 z-20 max-w-[calc(100vw-20px)] flex items-center gap-2.5 sm:gap-3 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-3 sm:px-3.5 py-2 rounded-2xl shadow-lg shadow-slate-900/8 dark:shadow-black/40 border border-slate-200/85 dark:border-slate-800 text-slate-800 dark:text-slate-100 overflow-x-auto"
+      className="absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-25 max-w-[calc(100vw-20px)] flex items-center gap-2 sm:gap-2.5 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl px-3 sm:px-4 py-2 rounded-full shadow-xl shadow-slate-900/15 dark:shadow-black/50 border border-slate-200/90 dark:border-slate-800 text-slate-800 dark:text-slate-100 overflow-x-auto scrollbar-none animate-in fade-in slide-in-from-bottom-2 duration-150"
     >
       {showEraserControls && (
         <div className="flex items-center gap-2.5 shrink-0">

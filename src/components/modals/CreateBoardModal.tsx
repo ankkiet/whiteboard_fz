@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { BoardType } from '../../types/board';
+import { BoardType, NotebookPaperSize } from '../../types/board';
 import { BOARD_TEMPLATES, getBoardTemplate } from '../../engine/boardTemplates';
 import { BoardTemplatePreview } from '../home/BoardTemplatePreview';
 import { AlertTriangle, Check, Plus, X } from 'lucide-react';
@@ -11,7 +11,11 @@ interface CreateBoardModalProps {
   localDraftTitle: string;
   localDraftElementCount: number;
   onClose: () => void;
-  onCreate: (options: { title: string; boardType: BoardType }) => void;
+  onCreate: (options: {
+    title: string;
+    boardType: BoardType;
+    notebookPaperSize?: NotebookPaperSize;
+  }) => void;
 }
 
 export const CreateBoardModal: React.FC<CreateBoardModalProps> = ({
@@ -24,12 +28,14 @@ export const CreateBoardModal: React.FC<CreateBoardModalProps> = ({
   onCreate,
 }) => {
   const [selectedType, setSelectedType] = useState<BoardType>(initialType);
+  const [selectedPaperSize, setSelectedPaperSize] = useState<NotebookPaperSize>('a4');
   const [boardTitle, setBoardTitle] = useState<string>(getBoardTemplate(initialType).defaultTitle);
   const [didEditTitle, setDidEditTitle] = useState(false);
 
   useEffect(() => {
     if (!isOpen) return;
     setSelectedType(initialType);
+    setSelectedPaperSize('a4');
     setBoardTitle(getBoardTemplate(initialType).defaultTitle);
     setDidEditTitle(false);
   }, [isOpen, initialType]);
@@ -60,6 +66,7 @@ export const CreateBoardModal: React.FC<CreateBoardModalProps> = ({
     onCreate({
       title: boardTitle.trim() || fallbackTitle,
       boardType: selectedType,
+      notebookPaperSize: selectedType === 'notebook' ? selectedPaperSize : undefined,
     });
   };
 
@@ -144,6 +151,52 @@ export const CreateBoardModal: React.FC<CreateBoardModalProps> = ({
               );
             })}
           </div>
+
+          {/* Notebook Paper Size Selection */}
+          {selectedType === 'notebook' && (
+            <div className="p-3.5 rounded-xl border border-indigo-200 dark:border-indigo-900/50 bg-indigo-50/30 dark:bg-indigo-950/20 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                  Khổ giấy vở ghi chú
+                </span>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                  Mặc định khổ A4, không gian trang liên tục
+                </span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2" role="radiogroup" aria-label="Khổ giấy">
+                {[
+                  { id: 'a4' as const, label: 'Khổ A4', desc: '210 × 297 mm (mặc định)' },
+                  { id: 'a3' as const, label: 'Khổ A3', desc: '297 × 420 mm (khổ lớn)' },
+                  { id: 'b5' as const, label: 'Khổ B5', desc: '176 × 250 mm (vở học sinh)' },
+                  { id: 'letter' as const, label: 'Khổ Letter', desc: '216 × 279 mm (tiêu chuẩn)' },
+                ].map((paper) => {
+                  const isPaperSelected = selectedPaperSize === paper.id;
+                  return (
+                    <button
+                      key={paper.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={isPaperSelected}
+                      onClick={() => setSelectedPaperSize(paper.id)}
+                      className={`p-2 rounded-lg border text-left transition-colors cursor-pointer ${
+                        isPaperSelected
+                          ? 'border-indigo-600 dark:border-indigo-500 bg-white dark:bg-slate-900 shadow-xs'
+                          : 'border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/50 hover:border-slate-300 dark:hover:border-slate-700'
+                      }`}
+                    >
+                      <div className="text-xs font-semibold text-slate-900 dark:text-slate-100 flex items-center justify-between">
+                        <span>{paper.label}</span>
+                        {isPaperSelected && <Check className="w-3 h-3 text-indigo-600 dark:text-indigo-400" />}
+                      </div>
+                      <div className="text-[10.5px] text-slate-500 dark:text-slate-400 mt-0.5">
+                        {paper.desc}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Board Title Input */}
           <div className="space-y-1.5">

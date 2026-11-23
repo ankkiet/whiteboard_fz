@@ -1,1 +1,1 @@
-window.__BTTM_VERSION_CALLBACK__&&window.__BTTM_VERSION_CALLBACK__({"version":"1.2.6958","buildId":"69589c06d642","notes":"Bản cập nhật Bảng Trắng Thông Minh mới nhất (Windows .exe & macOS .app)","updateOrigin":"https://whiteboardfz.pages.dev"});
+window.__BTTM_VERSION_CALLBACK__&&window.__BTTM_VERSION_CALLBACK__({"version":"v_fz.1.1.1.1.0","buildId":"937a7c6f860b","notes":"Bản cập nhật Bảng Trắng Thông Minh mới nhất (Windows .exe & macOS .app)","updateOrigin":"https://whiteboardfz.pages.dev"});

@@ -278,10 +278,26 @@ export async function applyInPlaceAppUpdate(
 
   markDesktopAppAsDownloaded(manifest);
 
-  // Nạp lại trực tiếp tài liệu trong cửa sổ hiện tại
-  document.open();
-  document.write(html);
-  document.close();
+  // Nạp lại trực tiếp tài liệu an toàn trong cửa sổ hiện tại mà không bị chặn module script
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+
+  document.title = doc.title;
+  document.body.innerHTML = doc.body.innerHTML;
+
+  document.querySelectorAll('style, link[rel="stylesheet"]').forEach((el) => el.remove());
+  doc.querySelectorAll('style').forEach((st) => {
+    document.head.appendChild(document.importNode(st, true));
+  });
+
+  const scripts = doc.querySelectorAll('script');
+  scripts.forEach((s) => {
+    const newScript = document.createElement('script');
+    if (s.type) newScript.type = s.type;
+    if (s.src) newScript.src = s.src;
+    newScript.textContent = s.textContent;
+    document.body.appendChild(newScript);
+  });
 }
 
 export const PWAInstallTriggerButton: React.FC<{
@@ -369,7 +385,7 @@ export const HomeSettingsMenu: React.FC<{
     void syncInitialBadge();
     const onDownloaded = () => {
       setHasUpdateBadge(false);
-      const ver = getDownloadedVersion() || '1.2';
+      const ver = getDownloadedVersion() || 'v_fz.1.1.1.1.0';
       const id = getDownloadedBuildId() || '';
       setCheckResult({ status: 'up-to-date', version: ver, buildId: id });
     };
@@ -419,7 +435,7 @@ export const HomeSettingsMenu: React.FC<{
 
       if (!downloaded) {
         setCheckResult({ status: 'not-installed', latestManifest: latest });
-        addToast(`Phiên bản mới nhất hiện tại là v${latest.version}. Bạn có thể tải về máy!`, 'info');
+        addToast(`Phiên bản mới nhất hiện tại là ${latest.version}. Bạn có thể tải về máy!`, 'info');
         return;
       }
 
@@ -431,7 +447,7 @@ export const HomeSettingsMenu: React.FC<{
           latestManifest: latest,
           sourceOrigin: result.sourceOrigin,
         });
-        addToast(`Phát hiện bản cập nhật mới v${latest.version}!`, 'success');
+        addToast(`Phát hiện bản cập nhật mới ${latest.version}!`, 'success');
       } else {
         setHasUpdateBadge(false);
         setCheckResult({
@@ -439,7 +455,7 @@ export const HomeSettingsMenu: React.FC<{
           version: latest.version,
           buildId: latest.buildId,
         });
-        addToast(`Ứng dụng của bạn đang ở phiên bản mới nhất (v${latest.version})!`, 'success');
+        addToast(`Ứng dụng của bạn đang ở phiên bản mới nhất (${latest.version})!`, 'success');
       }
     } finally {
       setIsChecking(false);
@@ -465,7 +481,7 @@ export const HomeSettingsMenu: React.FC<{
   const currentVersionLabel =
     getDownloadedVersion() ||
     (typeof window !== 'undefined' && window.__BTTM_EMBEDDED_BUILD__?.version) ||
-    'Bản Web trực tuyến';
+    'v_fz.1.1.1.1.0';
   const isDownloaded = hasDesktopAppBeenDownloaded();
 
   return (
@@ -554,7 +570,7 @@ export const HomeSettingsMenu: React.FC<{
               >
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
                 <span>
-                  Bạn đang dùng bản mới nhất (<strong>v{checkResult.version}</strong>).
+                  Bạn đang dùng bản mới nhất (<strong>{checkResult.version}</strong>).
                 </span>
               </div>
             )}
@@ -566,10 +582,10 @@ export const HomeSettingsMenu: React.FC<{
               >
                 <div className="flex items-center gap-1.5 text-amber-900 dark:text-amber-200 font-bold text-xs">
                   <CheckCircle2 className="w-4 h-4 text-amber-600 shrink-0" />
-                  <span>Đã có phiên bản mới: v{checkResult.latestManifest.version}!</span>
+                  <span>Đã có phiên bản mới: {checkResult.latestManifest.version}!</span>
                 </div>
                 <div className="text-amber-800/90 dark:text-amber-300/90">
-                  Bản hiện tại: <span className="font-semibold">{checkResult.currentVersion}</span> → Bản mới nhất: <span className="font-semibold">v{checkResult.latestManifest.version}</span>
+                  Bản hiện tại: <span className="font-semibold">{checkResult.currentVersion}</span> → Bản mới nhất: <span className="font-semibold">{checkResult.latestManifest.version}</span>
                 </div>
 
                 <div className="space-y-1.5 pt-1">
@@ -612,7 +628,7 @@ export const HomeSettingsMenu: React.FC<{
             {checkResult.status === 'not-installed' && (
               <div className="p-2.5 rounded-lg bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200/70 dark:border-indigo-800/60 space-y-2 text-[11px]">
                 <div className="text-indigo-900 dark:text-indigo-200">
-                  Phiên bản mới nhất: <strong>v{checkResult.latestManifest?.version || '1.2'}</strong>
+                  Phiên bản mới nhất: <strong>{checkResult.latestManifest?.version || 'v_fz.1.1.1.1.0'}</strong>
                 </div>
                 <button
                   type="button"

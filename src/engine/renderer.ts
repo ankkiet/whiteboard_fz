@@ -2,8 +2,10 @@ import { getStroke } from 'perfect-freehand';
 import {
   BoardElement,
   BoardPattern,
+  BoardType,
   Camera,
   LaserPoint,
+  NotebookPaperSize,
   Point,
   Rect,
 } from '../types/board';
@@ -16,6 +18,8 @@ import {
 } from './exportUtils';
 import { MATH_UNIT_PX } from './mathUtils';
 import { latexToReadableMath } from './mathDisplay';
+import { computeTotalNotebookPages, getNotebookConfig } from './notebookEngine';
+import { jsPDF } from 'jspdf';
 
 export const ADAPTIVE_INK = '#1e293b';
 
@@ -29,7 +33,10 @@ export function resolveColor(color: string, isDarkMode: boolean): string {
   return color;
 }
 
-export function getCanvasBackgroundColor(isDarkMode: boolean): string {
+export function getCanvasBackgroundColor(isDarkMode: boolean, boardType?: BoardType): string {
+  if (boardType === 'notebook') {
+    return isDarkMode ? '#0b0f19' : '#eef1f6';
+  }
   return isDarkMode ? '#0f172a' : '#f8fafc';
 }
 
@@ -343,6 +350,159 @@ export function drawWorldBackgroundPattern(
     ctx.lineTo(0, maxR);
     ctx.stroke();
   }
+  ctx.restore();
+}
+
+/**
+ * Draws the structured notebook layout:
+ * - Clean paper sheets for continuous pages (separated only by a horizontal dividing line)
+ * - Distinct left margin rule (red) and right margin guide (dashed)
+ * - Top and bottom horizontal margins for each page
+ * - Ruled handwriting lines
+ * - Page number indicator at the top right of each page and horizontal divider line at the end of each page
+ */
+export function drawNotebookLayout(
+  ctx: CanvasRenderingContext2D,
+  camera: Camera,
+  viewportWidth: number,
+  viewportHeight: number,
+  isDarkMode: boolean,
+  elements: BoardElement[],
+  paperSize: NotebookPaperSize = 'a4',
+  notebookTitle?: string
+) {
+  const config = getNotebookConfig(paperSize);
+  const totalPages = computeTotalNotebookPages(elements, camera, viewportHeight, config);
+
+  const safeZoom = Math.max(0.1, camera.zoom);
+  const worldTop = -camera.y / safeZoom;
+  const worldBottom = (viewportHeight - camera.y) / safeZoom;
+
+  ctx.save();
+
+  for (let p = 0; p < totalPages; p++) {
+    const pageY = p * config.height;
+    const pageBottom = pageY + config.height;
+
+    // Viewport culling: only draw pages that intersect with visible viewport
+    if (pageBottom < worldTop - 100 || pageY > worldBottom + 100) {
+      continue;
+    }
+
+    // 1. Paper drop shadow
+    if (!isDarkMode) {
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+      ctx.fillRect(2, pageY + 3, config.width + 4, config.height + 4);
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.03)';
+      ctx.fillRect(4, pageY + 6, config.width + 8, config.height + 6);
+    } else {
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+      ctx.fillRect(2, pageY + 2, config.width + 4, config.height + 4);
+    }
+
+    // 2. Paper background
+    ctx.fillStyle = isDarkMode ? '#1e293b' : '#ffffff';
+    ctx.fillRect(0, pageY, config.width, config.height);
+
+    // 3. Subtle page border
+    ctx.strokeStyle = isDarkMode ? 'rgba(255, 255, 255, 0.08)' : 'rgba(15, 23, 42, 0.08)';
+    ctx.lineWidth = 1 / safeZoom;
+    ctx.strokeRect(0, pageY, config.width, config.height);
+
+    // 4. Subtle notebook spine shading on the left edge (0 to 10px)
+    const spineGrad = ctx.createLinearGradient(0, pageY, 10, pageY);
+    spineGrad.addColorStop(0, isDarkMode ? 'rgba(0, 0, 0, 0.35)' : 'rgba(0, 0, 0, 0.07)');
+    spineGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = spineGrad;
+    ctx.fillRect(0, pageY, 10, config.height);
+
+    // 5. Ruled lines (dòng kẻ ngang)
+    const lineStartY = pageY + config.marginTop;
+    const lineEndY = pageBottom - config.marginBottom;
+    ctx.strokeStyle = isDarkMode ? 'rgba(148, 163, 184, 0.22)' : 'rgba(59, 130, 246, 0.24)';
+    ctx.lineWidth = 1 / safeZoom;
+    ctx.beginPath();
+    for (let y = lineStartY; y <= lineEndY; y += config.lineSpacing) {
+      ctx.moveTo(0, y);
+      ctx.lineTo(config.width - config.marginRight, y);
+    }
+    ctx.stroke();
+
+    // 6. Left vertical margin line (lề trái đỏ/hồng nhạt - đặc trưng vở kẻ ngang)
+    ctx.strokeStyle = isDarkMode ? 'rgba(244, 63, 94, 0.65)' : 'rgba(239, 68, 68, 0.55)';
+    ctx.lineWidth = 1.2 / safeZoom;
+    ctx.beginPath();
+    ctx.moveTo(config.marginLeft, pageY);
+    ctx.lineTo(config.marginLeft, pageBottom);
+    ctx.stroke();
+
+    // 7. Right vertical margin line (lề phải nét đứt mờ)
+    const rightMarginX = config.width - config.marginRight;
+    ctx.strokeStyle = isDarkMode ? 'rgba(148, 163, 184, 0.35)' : 'rgba(148, 163, 184, 0.45)';
+    ctx.lineWidth = 0.9 / safeZoom;
+    ctx.setLineDash([4 / safeZoom, 4 / safeZoom]);
+    ctx.beginPath();
+    ctx.moveTo(rightMarginX, pageY);
+    ctx.lineTo(rightMarginX, pageBottom);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // 8. Page header (vùng lề trên: chỉ hiển thị tên sổ ghi chép)
+    ctx.fillStyle = isDarkMode ? 'rgba(148, 163, 184, 0.65)' : 'rgba(100, 116, 139, 0.7)';
+    ctx.font = '500 11px system-ui, -apple-system, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    const displayTitle = (notebookTitle && notebookTitle.trim()) || 'Vở ghi chép';
+    ctx.fillText(displayTitle, config.marginLeft + 6, pageY + config.marginTop * 0.45);
+
+    ctx.textAlign = 'right';
+    ctx.fillText(`Trang ${p + 1}`, rightMarginX - 4, pageY + config.marginTop * 0.45);
+
+    // 9. Horizontal dividing line at the end of page ("ngăn cách bằng dòng gạch ngang thôi")
+    ctx.strokeStyle = isDarkMode ? 'rgba(148, 163, 184, 0.55)' : 'rgba(100, 116, 139, 0.45)';
+    ctx.lineWidth = 1.5 / safeZoom;
+    ctx.setLineDash([6 / safeZoom, 4 / safeZoom]);
+    ctx.beginPath();
+    ctx.moveTo(0, pageBottom);
+    ctx.lineTo(config.width, pageBottom);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Page break badge centered on divider
+    const badgeText = `Hết trang ${p + 1}`;
+    ctx.font = '600 10.5px system-ui, -apple-system, sans-serif';
+    const textMetrics = ctx.measureText(badgeText);
+    const badgeW = textMetrics.width + 20;
+    const badgeH = 18;
+    const badgeX = (config.width - badgeW) / 2;
+    const badgeY = pageBottom - badgeH / 2;
+
+    ctx.fillStyle = isDarkMode ? '#0f172a' : '#f1f5f9';
+    ctx.strokeStyle = isDarkMode ? 'rgba(148, 163, 184, 0.4)' : 'rgba(148, 163, 184, 0.5)';
+    ctx.lineWidth = 1 / safeZoom;
+
+    // Rounded pill rect
+    const r = 9;
+    ctx.beginPath();
+    ctx.moveTo(badgeX + r, badgeY);
+    ctx.lineTo(badgeX + badgeW - r, badgeY);
+    ctx.quadraticCurveTo(badgeX + badgeW, badgeY, badgeX + badgeW, badgeY + r);
+    ctx.lineTo(badgeX + badgeW, badgeY + badgeH - r);
+    ctx.quadraticCurveTo(badgeX + badgeW, badgeY + badgeH, badgeX + badgeW - r, badgeY + badgeH);
+    ctx.lineTo(badgeX + r, badgeY + badgeH);
+    ctx.quadraticCurveTo(badgeX, badgeY + badgeH, badgeX, badgeY + badgeH - r);
+    ctx.lineTo(badgeX, badgeY + r);
+    ctx.quadraticCurveTo(badgeX, badgeY, badgeX + r, badgeY);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = isDarkMode ? '#94a3b8' : '#64748b';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(badgeText, config.width / 2, pageBottom);
+  }
+
   ctx.restore();
 }
 
@@ -1025,23 +1185,64 @@ export interface ExportPngResult {
   wasClamped: boolean;
 }
 
-export async function exportBoardToPng(options: {
+export type PdfPageLayout = 'fit' | 'a4-landscape' | 'a4-portrait';
+
+export interface ExportPdfOptions {
   elements: BoardElement[];
   assets: Record<string, string>;
   isDarkMode: boolean;
   boardPattern: BoardPattern;
+  boardType?: BoardType;
+  notebookPaperSize?: NotebookPaperSize;
   includeBackground: boolean;
   includePattern: boolean;
   scale?: ExportQualityScale;
-}): Promise<ExportPngResult> {
+  layout?: PdfPageLayout;
+  title?: string;
+}
+
+export interface ExportPdfResult {
+  blob: Blob;
+  pageCount: number;
+  widthPt: number;
+  heightPt: number;
+}
+
+export interface RenderOffscreenOptions {
+  elements: BoardElement[];
+  assets: Record<string, string>;
+  isDarkMode: boolean;
+  boardPattern: BoardPattern;
+  boardType?: BoardType;
+  notebookPaperSize?: NotebookPaperSize;
+  includeBackground: boolean;
+  includePattern: boolean;
+  scale?: ExportQualityScale;
+  customBounds?: { minX: number; minY: number; width: number; height: number; padding: number };
+  title?: string;
+}
+
+export async function renderBoardToOffscreenCanvas(options: RenderOffscreenOptions): Promise<{
+  canvas: HTMLCanvasElement;
+  pixelWidth: number;
+  pixelHeight: number;
+  effectiveScale: number;
+  wasClamped: boolean;
+  width: number;
+  height: number;
+}> {
   const {
     elements,
     assets,
     isDarkMode,
     boardPattern,
+    boardType,
+    notebookPaperSize,
     includeBackground,
     includePattern,
     scale: requestedScale = 4,
+    customBounds,
+    title,
   } = options;
 
   // Ensure web fonts are loaded so exported typography is razor-sharp
@@ -1053,7 +1254,7 @@ export async function exportBoardToPng(options: {
     }
   }
 
-  const { minX, minY, width, height, padding } = computeBoardExportBounds(elements, 64);
+  const { minX, minY, width, height, padding } = customBounds || computeBoardExportBounds(elements, 64);
   const { pixelWidth, pixelHeight, effectiveScale, wasClamped } =
     computeOptimalExportDimensions(width, height, requestedScale);
 
@@ -1061,7 +1262,7 @@ export async function exportBoardToPng(options: {
   canvas.width = pixelWidth;
   canvas.height = pixelHeight;
   const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('Không thể khởi tạo Canvas xuất ảnh.');
+  if (!ctx) throw new Error('Không thể khởi tạo Canvas xuất dữ liệu.');
 
   // Preload all referenced images cleanly at full native resolution before drawing
   const preloadedImages = new Map<string, HTMLImageElement>();
@@ -1084,7 +1285,7 @@ export async function exportBoardToPng(options: {
   ctx.scale(effectiveScale, effectiveScale);
 
   if (includeBackground) {
-    ctx.fillStyle = getCanvasBackgroundColor(isDarkMode);
+    ctx.fillStyle = getCanvasBackgroundColor(isDarkMode, boardType);
     ctx.fillRect(0, 0, width, height);
   }
 
@@ -1097,8 +1298,12 @@ export async function exportBoardToPng(options: {
   ctx.save();
   ctx.translate(exportCamera.x, exportCamera.y);
 
-  if (includeBackground && includePattern && boardPattern !== 'plain') {
-    drawWorldBackgroundPattern(ctx, exportCamera, width, height, boardPattern, isDarkMode);
+  if (includeBackground && includePattern) {
+    if (boardType === 'notebook') {
+      drawNotebookLayout(ctx, exportCamera, width, height, isDarkMode, elements, notebookPaperSize, title);
+    } else if (boardPattern !== 'plain') {
+      drawWorldBackgroundPattern(ctx, exportCamera, width, height, boardPattern, isDarkMode);
+    }
   }
 
   const sorted = [...elements].sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
@@ -1112,6 +1317,31 @@ export async function exportBoardToPng(options: {
   }
 
   ctx.restore();
+
+  return {
+    canvas,
+    pixelWidth,
+    pixelHeight,
+    effectiveScale,
+    wasClamped,
+    width,
+    height,
+  };
+}
+
+export async function exportBoardToPng(options: {
+  elements: BoardElement[];
+  assets: Record<string, string>;
+  isDarkMode: boolean;
+  boardPattern: BoardPattern;
+  boardType?: BoardType;
+  notebookPaperSize?: NotebookPaperSize;
+  includeBackground: boolean;
+  includePattern: boolean;
+  scale?: ExportQualityScale;
+}): Promise<ExportPngResult> {
+  const { canvas, pixelWidth, pixelHeight, effectiveScale, wasClamped } =
+    await renderBoardToOffscreenCanvas(options);
 
   const blob = await new Promise<Blob>((resolve, reject) => {
     canvas.toBlob(
@@ -1132,5 +1362,148 @@ export async function exportBoardToPng(options: {
     pixelHeight,
     effectiveScale,
     wasClamped,
+  };
+}
+
+export async function exportBoardToPdf(options: ExportPdfOptions): Promise<ExportPdfResult> {
+  const {
+    elements,
+    boardType,
+    notebookPaperSize,
+    layout = 'fit',
+    title,
+  } = options;
+
+  // Trường hợp 1: Vở ghi chép nhiều trang (Xuất từng trang A4 dọc đúng chuẩn trang vở)
+  if (boardType === 'notebook' && layout !== 'fit') {
+    const config = getNotebookConfig(notebookPaperSize);
+    const camera: Camera = { x: 0, y: 0, zoom: 1 };
+    const totalPages = Math.min(
+      50,
+      computeTotalNotebookPages(elements, camera, 800, config)
+    );
+
+    const a4WidthPt = 595.28;
+    const a4HeightPt = 841.89;
+
+    const doc = new jsPDF({
+      orientation: 'portrait',
+      unit: 'pt',
+      format: 'a4',
+      compress: true,
+    });
+
+    if (title) {
+      doc.setProperties({
+        title,
+        creator: 'Bảng Trắng Thông Minh',
+      });
+    }
+
+    for (let p = 0; p < totalPages; p++) {
+      if (p > 0) {
+        doc.addPage('a4', 'portrait');
+      }
+
+      const pageBounds = {
+        minX: 0,
+        minY: p * config.height,
+        width: config.width,
+        height: config.height,
+        padding: 0,
+      };
+
+      const rendered = await renderBoardToOffscreenCanvas({
+        ...options,
+        scale: 2, // 2x gives 300+ DPI on A4 with fast compression
+        customBounds: pageBounds,
+      });
+
+      doc.addImage(rendered.canvas, 'PNG', 0, 0, a4WidthPt, a4HeightPt, undefined, 'FAST');
+    }
+
+    const blob = doc.output('blob');
+    return {
+      blob,
+      pageCount: totalPages,
+      widthPt: a4WidthPt,
+      heightPt: a4HeightPt,
+    };
+  }
+
+  // Trường hợp 2: Bảng tiêu chuẩn, bảng toán, sơ đồ tư duy hoặc Vừa vặn nội dung
+  const { canvas, pixelWidth, pixelHeight, width, height } =
+    await renderBoardToOffscreenCanvas(options);
+
+  let doc: jsPDF;
+  let finalWidthPt: number;
+  let finalHeightPt: number;
+
+  if (layout === 'a4-landscape') {
+    finalWidthPt = 841.89;
+    finalHeightPt = 595.28;
+    doc = new jsPDF({
+      orientation: 'landscape',
+      unit: 'pt',
+      format: 'a4',
+      compress: true,
+    });
+    const margin = 24;
+    const availW = finalWidthPt - margin * 2;
+    const availH = finalHeightPt - margin * 2;
+    const ratio = Math.min(availW / pixelWidth, availH / pixelHeight);
+    const drawW = pixelWidth * ratio;
+    const drawH = pixelHeight * ratio;
+    const posX = (finalWidthPt - drawW) / 2;
+    const posY = (finalHeightPt - drawH) / 2;
+    doc.addImage(canvas, 'PNG', posX, posY, drawW, drawH, undefined, 'FAST');
+  } else if (layout === 'a4-portrait') {
+    finalWidthPt = 595.28;
+    finalHeightPt = 841.89;
+    doc = new jsPDF({
+      orientation: 'portrait',
+      unit: 'pt',
+      format: 'a4',
+      compress: true,
+    });
+    const margin = 24;
+    const availW = finalWidthPt - margin * 2;
+    const availH = finalHeightPt - margin * 2;
+    const ratio = Math.min(availW / pixelWidth, availH / pixelHeight);
+    const drawW = pixelWidth * ratio;
+    const drawH = pixelHeight * ratio;
+    const posX = (finalWidthPt - drawW) / 2;
+    const posY = (finalHeightPt - drawH) / 2;
+    doc.addImage(canvas, 'PNG', posX, posY, drawW, drawH, undefined, 'FAST');
+  } else {
+    // layout === 'fit': Khổ giấy PDF tự động ôm sát chính xác tỉ lệ nội dung vẽ
+    const widthPt = Math.max(100, Math.min(14400, Math.round(width * 0.75)));
+    const heightPt = Math.max(100, Math.min(14400, Math.round(height * 0.75)));
+    finalWidthPt = widthPt;
+    finalHeightPt = heightPt;
+
+    const orientation = widthPt >= heightPt ? 'landscape' : 'portrait';
+    doc = new jsPDF({
+      orientation,
+      unit: 'pt',
+      format: [widthPt, heightPt],
+      compress: true,
+    });
+    doc.addImage(canvas, 'PNG', 0, 0, widthPt, heightPt, undefined, 'FAST');
+  }
+
+  if (title) {
+    doc.setProperties({
+      title,
+      creator: 'Bảng Trắng Thông Minh',
+    });
+  }
+
+  const blob = doc.output('blob');
+  return {
+    blob,
+    pageCount: 1,
+    widthPt: finalWidthPt,
+    heightPt: finalHeightPt,
   };
 }
