@@ -41,7 +41,48 @@ function createMainWindow() {
 }
 
 app.whenReady().then(() => {
-  Menu.setApplicationMenu(null);
+  if (process.platform === 'darwin') {
+    const template = [
+      {
+        label: app.name,
+        submenu: [
+          { role: 'about', label: 'Giới thiệu Bảng Trắng Thông Minh' },
+          { type: 'separator' },
+          { role: 'services', label: 'Dịch vụ' },
+          { type: 'separator' },
+          { role: 'hide', label: 'Ẩn ứng dụng' },
+          { role: 'hideOthers', label: 'Ẩn ứng dụng khác' },
+          { role: 'unhide', label: 'Hiện tất cả' },
+          { type: 'separator' },
+          { role: 'quit', label: 'Thoát' },
+        ],
+      },
+      {
+        label: 'Chỉnh sửa',
+        submenu: [
+          { role: 'undo', label: 'Hoàn tác' },
+          { role: 'redo', label: 'Làm lại' },
+          { type: 'separator' },
+          { role: 'cut', label: 'Cắt' },
+          { role: 'copy', label: 'Sao chép' },
+          { role: 'paste', label: 'Dán' },
+          { role: 'selectAll', label: 'Chọn tất cả' },
+        ],
+      },
+      {
+        label: 'Cửa sổ',
+        submenu: [
+          { role: 'minimize', label: 'Thu nhỏ' },
+          { role: 'zoom', label: 'Phóng to' },
+          { type: 'separator' },
+          { role: 'front', label: 'Đưa lên trước' },
+        ],
+      },
+    ];
+    Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+  } else {
+    Menu.setApplicationMenu(null);
+  }
   createMainWindow();
 
   app.on('activate', () => {

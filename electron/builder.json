@@ -29,7 +29,9 @@
   "mac": {
     "target": ["dmg", "zip"],
     "category": "public.app-category.education",
-    "icon": "public/pwa-512x512.png"
+    "icon": "public/pwa-512x512.png",
+    "artifactName": "BangTrangThongMinh-macOS.${ext}",
+    "identity": null
   },
   "nsis": {
     "artifactName": "BangTrangThongMinh-Setup.${ext}",
