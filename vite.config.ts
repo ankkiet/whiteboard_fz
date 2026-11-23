@@ -72,6 +72,15 @@ export default defineConfig(() => {
 
               const versionMetaScript = `<script>window.__BTTM_EMBEDDED_BUILD__=${JSON.stringify(versionManifest)};</script>`;
 
+              // Inject version manifest directly into dist/index.html so Electron packaged app always knows its version and buildId
+              if (fs.existsSync(indexHtmlPath)) {
+                let distHtml = fs.readFileSync(indexHtmlPath, 'utf-8');
+                if (!distHtml.includes('__BTTM_EMBEDDED_BUILD__')) {
+                  distHtml = distHtml.replace('<head>', `<head>\n    ${versionMetaScript}`);
+                  fs.writeFileSync(indexHtmlPath, distHtml, 'utf-8');
+                }
+              }
+
               html = html.replace(
                 /<link[^>]+rel="stylesheet"[^>]+href="(?:\.\/|\/)?assets\/index-[^"]+\.css"[^>]*>/i,
                 () => `${versionMetaScript}\n<style>\n${rawCss}\n</style>`

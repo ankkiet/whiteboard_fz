@@ -60,26 +60,29 @@ declare global {
 
 export function getDownloadedBuildId(): string | null {
   if (typeof window === 'undefined') return null;
+  try {
+    const stored = window.localStorage.getItem(DESKTOP_APP_DOWNLOADED_BUILD_ID_KEY);
+    if (stored) return stored;
+  } catch {}
   if (window.__BTTM_EMBEDDED_BUILD__?.buildId) {
     return window.__BTTM_EMBEDDED_BUILD__.buildId;
   }
-  try {
-    return window.localStorage.getItem(DESKTOP_APP_DOWNLOADED_BUILD_ID_KEY);
-  } catch {
-    return null;
-  }
+  return null;
 }
 
 export function getDownloadedVersion(): string | null {
   if (typeof window === 'undefined') return null;
+  try {
+    const stored = window.localStorage.getItem(DESKTOP_APP_DOWNLOADED_VERSION_KEY);
+    if (stored) return stored;
+  } catch {}
   if (window.__BTTM_EMBEDDED_BUILD__?.version) {
     return window.__BTTM_EMBEDDED_BUILD__.version;
   }
-  try {
-    return window.localStorage.getItem(DESKTOP_APP_DOWNLOADED_VERSION_KEY);
-  } catch {
-    return null;
+  if (window.location.protocol === 'file:') {
+    return 'v_fz.1.1.1.1.0';
   }
+  return null;
 }
 
 export function hasDesktopAppBeenDownloaded(): boolean {
@@ -368,12 +371,19 @@ export const HomeSettingsMenu: React.FC<{
   const syncInitialBadge = React.useCallback(async () => {
     const downloaded = hasDesktopAppBeenDownloaded();
     const installedId = getDownloadedBuildId();
+    const installedVer = getDownloadedVersion();
     const latest = await fetchLatestVersionManifest();
-    if (downloaded && installedId && latest?.buildId && latest.buildId !== installedId) {
+    const isUpdateAvailable = Boolean(
+      latest &&
+        ((installedId && latest.buildId && installedId !== latest.buildId) ||
+          (installedVer && latest.version && installedVer !== latest.version) ||
+          (!installedId && installedVer && latest.version && installedVer !== latest.version))
+    );
+    if (downloaded && isUpdateAvailable && latest) {
       setHasUpdateBadge(true);
       setCheckResult({
         status: 'update-available',
-        currentVersion: getDownloadedVersion() || installedId,
+        currentVersion: installedVer || installedId || 'Bản cũ',
         latestManifest: latest,
       });
     } else {
@@ -439,11 +449,17 @@ export const HomeSettingsMenu: React.FC<{
         return;
       }
 
-      if (installedId && installedId !== latest.buildId) {
+      const isUpdateAvailable = Boolean(
+        (installedId && latest.buildId && installedId !== latest.buildId) ||
+        (installedVer && latest.version && installedVer !== latest.version) ||
+        (!installedId && installedVer && latest.version && installedVer !== latest.version)
+      );
+
+      if (isUpdateAvailable) {
         setHasUpdateBadge(true);
         setCheckResult({
           status: 'update-available',
-          currentVersion: installedVer || installedId,
+          currentVersion: installedVer || installedId || 'Bản cũ',
           latestManifest: latest,
           sourceOrigin: result.sourceOrigin,
         });
@@ -452,10 +468,10 @@ export const HomeSettingsMenu: React.FC<{
         setHasUpdateBadge(false);
         setCheckResult({
           status: 'up-to-date',
-          version: latest.version,
-          buildId: latest.buildId,
+          version: installedVer || latest.version,
+          buildId: installedId || latest.buildId,
         });
-        addToast(`Ứng dụng của bạn đang ở phiên bản mới nhất (${latest.version})!`, 'success');
+        addToast(`Ứng dụng của bạn đang ở phiên bản mới nhất (${installedVer || latest.version})!`, 'success');
       }
     } finally {
       setIsChecking(false);
