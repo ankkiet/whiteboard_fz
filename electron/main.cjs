@@ -15,6 +15,7 @@ function createMainWindow() {
     minWidth: 1024,
     minHeight: 680,
     title: 'Bảng Trắng Thông Minh - Smart Whiteboard',
+    icon: path.join(__dirname, '../dist/pwa-512x512.png'),
     backgroundColor: '#f8fafc',
     autoHideMenuBar: true,
     webPreferences: {

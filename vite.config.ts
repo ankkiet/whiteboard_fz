@@ -7,6 +7,7 @@ import {defineConfig} from 'vite';
 
 export default defineConfig(() => {
   return {
+    base: './',
     plugins: [
       react(),
       tailwindcss(),
@@ -39,7 +40,7 @@ export default defineConfig(() => {
             if (cssFile && jsFile) {
               const rawCss = fs
                 .readFileSync(path.resolve(assetsDir, cssFile), 'utf-8')
-                .replace(/\/assets\/(KaTeX_[^"')]+\.(woff2|woff|ttf))/g, (fullMatch, fileName, ext) => {
+                .replace(/(?:\.\/|\/)?assets\/(KaTeX_[^"')]+\.(woff2|woff|ttf))/g, (fullMatch, fileName, ext) => {
                   const fontPath = path.resolve(assetsDir, fileName);
                   if (!fs.existsSync(fontPath)) return fullMatch;
                   const mime =
@@ -71,11 +72,11 @@ export default defineConfig(() => {
               const versionMetaScript = `<script>window.__BTTM_EMBEDDED_BUILD__=${JSON.stringify(versionManifest)};</script>`;
 
               html = html.replace(
-                /<link[^>]+rel="stylesheet"[^>]+href="\/assets\/index-[^"]+\.css"[^>]*>/i,
+                /<link[^>]+rel="stylesheet"[^>]+href="(?:\.\/|\/)?assets\/index-[^"]+\.css"[^>]*>/i,
                 () => `${versionMetaScript}\n<style>\n${rawCss}\n</style>`
               );
               html = html.replace(
-                /<script[^>]+src="\/assets\/index-[^"]+\.js"[^>]*><\/script>/i,
+                /<script[^>]+src="(?:\.\/|\/)?assets\/index-[^"]+\.js"[^>]*><\/script>/i,
                 () => `<script type="module">\n${rawJs}\n</script>`
               );
 
