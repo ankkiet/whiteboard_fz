@@ -1,1 +1,1 @@
-window.__BTTM_VERSION_CALLBACK__&&window.__BTTM_VERSION_CALLBACK__({"version":"v_fz.1.1.1.1.test.0","buildId":"a61d707de9d0","notes":"Bản cập nhật thử nghiệm Bảng Trắng Thông Minh (Windows .exe & macOS .app)","updateOrigin":"https://whiteboardfz.pages.dev"});
+window.__BTTM_VERSION_CALLBACK__&&window.__BTTM_VERSION_CALLBACK__({"version":"v_fz.1.1.1.1.test.0","buildId":"ed6b9ffee60e","notes":"Bản cập nhật thử nghiệm Bảng Trắng Thông Minh (Windows .exe & macOS .app)","updateOrigin":"https://whiteboardfz.pages.dev"});

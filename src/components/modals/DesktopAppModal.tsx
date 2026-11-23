@@ -85,14 +85,18 @@ export function getDownloadedVersion(): string | null {
   return null;
 }
 
-export function hasDesktopAppBeenDownloaded(): boolean {
+export function isDesktopApp(): boolean {
   if (typeof window === 'undefined') return false;
   if (window.location.protocol === 'file:') return true;
-  try {
-    return window.localStorage.getItem(DESKTOP_APP_DOWNLOADED_KEY) === 'true';
-  } catch {
-    return false;
-  }
+  if (typeof navigator !== 'undefined' && /Electron/i.test(navigator.userAgent)) return true;
+  if (Boolean((window as any).process?.versions?.electron)) return true;
+  return false;
+}
+
+export function hasDesktopAppBeenDownloaded(): boolean {
+  if (typeof window === 'undefined') return false;
+  if (isDesktopApp()) return true;
+  return false;
 }
 
 export function markDesktopAppAsDownloaded(manifest?: AppVersionManifest | null): void {
@@ -307,23 +311,10 @@ export const PWAInstallTriggerButton: React.FC<{
   onOpenModal: () => void;
   compact?: boolean;
 }> = ({ onOpenModal, compact = false }) => {
-  const [isDownloaded, setIsDownloaded] = useState<boolean>(() => hasDesktopAppBeenDownloaded());
+  const isDesktop = isDesktopApp();
 
-  React.useEffect(() => {
-    const syncState = () => {
-      setIsDownloaded(hasDesktopAppBeenDownloaded());
-    };
-    window.addEventListener(DESKTOP_APP_DOWNLOADED_EVENT, syncState);
-    window.addEventListener('storage', syncState);
-
-    return () => {
-      window.removeEventListener(DESKTOP_APP_DOWNLOADED_EVENT, syncState);
-      window.removeEventListener('storage', syncState);
-    };
-  }, []);
-
-  // Hide completely once downloaded — updates and re-downloads live inside the Home Settings gear menu!
-  if (isDownloaded) return null;
+  // Khi đang mở trên ứng dụng máy tính (Desktop App / Electron), ẩn nút tải về
+  if (isDesktop) return null;
 
   return (
     <button
@@ -352,6 +343,7 @@ export const HomeSettingsMenu: React.FC<{
   const addToast = useBoardStore((s) => s.addToast);
   const [isOpen, setIsOpen] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
+  const [latestDesktopVersion, setLatestDesktopVersion] = useState<string>('v_fz.1.1.1.1.test.0');
   const [checkResult, setCheckResult] = useState<
     | { status: 'idle' }
     | { status: 'up-to-date'; version: string; buildId: string }
@@ -368,40 +360,53 @@ export const HomeSettingsMenu: React.FC<{
   const [isApplyingUpdate, setIsApplyingUpdate] = useState(false);
   const menuRef = React.useRef<HTMLDivElement>(null);
 
+  const isDesktop = isDesktopApp();
+
   const syncInitialBadge = React.useCallback(async () => {
-    const downloaded = hasDesktopAppBeenDownloaded();
+    if (!isDesktop) return;
     const installedId = getDownloadedBuildId();
     const installedVer = getDownloadedVersion();
     const latest = await fetchLatestVersionManifest();
+    if (latest?.version) {
+      setLatestDesktopVersion(latest.version);
+    }
     const isUpdateAvailable = Boolean(
       latest &&
         ((installedId && latest.buildId && installedId !== latest.buildId) ||
           (installedVer && latest.version && installedVer !== latest.version) ||
           (!installedId && installedVer && latest.version && installedVer !== latest.version))
     );
-    if (downloaded && isUpdateAvailable && latest) {
+    if (isUpdateAvailable && latest) {
       setHasUpdateBadge(true);
       setCheckResult({
         status: 'update-available',
-        currentVersion: installedVer || installedId || 'Bản cũ',
+        currentVersion: installedVer || installedId || 'v_fz.1.1.1.1.0',
         latestManifest: latest,
       });
     } else {
       setHasUpdateBadge(false);
     }
-  }, []);
+  }, [isDesktop]);
 
   React.useEffect(() => {
-    void syncInitialBadge();
-    const onDownloaded = () => {
-      setHasUpdateBadge(false);
-      const ver = getDownloadedVersion() || 'v_fz.1.1.1.1.test.0';
-      const id = getDownloadedBuildId() || '';
-      setCheckResult({ status: 'up-to-date', version: ver, buildId: id });
-    };
-    window.addEventListener(DESKTOP_APP_DOWNLOADED_EVENT, onDownloaded);
-    return () => window.removeEventListener(DESKTOP_APP_DOWNLOADED_EVENT, onDownloaded);
-  }, [syncInitialBadge]);
+    if (isDesktop) {
+      void syncInitialBadge();
+      const onDownloaded = () => {
+        setHasUpdateBadge(false);
+        const ver = getDownloadedVersion() || 'v_fz.1.1.1.1.test.0';
+        const id = getDownloadedBuildId() || '';
+        setCheckResult({ status: 'up-to-date', version: ver, buildId: id });
+      };
+      window.addEventListener(DESKTOP_APP_DOWNLOADED_EVENT, onDownloaded);
+      return () => window.removeEventListener(DESKTOP_APP_DOWNLOADED_EVENT, onDownloaded);
+    } else {
+      void fetchLatestVersionManifest().then((manifest) => {
+        if (manifest?.version) {
+          setLatestDesktopVersion(manifest.version);
+        }
+      });
+    }
+  }, [isDesktop, syncInitialBadge]);
 
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -417,7 +422,6 @@ export const HomeSettingsMenu: React.FC<{
     setIsChecking(true);
     try {
       const result = await checkLatestVersionStatus();
-      const downloaded = hasDesktopAppBeenDownloaded();
       const installedId = getDownloadedBuildId();
       const installedVer = getDownloadedVersion();
 
@@ -442,12 +446,6 @@ export const HomeSettingsMenu: React.FC<{
       }
 
       const latest = result.manifest;
-
-      if (!downloaded) {
-        setCheckResult({ status: 'not-installed', latestManifest: latest });
-        addToast(`Phiên bản mới nhất hiện tại là ${latest.version}. Bạn có thể tải về máy!`, 'info');
-        return;
-      }
 
       const isUpdateAvailable = Boolean(
         (installedId && latest.buildId && installedId !== latest.buildId) ||
@@ -498,7 +496,6 @@ export const HomeSettingsMenu: React.FC<{
     getDownloadedVersion() ||
     (typeof window !== 'undefined' && window.__BTTM_EMBEDDED_BUILD__?.version) ||
     'v_fz.1.1.1.1.test.0';
-  const isDownloaded = hasDesktopAppBeenDownloaded();
 
   return (
     <div className="relative" ref={menuRef}>
@@ -507,8 +504,8 @@ export const HomeSettingsMenu: React.FC<{
         data-testid="home-settings-button"
         onClick={() => setIsOpen((v) => !v)}
         aria-expanded={isOpen}
-        aria-label="Cài đặt & kiểm tra cập nhật"
-        title="Cài đặt & kiểm tra cập nhật"
+        aria-label="Cài đặt hệ thống"
+        title="Cài đặt hệ thống"
         className={`relative w-9 h-9 rounded-lg flex items-center justify-center transition-colors cursor-pointer shrink-0 ${
           isOpen
             ? 'bg-indigo-50 dark:bg-indigo-950/70 text-indigo-600 dark:text-indigo-400'
@@ -528,7 +525,7 @@ export const HomeSettingsMenu: React.FC<{
           <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
           <circle cx="12" cy="12" r="3" />
         </svg>
-        {hasUpdateBadge && (
+        {isDesktop && hasUpdateBadge && (
           <span
             data-testid="settings-update-badge"
             className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-amber-500 ring-2 ring-white dark:ring-slate-900"
@@ -540,216 +537,246 @@ export const HomeSettingsMenu: React.FC<{
         <div
           data-testid="home-settings-dropdown"
           role="dialog"
-          aria-label="Bảng cài đặt và kiểm tra cập nhật"
+          aria-label="Bảng cài đặt hệ thống"
           className="absolute right-0 mt-2 w-[340px] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-3.5 z-40 space-y-3"
         >
-          <div className="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-2.5">
-            <div className="min-w-0">
-              <div className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
-                Cài đặt & phiên bản ứng dụng
-              </div>
-              <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
-                {isDownloaded ? `Đã cài bản desktop (${currentVersionLabel})` : 'Đang dùng bản web'}
-              </div>
-            </div>
-            <span className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-[10px] font-mono font-semibold text-slate-600 dark:text-slate-300 whitespace-nowrap shrink-0">
-              {currentVersionLabel}
-            </span>
-          </div>
-
-          {/* Check for Updates Section */}
-          <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200/70 dark:border-slate-800 space-y-2.5">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
-                Cập nhật phần mềm
-              </span>
-              <button
-                type="button"
-                data-testid="check-update-button"
-                disabled={isChecking}
-                onClick={() => void handleCheckUpdateNow()}
-                className="h-7 px-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-[11px] font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer"
-              >
-                {isChecking ? (
-                  <Loader2 className="w-3 h-3 animate-spin" />
-                ) : (
-                  <Download className="w-3 h-3" />
-                )}
-                <span>{isChecking ? 'Đang kiểm tra...' : 'Kiểm tra cập nhật'}</span>
-              </button>
-            </div>
-
-            {checkResult.status === 'up-to-date' && (
-              <div
-                data-testid="update-status-up-to-date"
-                className="p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-800/60 flex items-center gap-2 text-[11px] text-emerald-800 dark:text-emerald-300"
-              >
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                <span>
-                  Bạn đang dùng bản mới nhất (<strong>{checkResult.version}</strong>).
+          {isDesktop ? (
+            /* =================== GIAO DIỆN DESKTOP APP =================== */
+            <>
+              <div className="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-2.5">
+                <div className="min-w-0">
+                  <div className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
+                    Cài đặt & phiên bản ứng dụng
+                  </div>
+                  <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+                    Ứng dụng máy tính (Desktop)
+                  </div>
+                </div>
+                <span className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-[10px] font-mono font-semibold text-slate-600 dark:text-slate-300 whitespace-nowrap shrink-0">
+                  {currentVersionLabel}
                 </span>
               </div>
-            )}
 
-            {checkResult.status === 'update-available' && (
-              <div
-                data-testid="update-status-available"
-                className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/70 space-y-2.5 text-[11px]"
-              >
-                <div className="flex items-center gap-1.5 text-amber-900 dark:text-amber-200 font-bold text-xs">
-                  <CheckCircle2 className="w-4 h-4 text-amber-600 shrink-0" />
-                  <span>Đã có phiên bản mới: {checkResult.latestManifest.version}!</span>
-                </div>
-                <div className="text-amber-800/90 dark:text-amber-300/90">
-                  Bản hiện tại: <span className="font-semibold">{checkResult.currentVersion}</span> → Bản mới nhất: <span className="font-semibold">{checkResult.latestManifest.version}</span>
-                </div>
-
-                <div className="space-y-1.5 pt-1">
+              {/* Check for Updates Section */}
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200/70 dark:border-slate-800 space-y-2.5">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                    Cập nhật ứng dụng
+                  </span>
                   <button
                     type="button"
-                    data-testid="in-place-update-button"
-                    disabled={isApplyingUpdate}
-                    onClick={() => void handleInPlaceUpdate()}
-                    className="w-full h-8 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-sm"
+                    data-testid="check-update-button"
+                    disabled={isChecking}
+                    onClick={() => void handleCheckUpdateNow()}
+                    className="h-7 px-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-[11px] font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer"
                   >
-                    {isApplyingUpdate ? (
-                      <>
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        <span>Đang cập nhật trực tiếp tại chỗ...</span>
-                      </>
+                    {isChecking ? (
+                      <Loader2 className="w-3 h-3 animate-spin" />
                     ) : (
-                      <>
-                        <RefreshCw className="w-3.5 h-3.5" />
-                        <span>Cập nhật trực tiếp ngay (Không cần tải lại tệp)</span>
-                      </>
+                      <Download className="w-3 h-3" />
                     )}
+                    <span>{isChecking ? 'Đang kiểm tra...' : 'Kiểm tra cập nhật'}</span>
                   </button>
+                </div>
 
-                  <button
-                    type="button"
-                    data-testid="update-now-open-modal-button"
-                    onClick={() => {
-                      setIsOpen(false);
-                      onOpenDesktopModal();
-                    }}
-                    className="w-full h-7 rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-slate-800 hover:bg-amber-100/50 dark:hover:bg-slate-700 text-amber-900 dark:text-amber-200 font-medium text-[11px] flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                {checkResult.status === 'up-to-date' && (
+                  <div
+                    data-testid="update-status-up-to-date"
+                    className="p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-800/60 flex items-center gap-2 text-[11px] text-emerald-800 dark:text-emerald-300"
                   >
-                    <Download className="w-3 h-3" />
-                    <span>Hoặc tải bộ cài mới (.exe / Mac)</span>
-                  </button>
-                </div>
-              </div>
-            )}
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    <span>
+                      Bạn đang dùng bản mới nhất (<strong>{checkResult.version}</strong>).
+                    </span>
+                  </div>
+                )}
 
-            {checkResult.status === 'not-installed' && (
-              <div className="p-2.5 rounded-lg bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200/70 dark:border-indigo-800/60 space-y-2 text-[11px]">
-                <div className="text-indigo-900 dark:text-indigo-200">
-                  Phiên bản mới nhất: <strong>{checkResult.latestManifest?.version || 'v_fz.1.1.1.1.test.0'}</strong>
-                </div>
+                {checkResult.status === 'update-available' && (
+                  <div
+                    data-testid="update-status-available"
+                    className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/70 space-y-2.5 text-[11px]"
+                  >
+                    <div className="flex items-center gap-1.5 text-amber-900 dark:text-amber-200 font-bold text-xs">
+                      <CheckCircle2 className="w-4 h-4 text-amber-600 shrink-0" />
+                      <span>Đã có phiên bản mới: {checkResult.latestManifest.version}!</span>
+                    </div>
+                    <div className="text-amber-800/90 dark:text-amber-300/90">
+                      Bản hiện tại: <span className="font-semibold">{checkResult.currentVersion}</span> → Bản mới nhất: <span className="font-semibold">{checkResult.latestManifest.version}</span>
+                    </div>
+
+                    <div className="space-y-1.5 pt-1">
+                      <button
+                        type="button"
+                        data-testid="in-place-update-button"
+                        disabled={isApplyingUpdate}
+                        onClick={() => void handleInPlaceUpdate()}
+                        className="w-full h-8 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-sm"
+                      >
+                        {isApplyingUpdate ? (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            <span>Đang cập nhật trực tiếp tại chỗ...</span>
+                          </>
+                        ) : (
+                          <>
+                            <RefreshCw className="w-3.5 h-3.5" />
+                            <span>Cập nhật trực tiếp ngay (Không cần tải lại tệp)</span>
+                          </>
+                        )}
+                      </button>
+
+                      <button
+                        type="button"
+                        data-testid="update-now-open-modal-button"
+                        onClick={() => {
+                          setIsOpen(false);
+                          onOpenDesktopModal();
+                        }}
+                        className="w-full h-7 rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-slate-800 hover:bg-amber-100/50 dark:hover:bg-slate-700 text-amber-900 dark:text-amber-200 font-medium text-[11px] flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                      >
+                        <Download className="w-3 h-3" />
+                        <span>Hoặc tải bộ cài mới (.exe / Mac)</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {checkResult.status === 'not-installed' && (
+                  <div className="p-2.5 rounded-lg bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200/70 dark:border-indigo-800/60 space-y-2 text-[11px]">
+                    <div className="text-indigo-900 dark:text-indigo-200">
+                      Phiên bản mới nhất: <strong>{checkResult.latestManifest?.version || 'v_fz.1.1.1.1.test.0'}</strong>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsOpen(false);
+                        onOpenDesktopModal();
+                      }}
+                      className="w-full h-7 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-[11px] flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <Download className="w-3 h-3" />
+                      <span>Mở hộp thoại tải bộ cài (.exe / Mac)</span>
+                    </button>
+                  </div>
+                )}
+
+                {checkResult.status === 'check-failed' && checkResult.reason === 'offline' && (
+                  <div
+                    data-testid="update-status-offline"
+                    className="p-2.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/70 flex items-start gap-2 text-[11px] text-amber-900 dark:text-amber-200"
+                  >
+                    <WifiOff className="w-3.5 h-3.5 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
+                    <span>
+                      Thiết bị đang ngoại tuyến — Hãy kết nối Internet để kiểm tra phiên bản mới.
+                    </span>
+                  </div>
+                )}
+
+                {checkResult.status === 'check-failed' &&
+                  (checkResult.reason === 'no-update-origin' || checkResult.reason === 'server-unreachable') && (
+                    <div
+                      data-testid="update-status-unreachable"
+                      className="p-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed"
+                    >
+                      Máy vẫn trực tuyến nhưng máy chủ kiểm tra phiên bản tạm thời không phản hồi. Vui lòng thử lại sau.
+                    </div>
+                  )}
+              </div>
+
+              {/* Quick Preferences & Re-download */}
+              <div className="space-y-1 pt-0.5">
                 <button
                   type="button"
+                  onClick={onToggleTheme}
+                  className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                >
+                  <span>Giao diện hiển thị</span>
+                  <span className="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400">
+                    {theme === 'dark' ? 'Chế độ tối' : 'Chế độ sáng'}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  data-testid="settings-open-installer-modal-button"
                   onClick={() => {
                     setIsOpen(false);
                     onOpenDesktopModal();
                   }}
-                  className="w-full h-7 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-[11px] flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                  className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
                 >
-                  <Download className="w-3 h-3" />
-                  <span>Mở hộp thoại tải bộ cài (.exe / Mac)</span>
+                  <span>Bộ cài đặt máy tính (.exe / .app)</span>
+                  <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                    Tải lại
+                  </span>
                 </button>
               </div>
-            )}
-
-            {checkResult.status === 'check-failed' && checkResult.reason === 'offline' && (
-              <div
-                data-testid="update-status-offline"
-                className="p-2.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/70 flex items-start gap-2 text-[11px] text-amber-900 dark:text-amber-200"
-              >
-                <WifiOff className="w-3.5 h-3.5 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
-                <span>
-                  Thiết bị đang ngoại tuyến — Hãy kết nối Internet để kiểm tra phiên bản mới.
+            </>
+          ) : (
+            /* =================== GIAO DIỆN WEB TRỰC TUYẾN =================== */
+            <>
+              <div className="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-2.5">
+                <div className="min-w-0">
+                  <div className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
+                    Cài đặt hệ thống
+                  </div>
+                  <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+                    Phiên bản web trực tuyến
+                  </div>
+                </div>
+                <span className="px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/70 border border-emerald-200/60 dark:border-emerald-800/60 text-[10px] font-semibold text-emerald-700 dark:text-emerald-300 whitespace-nowrap shrink-0 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                  Trực tuyến
                 </span>
               </div>
-            )}
 
-            {checkResult.status === 'check-failed' && checkResult.reason === 'auth-or-cors-blocked' && (
-              <div
-                data-testid="update-status-auth-blocked"
-                className="p-2.5 rounded-lg bg-sky-50 dark:bg-sky-950/40 border border-sky-200/80 dark:border-sky-800/70 space-y-2 text-[11px]"
-              >
-                <div className="flex items-start gap-1.5 font-semibold text-sky-900 dark:text-sky-200">
-                  <Info className="w-3.5 h-3.5 shrink-0 mt-0.5 text-sky-600 dark:text-sky-400" />
-                  <span>Máy vẫn có mạng, nhưng tệp trên máy không thể tự đọc máy chủ riêng tư</span>
+              {/* Desktop App Promo Card */}
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200/70 dark:border-slate-800 space-y-2.5">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200">
+                    <Laptop className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                    <span>Ứng dụng máy tính</span>
+                  </div>
+                  <span className="px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/60 text-[10px] font-mono font-semibold text-indigo-600 dark:text-indigo-400">
+                    {latestDesktopVersion}
+                  </span>
                 </div>
-                <p className="text-sky-800/90 dark:text-sky-300/90 leading-relaxed">
-                  Ứng dụng đang mở từ tệp cục bộ nên máy chủ AI Studio yêu cầu phiên đăng nhập trình duyệt để xem bản mới. Hãy mở trang web gốc để kiểm tra và tải bản cập nhật.
+                <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
+                  Cài đặt lên Windows hoặc macOS để vẽ mượt hơn, lưu trữ an toàn và làm việc ngoại tuyến không cần mạng.
                 </p>
-                {checkResult.portalUrl && (
-                  <a
-                    href={checkResult.portalUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    data-testid="open-update-portal-link"
-                    className="w-full h-8 px-2.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white font-semibold text-[11px] flex items-center justify-center gap-1.5 transition-colors"
-                  >
-                    <ExternalLink className="w-3 h-3 shrink-0" />
-                    <span>Mở trang web gốc để kiểm tra cập nhật</span>
-                  </a>
-                )}
-              </div>
-            )}
-
-            {checkResult.status === 'check-failed' && checkResult.reason === 'local-server-stopped' && (
-              <div
-                data-testid="update-status-local-stopped"
-                className="p-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 space-y-1.5 text-[11px] text-slate-700 dark:text-slate-300"
-              >
-                <div className="font-semibold">Máy chủ cục bộ ({checkResult.portalUrl}) hiện không chạy.</div>
-                <div>Hãy bật lại máy chủ phát triển hoặc mở trang web gốc trên trình duyệt.</div>
-              </div>
-            )}
-
-            {checkResult.status === 'check-failed' &&
-              (checkResult.reason === 'no-update-origin' || checkResult.reason === 'server-unreachable') && (
-                <div
-                  data-testid="update-status-unreachable"
-                  className="p-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed"
+                <button
+                  type="button"
+                  data-testid="web-open-download-modal-button"
+                  onClick={() => {
+                    setIsOpen(false);
+                    onOpenDesktopModal();
+                  }}
+                  className="w-full h-8 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-sm shadow-indigo-600/20"
                 >
-                  {checkResult.reason === 'no-update-origin'
-                    ? 'Bản cài đặt trên máy chưa gắn địa chỉ web gốc để kiểm tra tự động. Hãy tải lại bộ cài mới từ trang web.'
-                    : 'Máy vẫn trực tuyến nhưng máy chủ kiểm tra phiên bản tạm thời không phản hồi. Vui lòng thử lại sau.'}
-                </div>
-              )}
-          </div>
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Tải bộ cài đặt (.exe / Mac)</span>
+                </button>
+              </div>
 
-          {/* Quick Preferences & Re-download option */}
-          <div className="space-y-1 pt-0.5">
-            <button
-              type="button"
-              onClick={onToggleTheme}
-              className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-            >
-              <span>Giao diện hiển thị</span>
-              <span className="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400">
-                {theme === 'dark' ? 'Chế độ tối' : 'Chế độ sáng'}
-              </span>
-            </button>
+              {/* Quick Preferences */}
+              <div className="space-y-1 pt-0.5">
+                <button
+                  type="button"
+                  onClick={onToggleTheme}
+                  className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                >
+                  <span>Giao diện hiển thị</span>
+                  <span className="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400">
+                    {theme === 'dark' ? 'Chế độ tối' : 'Chế độ sáng'}
+                  </span>
+                </button>
+              </div>
 
-            <button
-              type="button"
-              data-testid="settings-open-installer-modal-button"
-              onClick={() => {
-                setIsOpen(false);
-                onOpenDesktopModal();
-              }}
-              className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-            >
-              <span>Bộ cài đặt máy tính (.exe / .app)</span>
-              <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-                {isDownloaded ? 'Tải lại' : 'Tải về'}
-              </span>
-            </button>
-          </div>
+              <div className="text-[10px] text-center text-slate-400 dark:text-slate-500 pt-1 border-t border-slate-100 dark:border-slate-800">
+                Bản web luôn tự động cập nhật phiên bản mới nhất từ đám mây.
+              </div>
+            </>
+          )}
         </div>
       )}
     </div>
