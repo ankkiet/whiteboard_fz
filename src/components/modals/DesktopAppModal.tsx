@@ -385,7 +385,7 @@ export const HomeSettingsMenu: React.FC<{
     void syncInitialBadge();
     const onDownloaded = () => {
       setHasUpdateBadge(false);
-      const ver = getDownloadedVersion() || 'v_fz.1.1.1.1.0';
+      const ver = getDownloadedVersion() || 'v_fz.1.1.1.1.test.0';
       const id = getDownloadedBuildId() || '';
       setCheckResult({ status: 'up-to-date', version: ver, buildId: id });
     };
@@ -481,7 +481,7 @@ export const HomeSettingsMenu: React.FC<{
   const currentVersionLabel =
     getDownloadedVersion() ||
     (typeof window !== 'undefined' && window.__BTTM_EMBEDDED_BUILD__?.version) ||
-    'v_fz.1.1.1.1.0';
+    'v_fz.1.1.1.1.test.0';
   const isDownloaded = hasDesktopAppBeenDownloaded();
 
   return (
@@ -628,7 +628,7 @@ export const HomeSettingsMenu: React.FC<{
             {checkResult.status === 'not-installed' && (
               <div className="p-2.5 rounded-lg bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200/70 dark:border-indigo-800/60 space-y-2 text-[11px]">
                 <div className="text-indigo-900 dark:text-indigo-200">
-                  Phiên bản mới nhất: <strong>{checkResult.latestManifest?.version || 'v_fz.1.1.1.1.0'}</strong>
+                  Phiên bản mới nhất: <strong>{checkResult.latestManifest?.version || 'v_fz.1.1.1.1.test.0'}</strong>
                 </div>
                 <button
                   type="button"
