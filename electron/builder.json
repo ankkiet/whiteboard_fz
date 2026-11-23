@@ -1,6 +1,7 @@
 {
   "appId": "vn.smartwhiteboard.app",
   "productName": "Bảng Trắng Thông Minh",
+  "compression": "maximum",
   "directories": {
     "output": "release"
   },

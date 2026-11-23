@@ -969,7 +969,7 @@ export const DesktopAppModal: React.FC<DesktopAppModalProps> = ({ isOpen, onClos
               <div className="flex items-center gap-2.5">
                 <Laptop className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
                 <span className="text-slate-700 dark:text-slate-300">
-                  Dùng ngay không cần tải bộ cài đặt 145 MB?
+                  Dùng ngay không cần tải bộ cài đặt lớn?
                 </span>
               </div>
               <button
