@@ -725,18 +725,15 @@ export const HomePage: React.FC<HomePageProps> = ({
                   <button
                     type="button"
                     onClick={() => {
-                      if (onOpenAuthBridgeClick) {
-                        onOpenAuthBridgeClick();
-                      } else {
-                        const portal = getWebPortalOrigin();
-                        window.open(
-                          `${portal}?auth_bridge=1`,
-                          'bttm_auth_bridge',
-                          'width=540,height=700'
-                        );
-                      }
+                      onOpenAuthBridgeClick?.();
+                      const portal = getWebPortalOrigin();
+                      window.open(
+                        `${portal}?auth_bridge=1`,
+                        'bttm_auth_bridge',
+                        'width=540,height=700,menubar=no,toolbar=no,location=no,status=no'
+                      );
                     }}
-                    className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-colors cursor-pointer shadow-xs"
+                    className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs transition-colors cursor-pointer shadow-xs"
                   >
                     <KeyRound className="w-4 h-4" />
                     <span>Đăng nhập tự động qua trình duyệt</span>

@@ -1,7 +1,7 @@
 {
   "name": "bang-trang-thong-minh",
   "private": true,
-  "version": "1.2.4",
+  "version": "1.2.5",
   "description": "Ứng dụng bảng trắng tương tác vô tận với công cụ vẽ mượt mà, ghi chú dán, hình khối và chèn ảnh.",
   "author": "Bảng Trắng Thông Minh",
   "type": "module",

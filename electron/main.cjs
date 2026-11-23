@@ -7,9 +7,54 @@ const { app, BrowserWindow, shell, Menu } = require('electron');
 const path = require('path');
 
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
+let mainWindow = null;
+
+// Đăng ký custom protocol bttm:// để Web có thể mở lại Desktop App
+if (process.defaultApp) {
+  if (process.argv.length >= 2) {
+    app.setAsDefaultProtocolClient('bttm', process.execPath, [path.resolve(process.argv[1])]);
+  }
+} else {
+  app.setAsDefaultProtocolClient('bttm');
+}
+
+function sendProtocolTokenToRenderer(urlStr) {
+  if (!urlStr || !mainWindow) return;
+  try {
+    const parsed = new URL(urlStr);
+    const token = parsed.searchParams.get('token');
+    if (token && mainWindow.webContents) {
+      mainWindow.webContents.executeJavaScript(
+        `window.postMessage({ type: 'BTTM_AUTH_SUCCESS', token: ${JSON.stringify(token)} }, '*')`
+      );
+    }
+  } catch {
+    // Bỏ qua lỗi phân tích URL
+  }
+}
+
+// Single Instance Lock: Đảm bảo chỉ có 1 cửa sổ ứng dụng chạy và nhận lệnh từ trình duyệt
+const gotTheLock = app.requestSingleInstanceLock();
+if (!gotTheLock) {
+  app.quit();
+} else {
+  app.on('second-instance', (event, commandLine) => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.show();
+      mainWindow.focus();
+
+      // Tìm URL protocol trong commandLine (Windows)
+      const protocolUrl = commandLine.find((arg) => typeof arg === 'string' && arg.startsWith('bttm://'));
+      if (protocolUrl) {
+        sendProtocolTokenToRenderer(protocolUrl);
+      }
+    }
+  });
+}
 
 function createMainWindow() {
-  const mainWindow = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 1440,
     height: 900,
     minWidth: 1024,
@@ -38,7 +83,22 @@ function createMainWindow() {
     }
     return { action: 'deny' };
   });
+
+  mainWindow.on('closed', () => {
+    mainWindow = null;
+  });
 }
+
+// macOS protocol handler
+app.on('open-url', (event, url) => {
+  event.preventDefault();
+  if (mainWindow) {
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.show();
+    mainWindow.focus();
+    sendProtocolTokenToRenderer(url);
+  }
+});
 
 app.whenReady().then(() => {
   if (process.platform === 'darwin') {

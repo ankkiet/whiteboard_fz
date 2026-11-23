@@ -12,6 +12,10 @@
   "extraMetadata": {
     "main": "electron/main.cjs"
   },
+  "protocols": {
+    "name": "BangTrangThongMinh",
+    "schemes": ["bttm"]
+  },
   "win": {
     "target": [
       {
