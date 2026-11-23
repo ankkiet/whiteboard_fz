@@ -1,39 +1,39 @@
-THỎA THUẬN CẤP PHÉP NGƯỜI DÙNG CUỐI (EULA) VÀ CHÍNH SÁCH BẢO VỆ QUYỀN RIÊNG TƯ
-Phần mềm: Bảng Trắng Thông Minh (Smart Whiteboard)
-Phiên bản: 1.2
-Bản quyền © 2026 Bảng Trắng Thông Minh. Toàn quyền bảo lưu.
+END-USER LICENSE AGREEMENT (EULA) AND PRIVACY POLICY
+Software: Smart Whiteboard (Bang Trang Thong Minh)
+Version: 1.2
+Copyright (c) 2026 Smart Whiteboard. All rights reserved.
 
-Vui lòng đọc kỹ thỏa thuận này trước khi tiến hành tải về, cài đặt hoặc sử dụng phần mềm Bảng Trắng Thông Minh. Bằng việc nhấn nút "Tôi đồng ý" hoặc tiến hành cài đặt và sử dụng phần mềm, bạn xác nhận đã đọc, hiểu và đồng ý chịu sự ràng buộc bởi các điều khoản dưới đây.
-
---------------------------------------------------------------------------------
-ĐIỀU 1: PHẠM VI CẤP PHÉP SỬ DỤNG
-1.1. Tác giả cấp cho bạn quyền sử dụng phần mềm phi độc quyền, có thể chuyển giao hạn chế để phục vụ nhu cầu học tập, giảng dạy, làm việc cá nhân hoặc doanh nghiệp.
-1.2. Bạn được phép cài đặt phần mềm trên các máy tính thuộc quyền sở hữu hoặc quyền quản lý hợp pháp của bạn.
-1.3. Bạn không được phép dịch ngược (reverse engineer), giải mã, tháo rời mã nguồn hoặc sửa đổi các thành phần nhị phân của phần mềm mà không có sự đồng ý bằng văn bản của tác giả.
+Please read this agreement carefully before downloading, installing, or using the Smart Whiteboard software. By clicking "I Agree" or by installing and using the software, you acknowledge that you have read, understood, and agreed to be bound by the terms and conditions below.
 
 --------------------------------------------------------------------------------
-ĐIỀU 2: BẢO VỆ DỮ LIỆU CÁ NHÂN VÀ QUYỀN RIÊNG TƯ (NGHỊ ĐỊNH 13/2023/NĐ-CP)
-2.1. Kiến trúc lưu trữ an toàn (Offline-first): Bảng Trắng Thông Minh được thiết kế ưu tiên quyền riêng tư tuyệt đối. Mọi nét vẽ, hình ảnh, tài liệu và dữ liệu ghi chú đều được lưu trữ trực tiếp trên bộ nhớ cục bộ của máy tính của bạn (IndexedDB / LocalStorage).
-2.2. Không thu thập thông tin định danh: Phần mềm không tự động thu thập thông tin danh tính cá nhân, mật khẩu, vị trí địa lý hoặc dữ liệu nhạy cảm của người dùng.
-2.3. Dịch vụ lưu trữ đám mây liên kết: Trường hợp người dùng chủ động kích hoạt đồng bộ hóa với tài khoản Google Drive cá nhân, dữ liệu chỉ di chuyển trực tiếp giữa trình duyệt/máy tính của bạn và máy chủ của Google theo chính sách bảo mật của Google OAuth. Tác giả phần mềm không có quyền tiếp cận hoặc lưu trữ bất kỳ dữ liệu nào của bạn.
-2.4. Quyền của chủ thể dữ liệu: Bạn có toàn quyền xuất (export), sao lưu (backup) hoặc xóa bỏ hoàn toàn dữ liệu của mình bất cứ lúc nào thông qua chức năng quản lý bảng trong ứng dụng hoặc gỡ bỏ phần mềm.
+SECTION 1: LICENSE GRANT
+1.1. The author grants you a non-exclusive, non-transferable, revocable license to install and use Smart Whiteboard for personal, educational, teaching, or commercial purposes.
+1.2. You may install the software on computers and devices that you own or legally control.
+1.3. You agree not to reverse engineer, decompile, disassemble, or modify any binary components of the software without prior written permission from the author.
 
 --------------------------------------------------------------------------------
-ĐIỀU 3: QUYỀN SỞ HỮU TRÍ TUỆ
-3.1. Toàn bộ mã nguồn, thiết kế đồ họa, biểu tượng, thuật toán xử lý đồ họa mượt mà và tài liệu hướng dẫn đi kèm thuộc quyền sở hữu trí tuệ hợp pháp của tác giả và được bảo hộ theo Luật Sở hữu trí tuệ Việt Nam cũng như các công ước quốc tế có liên quan.
-3.2. Toàn bộ nội dung tranh vẽ, bài học, tài liệu do bạn tự tạo ra trên bảng trắng hoàn toàn thuộc quyền sở hữu của bạn. Tác giả không yêu cầu bất kỳ quyền sở hữu nào đối với sản phẩm sáng tạo của bạn.
+SECTION 2: DATA PRIVACY AND SECURITY (OFFLINE-FIRST ARCHITECTURE)
+2.1. Offline-First Privacy: Smart Whiteboard is built with strict privacy-by-design principles. All board drawings, handwritten strokes, imported images, and note data are stored locally on your device (IndexedDB and LocalStorage).
+2.2. Zero Data Collection: The software does not automatically collect, store, or transmit your personal identity, passwords, location data, or sensitive files to external servers.
+2.3. Google Drive Cloud Sync: If you choose to enable cloud backup or Google Drive synchronization, data is transmitted directly and securely between your computer and official Google servers using standard Google OAuth authorization. The author does not have access to your credentials or board content.
+2.4. Data Ownership: You retain full ownership of all drawings, documents, and content created within the application. You can export, backup, or delete your data at any time.
 
 --------------------------------------------------------------------------------
-ĐIỀU 4: CẬP NHẬT PHẦN MỀM VÀ TÍNH NĂNG
-4.1. Phần mềm có thể định kỳ kiểm tra các bản cập nhật phiên bản mới thông qua giao thức bảo mật HTTPS tới máy chủ phân phối chính thức (whiteboardfz.pages.dev).
-4.2. Việc kiểm tra cập nhật chỉ nhằm mục đích tải thông số phiên bản (manifest) và không gửi đi bất kỳ thông tin cá nhân hay nội dung sử dụng nào của bạn.
+SECTION 3: INTELLECTUAL PROPERTY
+3.1. All software source code, visual design, icons, dynamic rendering engines, and documentation are the intellectual property of the author and protected by copyright and international intellectual property treaties.
+3.2. All artwork, lesson notes, and materials created by you on the canvas belong entirely to you.
 
 --------------------------------------------------------------------------------
-ĐIỀU 5: MIỄN TRỪ TRÁCH NHIỆM PHÁP LÝ (DISCLAIMER)
-5.1. Phần mềm được cung cấp theo nguyên tắc "nguyên trạng" (as is) mà không có bất kỳ sự bảo đảm rõ ràng hay ngụ ý nào, bao gồm nhưng không giới hạn ở tính phù hợp cho một mục đích cụ thể hay tính tương thích tuyệt đối với mọi cấu hình phần cứng.
-5.2. Trong phạm vi tối đa được pháp luật cho phép, tác giả không chịu trách nhiệm đối với bất kỳ thiệt hại trực tiếp, gián tiếp, ngẫu nhiên hoặc hậu quả nào phát sinh từ việc sử dụng hoặc không thể sử dụng phần mềm, bao gồm nhưng không giới hạn ở sự cố mất mát dữ liệu do hư hỏng phần cứng hoặc thao tác của người dùng.
+SECTION 4: UPDATES AND NETWORK ACCESS
+4.1. The software may periodically check for version updates via secure HTTPS requests to the official release server (whiteboardfz.pages.dev and GitHub).
+4.2. Update checks only retrieve version manifests and release notes; no personal information or canvas data is transmitted.
 
 --------------------------------------------------------------------------------
-ĐIỀU 6: LUẬT ÁP DỤNG VÀ THÔNG TIN LIÊN HỆ
-6.1. Thỏa thuận này được điều chỉnh và giải thích theo quy định của pháp luật nước Cộng hòa Xã hội Chủ nghĩa Việt Nam.
-6.2. Mọi thắc mắc, đề xuất hoặc phản hồi liên quan đến phần mềm và quyền riêng tư, vui lòng liên hệ qua cổng tiếp nhận chính thức của dự án tại: https://whiteboardfz.pages.dev/
+SECTION 5: DISCLAIMER OF WARRANTIES AND LIMITATION OF LIABILITY
+5.1. The software is provided "AS IS" without warranty of any kind, either express or implied, including but not limited to the implied warranties of merchantability and fitness for a particular purpose.
+5.2. In no event shall the author be liable for any direct, indirect, incidental, special, or consequential damages arising out of the use or inability to use the software.
+
+--------------------------------------------------------------------------------
+SECTION 6: GENERAL AND CONTACT
+6.1. If any provision of this agreement is deemed unlawful or unenforceable, the remaining provisions shall continue in full force and effect.
+6.2. For feedback, feature requests, or questions regarding this agreement, please visit the official portal: https://whiteboardfz.pages.dev/
