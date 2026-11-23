@@ -18,6 +18,7 @@ import { BoardType } from '../../types/board';
 import { BoardTemplatePreview } from './BoardTemplatePreview';
 import { CreateBoardModal } from '../modals/CreateBoardModal';
 import { HomeSettingsMenu, PWAInstallTriggerButton } from '../modals/DesktopAppModal';
+import { getWebPortalOrigin } from '../../services/authBridge';
 import { GoogleSignInButton } from './GoogleSignInButton';
 import { AppLogo } from '../ui/AppLogo';
 import {
@@ -723,14 +724,9 @@ export const HomePage: React.FC<HomePageProps> = ({
                       if (onOpenAuthBridgeClick) {
                         onOpenAuthBridgeClick();
                       } else {
-                        const portal =
-                          typeof window !== 'undefined'
-                            ? window.__BTTM_EMBEDDED_BUILD__?.updateOrigin
-                            : undefined;
+                        const portal = getWebPortalOrigin();
                         window.open(
-                          portal
-                            ? `${portal}?auth_bridge=1`
-                            : 'https://whiteboard-34d4d.web.app?auth_bridge=1',
+                          `${portal}?auth_bridge=1`,
                           'bttm_auth_bridge',
                           'width=540,height=700'
                         );

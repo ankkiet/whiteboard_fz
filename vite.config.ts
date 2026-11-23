@@ -67,6 +67,7 @@ export default defineConfig(() => {
                 version: `1.2.${buildId.slice(0, 4)}`,
                 buildId,
                 notes: 'Bản cập nhật Bảng Trắng Thông Minh mới nhất (Windows .exe & macOS .app)',
+                updateOrigin: 'https://whiteboardfz.pages.dev',
               };
 
               const versionMetaScript = `<script>window.__BTTM_EMBEDDED_BUILD__=${JSON.stringify(versionManifest)};</script>`;

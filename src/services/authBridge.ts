@@ -4,6 +4,8 @@
  * Google Drive thông qua phiên đăng nhập trên trình duyệt web.
  */
 
+import { PRODUCTION_UPDATE_ORIGIN } from '../engine/versionCheck';
+
 export interface BridgeUser {
   uid: string;
   displayName: string | null;
@@ -29,7 +31,7 @@ export function getWebPortalOrigin(): string {
   if (typeof window !== 'undefined' && window.__BTTM_EMBEDDED_BUILD__?.updateOrigin) {
     return window.__BTTM_EMBEDDED_BUILD__.updateOrigin;
   }
-  return 'https://whiteboard-34d4d.web.app';
+  return PRODUCTION_UPDATE_ORIGIN;
 }
 
 export function createAuthBridgeToken(user: BridgeUser, accessToken: string): string {
