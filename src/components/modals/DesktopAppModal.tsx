@@ -598,10 +598,22 @@ export const HomeSettingsMenu: React.FC<{
                   >
                     <div className="flex items-center gap-1.5 text-amber-900 dark:text-amber-200 font-bold text-xs">
                       <CheckCircle2 className="w-4 h-4 text-amber-600 shrink-0" />
-                      <span>Đã có phiên bản mới: {checkResult.latestManifest.version}!</span>
+                      <span>
+                        {checkResult.currentVersion !== checkResult.latestManifest.version
+                          ? `Đã có phiên bản mới: ${checkResult.latestManifest.version}!`
+                          : `Đã có bản cập nhật vá lỗi cho ${checkResult.latestManifest.version}!`}
+                      </span>
                     </div>
                     <div className="text-amber-800/90 dark:text-amber-300/90">
-                      Bản hiện tại: <span className="font-semibold">{checkResult.currentVersion}</span> → Bản mới nhất: <span className="font-semibold">{checkResult.latestManifest.version}</span>
+                      {checkResult.currentVersion !== checkResult.latestManifest.version ? (
+                        <>
+                          Bản hiện tại: <span className="font-semibold">{checkResult.currentVersion}</span> → Bản mới nhất: <span className="font-semibold">{checkResult.latestManifest.version}</span>
+                        </>
+                      ) : (
+                        <>
+                          Phiên bản: <span className="font-semibold">{checkResult.latestManifest.version}</span> (Mã nguồn đã được cập nhật mới trên đám mây)
+                        </>
+                      )}
                     </div>
 
                     <div className="space-y-1.5 pt-1">
