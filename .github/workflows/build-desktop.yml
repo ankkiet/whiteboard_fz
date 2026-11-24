@@ -52,9 +52,7 @@ jobs:
         run: bun run build
 
       - name: Package Desktop App
-        run: npx electron-builder ${{ matrix.builder-args }} --config electron/builder.json
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx electron-builder ${{ matrix.builder-args }} --config electron/builder.json --publish never
 
       - name: Create or Update GitHub Release
         uses: softprops/action-gh-release@v2
