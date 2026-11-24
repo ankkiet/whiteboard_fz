@@ -286,7 +286,7 @@ export const HomePage: React.FC<HomePageProps> = ({
           <div className="flex items-center gap-2.5 whitespace-nowrap shrink-0">
             <AppLogo size={30} concept="infinite" />
             <span className="text-sm sm:text-[15px] font-bold tracking-tight text-slate-900 dark:text-slate-100 whitespace-nowrap shrink-0">
-              Bảng Trắng Thông Minh
+              fzINK
             </span>
           </div>
 

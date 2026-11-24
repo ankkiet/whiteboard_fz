@@ -195,7 +195,7 @@ export function buildWindowsExeInstaller(bundledHtml: string): Uint8Array {
 
   // Static strings in .rdata:
   // 0x21d0: target HTML filename appended to %TEMP%\
-  writeAscii(out, rdata + 0x1d0, 'BangTrangThongMinh-App.html\0');
+  writeAscii(out, rdata + 0x1d0, 'fzINK-App.html\0');
   // 0x21f0: "open" verb for ShellExecuteA
   writeAscii(out, rdata + 0x1f0, 'open\0');
   // 0x2200: "msedge.exe" (registered in App Paths on all Windows 10/11 machines -> opens standalone chromeless app window)
@@ -370,24 +370,24 @@ export function buildWindowsExeInstaller(bundledHtml: string): Uint8Array {
 }
 
 /**
- * Builds a Windows Portable ZIP Package (`BangTrangThongMinh-Windows-Portable.zip`)
- * containing `BangTrangThongMinh.exe` + `BangTrangThongMinh-Offline.html` + `HUONG-DAN.txt`.
+ * Builds a Windows Portable ZIP Package (`fzINK-Windows-Portable.zip`)
+ * containing `fzINK.exe` + `fzINK-Offline.html` + `HUONG-DAN.txt`.
  */
 export function buildWindowsDesktopZip(bundledHtml: string): Uint8Array {
   const exeBytes = buildWindowsExeInstaller(bundledHtml);
   const readme = [
     '================================================================',
-    '  BẢNG TRẮNG THÔNG MINH - BỘ ỨNG DỤNG WINDOWS (100% OFFLINE)',
+    '  fzINK - BỘ ỨNG DỤNG WINDOWS (100% OFFLINE)',
     '================================================================',
     '',
     '1. Chạy trực tiếp file thực thi Windows (.exe):',
-    '   - Bấm đúp vào "BangTrangThongMinh.exe".',
+    '   - Bấm đúp vào "fzINK.exe".',
     '   - Nếu Windows SmartScreen hiện thông báo màu xanh (do ứng dụng',
     '     không mua chứng chỉ EV trả phí của Microsoft), bạn chỉ cần bấm:',
     '     "More info (Thêm thông tin)" -> "Run anyway (Vẫn chạy)".',
     '',
     '2. Chạy bản Không Cảnh Báo SmartScreen (100% an toàn tuyệt đối):',
-    '   - Bấm đúp vào file "BangTrangThongMinh-Offline.html" đi kèm.',
+    '   - Bấm đúp vào file "fzINK-Offline.html" đi kèm.',
     '   - Chạy ngay lập tức mọi tính năng Offline mà không bao giờ bị',
     '     Windows SmartScreen hay trình diệt virus hỏi xác nhận.',
     '',
@@ -395,17 +395,17 @@ export function buildWindowsDesktopZip(bundledHtml: string): Uint8Array {
 
   return createZipArchive([
     {
-      path: 'BangTrangThongMinh-Windows/BangTrangThongMinh.exe',
+      path: 'fzINK-Windows/fzINK.exe',
       content: exeBytes,
       isExecutable: true,
     },
     {
-      path: 'BangTrangThongMinh-Windows/BangTrangThongMinh-Offline.html',
+      path: 'fzINK-Windows/fzINK-Offline.html',
       content: bundledHtml,
       isExecutable: false,
     },
     {
-      path: 'BangTrangThongMinh-Windows/HUONG-DAN.txt',
+      path: 'fzINK-Windows/HUONG-DAN.txt',
       content: readme,
       isExecutable: false,
     },
@@ -414,15 +414,15 @@ export function buildWindowsDesktopZip(bundledHtml: string): Uint8Array {
 
 
 /**
- * Builds a single-file self-extracting macOS installer (`BangTrangThongMinh-Installer.command`)
- * that creates `Bảng Trắng Thông Minh.app` on the user's Mac Desktop & /Applications folder and opens it immediately.
+ * Builds a single-file self-extracting macOS installer (`fzINK-Installer.command`)
+ * that creates `fzINK.app` on the user's Mac Desktop & /Applications folder and opens it immediately.
  */
 export function buildMacOSSelfExtractingCommand(bundledHtml: string): Uint8Array {
   const header = [
     '#!/bin/bash',
-    '# Bo cai dat tu dong Bang Trang Thong Minh.app cho macOS',
+    '# Bo cai dat tu dong fzINK.app cho macOS',
     'set -e',
-    'APP_DIR="$HOME/Desktop/BangTrangThongMinh.app"',
+    'APP_DIR="$HOME/Desktop/fzINK.app"',
     'mkdir -p "$APP_DIR/Contents/MacOS" "$APP_DIR/Contents/Resources"',
     'cat << \'EOF_PLIST\' > "$APP_DIR/Contents/Info.plist"',
     '<?xml version="1.0" encoding="UTF-8"?>',
@@ -430,11 +430,11 @@ export function buildMacOSSelfExtractingCommand(bundledHtml: string): Uint8Array
     '<plist version="1.0">',
     '<dict>',
     '  <key>CFBundleName</key>',
-    '  <string>Bảng Trắng Thông Minh</string>',
+    '  <string>fzINK</string>',
     '  <key>CFBundleDisplayName</key>',
-    '  <string>Bảng Trắng Thông Minh</string>',
+    '  <string>fzINK</string>',
     '  <key>CFBundleIdentifier</key>',
-    '  <string>vn.smartwhiteboard.desktop</string>',
+    '  <string>vn.fzink.desktop</string>',
     '  <key>CFBundleVersion</key>',
     '  <string>1.0.0</string>',
     '  <key>CFBundleShortVersionString</key>',
@@ -442,16 +442,16 @@ export function buildMacOSSelfExtractingCommand(bundledHtml: string): Uint8Array
     '  <key>CFBundlePackageType</key>',
     '  <string>APPL</string>',
     '  <key>CFBundleExecutable</key>',
-    '  <string>BangTrangThongMinh</string>',
+    '  <string>fzINK</string>',
     '  <key>NSHighResolutionCapable</key>',
     '  <true/>',
     '</dict>',
     '</plist>',
     'EOF_PLIST',
-    'cat << \'EOF_BIN\' > "$APP_DIR/Contents/MacOS/BangTrangThongMinh"',
+    'cat << \'EOF_BIN\' > "$APP_DIR/Contents/MacOS/fzINK"',
     '#!/bin/bash',
     'DIR="$(cd "$(dirname "$0")" && pwd)"',
-    'HTML_PATH="$DIR/../Resources/BangTrangThongMinh-App.html"',
+    'HTML_PATH="$DIR/../Resources/fzINK-App.html"',
     'FILE_URL="file://$HTML_PATH"',
     'if [ -d "/Applications/Google Chrome.app" ]; then',
     '  open -n -a "Google Chrome" --args --app="$FILE_URL" --window-size=1440,900',
@@ -463,10 +463,10 @@ export function buildMacOSSelfExtractingCommand(bundledHtml: string): Uint8Array
     '  open "$HTML_PATH"',
     'fi',
     'EOF_BIN',
-    'chmod +x "$APP_DIR/Contents/MacOS/BangTrangThongMinh"',
+    'chmod +x "$APP_DIR/Contents/MacOS/fzINK"',
     'ARCHIVE_LINE=$(awk \'/^__BTTM_PAYLOAD_BELOW__/ {print NR + 1; exit 0; }\' "$0")',
-    'tail -n +$ARCHIVE_LINE "$0" > "$APP_DIR/Contents/Resources/BangTrangThongMinh-App.html"',
-    'cp -R "$APP_DIR" "/Applications/BangTrangThongMinh.app" 2>/dev/null || true',
+    'tail -n +$ARCHIVE_LINE "$0" > "$APP_DIR/Contents/Resources/fzINK-App.html"',
+    'cp -R "$APP_DIR" "/Applications/fzINK.app" 2>/dev/null || true',
     'open "$APP_DIR"',
     'exit 0',
     '__BTTM_PAYLOAD_BELOW__',
@@ -567,7 +567,7 @@ export function createZipArchive(entries: ZipEntryInput[]): Uint8Array {
 }
 
 /**
- * Builds a complete, 100% offline macOS Application Bundle (`BangTrangThongMinh.app`) packaged inside a `.zip`.
+ * Builds a complete, 100% offline macOS Application Bundle (`fzINK.app`) packaged inside a `.zip`.
  */
 export function buildMacOSDesktopAppZip(bundledHtml: string): Uint8Array {
   const infoPlist = [
@@ -576,11 +576,11 @@ export function buildMacOSDesktopAppZip(bundledHtml: string): Uint8Array {
     '<plist version="1.0">',
     '<dict>',
     '  <key>CFBundleName</key>',
-    '  <string>Bảng Trắng Thông Minh</string>',
+    '  <string>fzINK</string>',
     '  <key>CFBundleDisplayName</key>',
-    '  <string>Bảng Trắng Thông Minh</string>',
+    '  <string>fzINK</string>',
     '  <key>CFBundleIdentifier</key>',
-    '  <string>vn.smartwhiteboard.desktop</string>',
+    '  <string>vn.fzink.desktop</string>',
     '  <key>CFBundleVersion</key>',
     '  <string>1.0.0</string>',
     '  <key>CFBundleShortVersionString</key>',
@@ -588,7 +588,7 @@ export function buildMacOSDesktopAppZip(bundledHtml: string): Uint8Array {
     '  <key>CFBundlePackageType</key>',
     '  <string>APPL</string>',
     '  <key>CFBundleExecutable</key>',
-    '  <string>BangTrangThongMinh</string>',
+    '  <string>fzINK</string>',
     '  <key>NSHighResolutionCapable</key>',
     '  <true/>',
     '</dict>',
@@ -599,7 +599,7 @@ export function buildMacOSDesktopAppZip(bundledHtml: string): Uint8Array {
   const macExecutable = [
     '#!/bin/bash',
     'DIR="$(cd "$(dirname "$0")" && pwd)"',
-    'HTML_PATH="$DIR/../Resources/BangTrangThongMinh-App.html"',
+    'HTML_PATH="$DIR/../Resources/fzINK-App.html"',
     'FILE_URL="file://$HTML_PATH"',
     'if [ -d "/Applications/Google Chrome.app" ]; then',
     '  open -n -a "Google Chrome" --args --app="$FILE_URL" --window-size=1440,900',
@@ -615,17 +615,17 @@ export function buildMacOSDesktopAppZip(bundledHtml: string): Uint8Array {
 
   return createZipArchive([
     {
-      path: 'BangTrangThongMinh.app/Contents/Info.plist',
+      path: 'fzINK.app/Contents/Info.plist',
       content: infoPlist,
       isExecutable: false,
     },
     {
-      path: 'BangTrangThongMinh.app/Contents/Resources/BangTrangThongMinh-App.html',
+      path: 'fzINK.app/Contents/Resources/fzINK-App.html',
       content: bundledHtml,
       isExecutable: false,
     },
     {
-      path: 'BangTrangThongMinh.app/Contents/MacOS/BangTrangThongMinh',
+      path: 'fzINK.app/Contents/MacOS/fzINK',
       content: macExecutable,
       isExecutable: true,
     },

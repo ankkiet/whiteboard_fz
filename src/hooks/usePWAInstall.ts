@@ -96,7 +96,7 @@ export function useOnlineStatus() {
 
 /**
  * Generates a native 1-click desktop launcher script for Windows (.bat) or macOS (.command)
- * that opens the Smart Whiteboard web app in a dedicated chromeless standalone desktop window.
+ * that opens the fzINK web app in a dedicated chromeless standalone desktop window.
  */
 export function buildDesktopLauncherScript(targetOs: 'windows' | 'macos', appUrl: string): {
   fileName: string;
@@ -107,7 +107,7 @@ export function buildDesktopLauncherScript(targetOs: 'windows' | 'macos', appUrl
   if (targetOs === 'macos') {
     const content = [
       '#!/bin/bash',
-      '# Khởi chạy Bảng Trắng Thông Minh ở chế độ Ứng dụng Desktop độc lập trên macOS',
+      '# Khởi chạy fzINK ở chế độ ứng dụng desktop độc lập trên macOS',
       `APP_URL="${cleanUrl}"`,
       'if [ -d "/Applications/Google Chrome.app" ]; then',
       '  open -n -a "Google Chrome" --args --app="$APP_URL"',
@@ -121,7 +121,7 @@ export function buildDesktopLauncherScript(targetOs: 'windows' | 'macos', appUrl
       '',
     ].join('\n');
     return {
-      fileName: 'BangTrangThongMinh-macOS.command',
+      fileName: 'fzINK-macOS.command',
       mimeType: 'text/plain;charset=utf-8',
       content,
     };
@@ -129,7 +129,7 @@ export function buildDesktopLauncherScript(targetOs: 'windows' | 'macos', appUrl
 
   const content = [
     '@echo off',
-    'REM Khoi chay Bang Trang Thong Minh o che do Ung dung Desktop doc lap tren Windows',
+    'REM Khoi chay fzINK o che do ung dung desktop doc lap tren Windows',
     `set APP_URL=${cleanUrl}`,
     'where msedge >nul 2>nul',
     'if %errorlevel%==0 (',
@@ -154,7 +154,7 @@ export function buildDesktopLauncherScript(targetOs: 'windows' | 'macos', appUrl
   ].join('\r\n');
 
   return {
-    fileName: 'BangTrangThongMinh-Windows.bat',
+    fileName: 'fzINK-Windows.bat',
     mimeType: 'text/plain;charset=utf-8',
     content,
   };

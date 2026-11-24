@@ -32,17 +32,47 @@ interface DesktopAppModalProps {
   onClose: () => void;
 }
 
+const OFFLINE_BANNER_DURATION_MS = 4000;
+
 export const OfflineIndicator: React.FC = () => {
   const isOnline = useOnlineStatus();
-  if (isOnline) return null;
+  const [visible, setVisible] = useState(!isOnline);
+
+  useEffect(() => {
+    if (isOnline) {
+      setVisible(false);
+      return;
+    }
+
+    setVisible(true);
+    const timer = window.setTimeout(() => {
+      setVisible(false);
+    }, OFFLINE_BANNER_DURATION_MS);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [isOnline]);
+
+  if (isOnline || !visible) return null;
 
   return (
     <div
+      role="status"
+      aria-live="polite"
       data-testid="pwa-offline-indicator"
-      className="fixed bottom-4 left-4 z-50 flex items-center gap-2 rounded-xl bg-amber-500 px-3 py-1.5 text-xs font-semibold text-white shadow-lg"
+      className="fixed bottom-4 left-4 z-50 flex items-center gap-2 rounded-xl bg-amber-500 pl-3 pr-2 py-1.5 text-xs font-semibold text-white shadow-lg"
     >
-      <WifiOff className="w-3.5 h-3.5" />
+      <WifiOff className="w-3.5 h-3.5 shrink-0" />
       <span>Đang ngoại tuyến — Dữ liệu bảng vẫn tự động lưu trên máy</span>
+      <button
+        type="button"
+        onClick={() => setVisible(false)}
+        aria-label="Đóng thông báo ngoại tuyến"
+        className="ml-1 inline-flex items-center justify-center w-5 h-5 rounded-full hover:bg-black/15 transition-colors cursor-pointer shrink-0"
+      >
+        <X className="w-3 h-3" />
+      </button>
     </div>
   );
 };
@@ -322,7 +352,7 @@ export const PWAInstallTriggerButton: React.FC<{
       type="button"
       data-testid="open-desktop-app-modal-button"
       onClick={onOpenModal}
-      title="Tải ứng dụng Bảng Trắng Thông Minh (.exe cho Windows / .app cho macOS)"
+      title="Tải ứng dụng fzINK (.exe cho Windows / .dmg cho macOS)"
       aria-label="Tải ứng dụng về máy tính"
       className={`inline-flex items-center gap-1.5 rounded-xl border transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
         compact
@@ -344,7 +374,7 @@ export const HomeSettingsMenu: React.FC<{
   const addToast = useBoardStore((s) => s.addToast);
   const [isOpen, setIsOpen] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
-  const [latestDesktopVersion, setLatestDesktopVersion] = useState<string>('v_fz.1.1.1.1.3');
+  const [latestDesktopVersion, setLatestDesktopVersion] = useState<string>('v_fz.1.1.1.1.4');
   const [checkResult, setCheckResult] = useState<
     | { status: 'idle' }
     | { status: 'up-to-date'; version: string; buildId: string }
@@ -394,7 +424,7 @@ export const HomeSettingsMenu: React.FC<{
       void syncInitialBadge();
       const onDownloaded = () => {
         setHasUpdateBadge(false);
-        const ver = getDownloadedVersion() || 'v_fz.1.1.1.1.3';
+        const ver = getDownloadedVersion() || 'v_fz.1.1.1.1.4';
         const id = getDownloadedBuildId() || '';
         setCheckResult({ status: 'up-to-date', version: ver, buildId: id });
       };
@@ -496,7 +526,7 @@ export const HomeSettingsMenu: React.FC<{
   const currentVersionLabel =
     getDownloadedVersion() ||
     (typeof window !== 'undefined' && window.__BTTM_EMBEDDED_BUILD__?.version) ||
-    'v_fz.1.1.1.1.3';
+    'v_fz.1.1.1.1.4';
 
   return (
     <div className="relative" ref={menuRef}>
@@ -657,7 +687,7 @@ export const HomeSettingsMenu: React.FC<{
                 {checkResult.status === 'not-installed' && (
                   <div className="p-2.5 rounded-lg bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200/70 dark:border-indigo-800/60 space-y-2 text-[11px]">
                     <div className="text-indigo-900 dark:text-indigo-200">
-                      Phiên bản mới nhất: <strong>{checkResult.latestManifest?.version || 'v_fz.1.1.1.1.3'}</strong>
+                      Phiên bản mới nhất: <strong>{checkResult.latestManifest?.version || 'v_fz.1.1.1.1.4'}</strong>
                     </div>
                     <button
                       type="button"
@@ -801,12 +831,12 @@ export const DESKTOP_RELEASE_BASE = `https://github.com/${GITHUB_REPO}/releases/
 export const DESKTOP_RELEASES_PAGE = `https://github.com/${GITHUB_REPO}/releases`;
 
 export const DOWNLOAD_LINKS = {
-  windowsSetup: `${DESKTOP_RELEASE_BASE}/BangTrangThongMinh-Setup.exe`,
-  windowsPortable: `${DESKTOP_RELEASE_BASE}/BangTrangThongMinh-Portable.exe`,
-  macosArm64Dmg: `${DESKTOP_RELEASE_BASE}/BangTrangThongMinh-macOS-arm64.dmg`,
-  macosArm64Zip: `${DESKTOP_RELEASE_BASE}/BangTrangThongMinh-macOS-arm64.zip`,
-  macosX64Dmg: `${DESKTOP_RELEASE_BASE}/BangTrangThongMinh-macOS-x64.dmg`,
-  macosX64Zip: `${DESKTOP_RELEASE_BASE}/BangTrangThongMinh-macOS-x64.zip`,
+  windowsSetup: `${DESKTOP_RELEASE_BASE}/fzINK-Setup.exe`,
+  windowsPortable: `${DESKTOP_RELEASE_BASE}/fzINK-Portable.exe`,
+  macosArm64Dmg: `${DESKTOP_RELEASE_BASE}/fzINK-macOS-arm64.dmg`,
+  macosArm64Zip: `${DESKTOP_RELEASE_BASE}/fzINK-macOS-arm64.zip`,
+  macosX64Dmg: `${DESKTOP_RELEASE_BASE}/fzINK-macOS-x64.dmg`,
+  macosX64Zip: `${DESKTOP_RELEASE_BASE}/fzINK-macOS-x64.zip`,
 };
 
 // Standard market SVG logos for Windows & macOS (matching official branding specs)
@@ -873,8 +903,8 @@ export const DesktopAppModal: React.FC<DesktopAppModalProps> = ({ isOpen, onClos
 
   if (!isOpen) return null;
 
-  const macDmgFileName = `BangTrangThongMinh-macOS-${macArch}.dmg`;
-  const macZipFileName = `BangTrangThongMinh-macOS-${macArch}.zip`;
+  const macDmgFileName = `fzINK-macOS-${macArch}.dmg`;
+  const macZipFileName = `fzINK-macOS-${macArch}.zip`;
   const macDmgUrl = macArch === 'arm64' ? DOWNLOAD_LINKS.macosArm64Dmg : DOWNLOAD_LINKS.macosX64Dmg;
   const macZipUrl = macArch === 'arm64' ? DOWNLOAD_LINKS.macosArm64Zip : DOWNLOAD_LINKS.macosX64Zip;
 
@@ -884,14 +914,14 @@ export const DesktopAppModal: React.FC<DesktopAppModalProps> = ({ isOpen, onClos
   };
 
   const handleDownloadWindowsSetup = () => {
-    addToast('Đang tải bộ cài đặt BangTrangThongMinh-Setup.exe...', 'info');
-    triggerDirectDownload(DOWNLOAD_LINKS.windowsSetup, 'BangTrangThongMinh-Setup.exe');
+    addToast('Đang tải bộ cài đặt fzINK-Setup.exe...', 'info');
+    triggerDirectDownload(DOWNLOAD_LINKS.windowsSetup, 'fzINK-Setup.exe');
     markDesktopAppAsDownloaded();
   };
 
   const handleDownloadWindowsPortable = () => {
-    addToast('Đang tải bản Portable (BangTrangThongMinh-Portable.exe)...', 'info');
-    triggerDirectDownload(DOWNLOAD_LINKS.windowsPortable, 'BangTrangThongMinh-Portable.exe');
+    addToast('Đang tải bản Portable (fzINK-Portable.exe)...', 'info');
+    triggerDirectDownload(DOWNLOAD_LINKS.windowsPortable, 'fzINK-Portable.exe');
     markDesktopAppAsDownloaded();
   };
 
@@ -1005,7 +1035,7 @@ export const DesktopAppModal: React.FC<DesktopAppModalProps> = ({ isOpen, onClos
                   <span>Bản chạy ngay (.exe Portable)</span>
                 </button>
                 <div className="text-[11px] font-mono text-center text-slate-400 dark:text-slate-500">
-                  BangTrangThongMinh-Setup.exe
+                  fzINK-Setup.exe
                 </div>
               </div>
             </div>

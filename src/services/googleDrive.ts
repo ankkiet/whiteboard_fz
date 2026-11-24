@@ -65,7 +65,7 @@ async function driveFetch(url: string, init: RequestInit = {}): Promise<Response
 }
 
 /**
- * Finds or creates the dedicated "Bảng Trắng Thông Minh" folder in the user's Google Drive
+ * Finds or creates the dedicated "fzINK" folder in the user's Google Drive
  * so all saved boards and PNG exports stay neatly organized in one place.
  */
 export async function ensureAppDriveFolder(): Promise<DriveAppFolder> {
@@ -156,7 +156,7 @@ export async function listDriveWorkspace(): Promise<{
 }
 
 /**
- * Moves an older app-created file into the dedicated "Bảng Trắng Thông Minh" folder.
+ * Moves an older app-created file into the dedicated "fzINK" folder.
  */
 export async function moveDriveFileToFolder(
   file: DriveWhiteboardFile,

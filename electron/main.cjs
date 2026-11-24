@@ -1,7 +1,7 @@
 /**
  * Electron Main Process (Windows .exe & macOS .dmg / .app)
- * Cho phép đóng gói dự án Bảng Trắng Thông Minh thành ứng dụng Desktop độc lập
- * mà vẫn dùng chung 100% mã nguồn với phiên bản Website.
+ * Cho phép đóng gói dự án fzINK thành ứng dụng desktop độc lập
+ * mà vẫn dùng chung 100% mã nguồn với phiên bản website.
  */
 const { app, BrowserWindow, shell, Menu } = require('electron');
 const path = require('path');
@@ -9,13 +9,15 @@ const path = require('path');
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 let mainWindow = null;
 
-// Đăng ký custom protocol bttm:// để Web có thể mở lại Desktop App
-if (process.defaultApp) {
-  if (process.argv.length >= 2) {
-    app.setAsDefaultProtocolClient('bttm', process.execPath, [path.resolve(process.argv[1])]);
+// Đăng ký custom protocol fzink:// (và bttm:// để tương thích ngược) để Web có thể mở lại Desktop App
+for (const scheme of ['fzink', 'bttm']) {
+  if (process.defaultApp) {
+    if (process.argv.length >= 2) {
+      app.setAsDefaultProtocolClient(scheme, process.execPath, [path.resolve(process.argv[1])]);
+    }
+  } else {
+    app.setAsDefaultProtocolClient(scheme);
   }
-} else {
-  app.setAsDefaultProtocolClient('bttm');
 }
 
 function sendProtocolTokenToRenderer(urlStr) {
@@ -45,7 +47,9 @@ if (!gotTheLock) {
       mainWindow.focus();
 
       // Tìm URL protocol trong commandLine (Windows)
-      const protocolUrl = commandLine.find((arg) => typeof arg === 'string' && arg.startsWith('bttm://'));
+      const protocolUrl = commandLine.find(
+        (arg) => typeof arg === 'string' && (arg.startsWith('fzink://') || arg.startsWith('bttm://'))
+      );
       if (protocolUrl) {
         sendProtocolTokenToRenderer(protocolUrl);
       }
@@ -59,7 +63,7 @@ function createMainWindow() {
     height: 900,
     minWidth: 1024,
     minHeight: 680,
-    title: 'Bảng Trắng Thông Minh - Smart Whiteboard',
+    title: 'fzINK',
     icon: path.join(__dirname, '../dist/pwa-512x512.png'),
     backgroundColor: '#f8fafc',
     autoHideMenuBar: true,
@@ -106,7 +110,7 @@ app.whenReady().then(() => {
       {
         label: app.name,
         submenu: [
-          { role: 'about', label: 'Giới thiệu Bảng Trắng Thông Minh' },
+          { role: 'about', label: 'Giới thiệu fzINK' },
           { type: 'separator' },
           { role: 'services', label: 'Dịch vụ' },
           { type: 'separator' },

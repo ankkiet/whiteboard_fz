@@ -1,4 +1,4 @@
-// Service Worker cho Bảng Trắng Thông Minh (PWA)
+// Service Worker cho fzINK (PWA)
 // Cho phép ứng dụng hoạt động ngoại tuyến và tự động cập nhật ngầm khi có bản mới
 const CACHE_NAME = 'bttm-pwa-v1';
 const PRECACHE_ASSETS = [

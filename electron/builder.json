@@ -1,6 +1,6 @@
 {
-  "appId": "vn.smartwhiteboard.app",
-  "productName": "Bảng Trắng Thông Minh",
+  "appId": "vn.fzink.app",
+  "productName": "fzINK",
   "compression": "maximum",
   "npmRebuild": false,
   "afterPack": "electron/afterPack.cjs",
@@ -16,8 +16,8 @@
     "main": "electron/main.cjs"
   },
   "protocols": {
-    "name": "BangTrangThongMinh",
-    "schemes": ["bttm"]
+    "name": "fzINK",
+    "schemes": ["fzink", "bttm"]
   },
   "win": {
     "target": [
@@ -31,7 +31,7 @@
       }
     ],
     "icon": "public/pwa-512x512.png",
-    "legalTrademarks": "Bản quyền © 2026 Bảng Trắng Thông Minh. Toàn quyền bảo lưu."
+    "legalTrademarks": "Bản quyền © 2026 fzINK. Toàn quyền bảo lưu."
   },
   "mac": {
     "target": [
@@ -46,27 +46,27 @@
     ],
     "category": "public.app-category.education",
     "icon": "public/pwa-512x512.png",
-    "artifactName": "BangTrangThongMinh-macOS-${arch}.${ext}",
+    "artifactName": "fzINK-macOS-${arch}.${ext}",
     "identity": null
   },
   "nsis": {
-    "artifactName": "BangTrangThongMinh-Setup.${ext}",
+    "artifactName": "fzINK-Setup.${ext}",
     "oneClick": false,
     "perMachine": false,
     "allowElevation": true,
     "allowToChangeInstallationDirectory": true,
     "createDesktopShortcut": true,
     "createStartMenuShortcut": true,
-    "shortcutName": "Bảng Trắng Thông Minh",
-    "uninstallDisplayName": "Bảng Trắng Thông Minh",
+    "shortcutName": "fzINK",
+    "uninstallDisplayName": "fzINK",
     "license": "electron/license.txt",
     "runAfterFinish": true,
     "deleteAppDataOnUninstall": false
   },
   "portable": {
-    "artifactName": "BangTrangThongMinh-Portable.${ext}"
+    "artifactName": "fzINK-Portable.${ext}"
   },
   "dmg": {
-    "artifactName": "BangTrangThongMinh-macOS-${arch}.${ext}"
+    "artifactName": "fzINK-macOS-${arch}.${ext}"
   }
 }

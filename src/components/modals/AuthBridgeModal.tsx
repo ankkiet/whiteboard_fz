@@ -523,7 +523,7 @@ export const AuthBridgeModal: React.FC<AuthBridgeModalProps> = ({
                       Đăng nhập Google để kết nối ứng dụng máy tính
                     </h3>
                     <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                      Đăng nhập tài khoản Google của bạn để cấp quyền lưu trữ và đồng bộ bảng vẽ cho ứng dụng Bảng Trắng Thông Minh trên máy tính.
+                      Đăng nhập tài khoản Google của bạn để cấp quyền lưu trữ và đồng bộ bảng vẽ cho ứng dụng fzINK trên máy tính.
                     </p>
                   </div>
                   <GoogleSignInButton
@@ -589,7 +589,7 @@ export const AuthBridgeModal: React.FC<AuthBridgeModalProps> = ({
 
                       {appRedirectRequested && (
                         <div className="p-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 text-[11px] text-indigo-900 dark:text-indigo-200 text-center leading-relaxed animate-fade-in">
-                          Đã kích hoạt quay về ứng dụng! Bạn hãy mở hoặc chuyển sang cửa sổ Bảng Trắng Thông Minh trên thanh tác vụ của máy tính.
+                          Đã kích hoạt quay về ứng dụng! Bạn hãy mở hoặc chuyển sang cửa sổ fzINK trên thanh tác vụ của máy tính.
                         </div>
                       )}
 

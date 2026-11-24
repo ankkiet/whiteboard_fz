@@ -253,11 +253,11 @@ export const AppLogo: React.FC<AppLogoProps> = ({
       </div>
       <div className="flex flex-col min-w-0 leading-none">
         <span className="text-sm sm:text-[15px] font-bold tracking-tight text-slate-900 dark:text-white truncate">
-          Bảng Trắng Thông Minh
+          fzINK
         </span>
         {showSubtitle && (
           <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400 mt-0.5 truncate">
-            Smart Whiteboard
+            Bảng trắng tương tác
           </span>
         )}
       </div>

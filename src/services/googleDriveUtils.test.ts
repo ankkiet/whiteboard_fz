@@ -181,7 +181,7 @@ test('buildMultipartRelatedBody produces valid multipart/related payload', async
 test('folder helpers exclude Drive folders and find files outside the app folder', () => {
   const folder: DriveWhiteboardFile = {
     id: 'folder_1',
-    name: 'Bảng Trắng Thông Minh',
+    name: 'fzINK',
     mimeType: DRIVE_FOLDER_MIME_TYPE,
   };
   const insideFile: DriveWhiteboardFile = {
