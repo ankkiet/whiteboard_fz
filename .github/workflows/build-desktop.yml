@@ -26,7 +26,7 @@ jobs:
             release-files: release/*.exe
           - os: macos-latest
             os-name: macOS
-            target-name: .dmg, .zip
+            target-name: .dmg, .zip (arm64 & x64)
             builder-args: --mac
             release-files: |
               release/*.dmg

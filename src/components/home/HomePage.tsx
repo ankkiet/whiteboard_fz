@@ -14,7 +14,7 @@ import {
 } from '../../services/googleDriveUtils';
 import { formatSyncTime, getLocalDraftActionState } from '../../services/driveSyncUtils';
 import { BOARD_TEMPLATES, getBoardTypeLabel } from '../../engine/boardTemplates';
-import { BoardType, NotebookPaperSize } from '../../types/board';
+import { BoardPattern, BoardType, NotebookPaperSize } from '../../types/board';
 import { BoardTemplatePreview } from './BoardTemplatePreview';
 import { CreateBoardModal } from '../modals/CreateBoardModal';
 import { HomeSettingsMenu, PWAInstallTriggerButton } from '../modals/DesktopAppModal';
@@ -221,6 +221,7 @@ export const HomePage: React.FC<HomePageProps> = ({
   const handleCreateBoard = (options: {
     title?: string;
     boardType: BoardType;
+    boardPattern?: BoardPattern;
     notebookPaperSize?: NotebookPaperSize;
   }) => {
     setCreateModalState((prev) => ({ ...prev, open: false }));

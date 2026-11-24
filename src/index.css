@@ -72,30 +72,44 @@
 }
 
 .casio-lcd-screen {
-  font-family: var(--font-mono), ui-monospace, SFMono-Regular, monospace;
-  font-feature-settings: "tnum" 1, "zero" 1;
+  font-family: "KaTeX_Main", "Cambria Math", "Times New Roman", Georgia, serif;
+  color: #1e345a;
+}
+
+.casio-math-font {
+  font-family: "KaTeX_Main", "Cambria Math", "Times New Roman", Georgia, serif;
+  font-variant-numeric: lining-nums;
+}
+
+.casio-math-var {
+  font-family: "KaTeX_Math", "KaTeX_Main", "Cambria Math", serif;
+  font-style: italic;
+  font-weight: 400;
 }
 
 .casio-lcd-screen .katex {
-  font-family: var(--font-mono), ui-monospace, SFMono-Regular, monospace;
-  color: #090d0b;
+  font-family: "KaTeX_Main", "Cambria Math", "Times New Roman", serif;
+  color: #1e345a;
 }
 
-.casio-lcd-screen .katex .mord:not(.delimsizing) {
-  font-family: var(--font-mono), monospace !important;
-  font-style: normal;
-  font-weight: 600;
+@keyframes casio-caret-blink {
+  0%, 49% {
+    opacity: 1;
+  }
+  50%, 100% {
+    opacity: 0;
+  }
 }
 
-.casio-lcd-screen .katex .mord.mathnormal {
-  font-family: var(--font-mono), monospace !important;
-  font-style: italic;
-  font-weight: 500;
-}
-
-.casio-lcd-screen .katex .mbin,
-.casio-lcd-screen .katex .mrel {
-  font-family: var(--font-mono), monospace !important;
-  font-weight: 600;
+.casio-caret {
+  display: inline-block;
+  width: 1.5px;
+  height: 1.05em;
+  background-color: #1e345a;
+  vertical-align: -0.14em;
+  margin-left: -0.5px;
+  margin-right: -1px;
+  animation: casio-caret-blink 1s step-end infinite;
+  pointer-events: none;
 }
 

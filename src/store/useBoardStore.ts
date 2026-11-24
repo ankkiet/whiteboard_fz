@@ -190,7 +190,16 @@ interface BoardState {
     notebookPaperSize?: NotebookPaperSize;
     resetHistory?: boolean;
   }) => void;
-  startNewBoard: (options?: string | { title?: string; boardType?: BoardType; notebookPaperSize?: NotebookPaperSize }) => void;
+  startNewBoard: (
+    options?:
+      | string
+      | {
+          title?: string;
+          boardType?: BoardType;
+          boardPattern?: BoardPattern;
+          notebookPaperSize?: NotebookPaperSize;
+        }
+  ) => void;
   clearBoard: () => void;
 
   // Persistence
@@ -892,6 +901,10 @@ export const useBoardStore = create<BoardState>((set, get) => ({
         ? normalizeNotebookPaperSize(options.notebookPaperSize)
         : 'a4';
     const template = getBoardTemplate(resolvedType);
+    const resolvedPattern: BoardPattern =
+      typeof options === 'object' && options?.boardPattern
+        ? normalizeBoardPattern(options.boardPattern)
+        : template.pattern;
     const resolvedTitle =
       typeof options === 'string'
         ? options.trim() || template.defaultTitle
@@ -924,7 +937,7 @@ export const useBoardStore = create<BoardState>((set, get) => ({
     set({
       title: resolvedTitle,
       boardType: resolvedType,
-      boardPattern: template.pattern,
+      boardPattern: resolvedPattern,
       notebookPaperSize: resolvedPaperSize,
       elements: starterElements,
       assets: {},

@@ -2,31 +2,58 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useBoardStore } from '../../store/useBoardStore';
 import {
   CasioAngleUnit,
+  CasioBaseMode,
   CasioDisplayFormat,
+  CasioDistKind,
+  CasioEqFullResult,
   CasioExactRepresentation,
   CasioNormMode,
+  CasioVerifyOp,
   casioExprToNaturalLatex,
+  computeCasioDistribution,
+  computeCasioLinReg,
   computeCasioStats1Var,
   computeMatrixDet,
   computeMatrixInverse,
   computeVectorMetrics,
+  evaluateCasioBaseN,
   evaluateCasioComplex,
   evaluateCasioExpression,
+  evaluateCasioVerify,
   factorizeIntegerLatex,
   formatCasioExact,
   formatComplexLatex,
   matrixToLatex,
   multiplyMatrices,
-  solveCasioEquation,
-  solveCubicEquation,
-  solveLinearSystem2x2,
-  solveLinearSystem3x3,
+  parseCasioCoeff,
+  solveCasioCubicFull,
+  solveCasioEquationAllRoots,
+  solveCasioLinearSystemFull,
+  solveCasioQuadraticFull,
+  solveCasioQuarticFull,
+  solveCasioRatio,
+  solveCubicInequality,
   solveQuadraticInequality,
+  subtractMatrices,
+  transposeMatrix,
 } from '../../engine/casio580Engine';
-import { solveQuadratic } from '../../engine/mathEngine';
 import { FormulaElement } from '../../types/board';
 import { MathTex } from './MathTex';
-import { CasioEqSubMode, CasioLcdModes, CasioLcdOverlay, CasioMainMode } from './CasioLcdModes';
+import {
+  CasioDistScreen,
+  CasioEqScreen,
+  CasioEqSubMode,
+  CasioIneqScreen,
+  CasioLcdModes,
+  CasioLcdOverlay,
+  CasioMainMode,
+  CasioMatOp,
+  CasioRatioScreen,
+  CasioStatsScreen,
+  CasioStatsSubMode,
+  CasioTableScreen,
+  CasioVecOp,
+} from './CasioLcdModes';
 import { CasioNaturalEditor } from './CasioNaturalEditor';
 import {
   Casio2dSlotNode,
@@ -92,6 +119,28 @@ interface NumKeyDef {
   onAlphaPress?: () => void;
 }
 
+const CASIO_STORAGE_KEY = 'bttm_casio_fx580_state_v1';
+
+interface PersistedCasioState {
+  angleUnit?: CasioAngleUnit;
+  normMode?: CasioNormMode;
+  fixDigits?: number;
+  chassisTheme?: 'carbon' | 'navy' | 'silver';
+  vars?: Record<string, number>;
+}
+
+function loadPersistedCasioState(): PersistedCasioState {
+  try {
+    if (typeof window === 'undefined') return {};
+    const raw = window.localStorage.getItem(CASIO_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
 export const FloatingCalculator: React.FC = () => {
   const isOpen = useBoardStore((s) => s.isCalculatorOpen);
   const setIsOpen = useBoardStore((s) => s.setIsCalculatorOpen);
@@ -100,36 +149,46 @@ export const FloatingCalculator: React.FC = () => {
   const addElement = useBoardStore((s) => s.addElement);
   const addToast = useBoardStore((s) => s.addToast);
 
+  const persisted = useMemo(() => loadPersistedCasioState(), []);
+
   const [pos, setPos] = useState({ x: 14, y: 60 });
   const [mode, setMode] = useState<CasioMainMode>('calc');
   const [overlay, setOverlay] = useState<CasioLcdOverlay>(null);
-  const [angleUnit, setAngleUnit] = useState<CasioAngleUnit>('D');
-  const [normMode, setNormMode] = useState<CasioNormMode>('NORM');
-  const [fixDigits, setFixDigits] = useState<number>(4);
+  const [angleUnit, setAngleUnit] = useState<CasioAngleUnit>(
+    persisted.angleUnit === 'R' || persisted.angleUnit === 'G' ? persisted.angleUnit : 'D'
+  );
+  const [normMode, setNormMode] = useState<CasioNormMode>(
+    persisted.normMode === 'FIX' || persisted.normMode === 'SCI' ? persisted.normMode : 'NORM'
+  );
+  const [fixDigits, setFixDigits] = useState<number>(
+    typeof persisted.fixDigits === 'number' ? persisted.fixDigits : 4
+  );
   const [displayFormat, setDisplayFormat] = useState<CasioDisplayFormat>('exact');
-  const [chassisTheme, setChassisTheme] = useState<'carbon' | 'navy' | 'silver'>('carbon');
+  const [chassisTheme, setChassisTheme] = useState<'carbon' | 'navy' | 'silver'>(
+    persisted.chassisTheme === 'navy' || persisted.chassisTheme === 'silver' ? persisted.chassisTheme : 'carbon'
+  );
 
   const [shiftActive, setShiftActive] = useState(false);
   const [alphaActive, setAlphaActive] = useState(false);
   const [stoActive, setStoActive] = useState(false);
 
-  // Mode 1: Calculate state
-  const [expr, setExpr] = useState('sin(30) + sqrt(16)');
+  // Mode 1: Calculate state (clean empty LCD on startup, just like a real Casio)
+  const [expr, setExpr] = useState('');
   const [undoStack, setUndoStack] = useState<string[]>([]);
-  const [isEvaluated, setIsEvaluated] = useState(true);
+  const [isEvaluated, setIsEvaluated] = useState(false);
   const [lastResult, setLastResult] = useState<CasioExactRepresentation>({
-    numeric: 4.5,
-    decimalText: '4.5',
-    exactLatex: '\\frac{9}{2}',
-    mixedLatex: '4\\frac{1}{2}',
-    dmsText: `4°30'0"`,
-    engLatex: '4.5 \\times 10^{0}',
-    hasExactForm: true,
+    numeric: 0,
+    decimalText: '0',
+    exactLatex: '0',
+    mixedLatex: '0',
+    dmsText: `0°0'0"`,
+    engLatex: '0 \\times 10^{0}',
+    hasExactForm: false,
   });
   const [preAns, setPreAns] = useState<number>(0);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [infoBanner, setInfoBanner] = useState<string | null>(null);
-  const [vars, setVars] = useState<Record<string, number>>({
+  const [vars, setVars] = useState<Record<string, number>>(() => ({
     A: 0,
     B: 0,
     C: 0,
@@ -140,77 +199,76 @@ export const FloatingCalculator: React.FC = () => {
     x: 0,
     y: 0,
     z: 0,
-  });
+    ...(persisted.vars ?? {}),
+  }));
   const [calcVarInputs, setCalcVarInputs] = useState<Record<string, string>>({});
-  const [history, setHistory] = useState<HistoryEntry[]>([
-    {
-      expr: 'sin(30) + sqrt(16)',
-      res: {
-        numeric: 4.5,
-        decimalText: '4.5',
-        exactLatex: '\\frac{9}{2}',
-        mixedLatex: '4\\frac{1}{2}',
-        dmsText: `4°30'0"`,
-        engLatex: '4.5 \\times 10^{0}',
-        hasExactForm: true,
-      },
-    },
-  ]);
-  const [historyIdx, setHistoryIdx] = useState<number>(0);
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [historyIdx, setHistoryIdx] = useState<number>(-1);
 
   const calcRootRef = useRef<HTMLDivElement>(null);
   const activeFieldIdRef = useRef<string>('slot-root');
   const [activeFieldId, setActiveFieldId] = useState<string>('slot-root');
-  const caretPosRef = useRef<number | null>(null);
+  const caretPosRef = useRef<number | null>(0);
+  const [activeCaret, setActiveCaret] = useState<number | null>(0);
 
   const setActiveField = (id: string) => {
     activeFieldIdRef.current = id;
     setActiveFieldId(id);
   };
 
+  const setCaretPos = (posVal: number | null) => {
+    caretPosRef.current = posVal;
+    setActiveCaret(posVal);
+  };
+
+  // Persist user settings and memory variables safely
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(
+        CASIO_STORAGE_KEY,
+        JSON.stringify({ angleUnit, normMode, fixDigits, chassisTheme, vars })
+      );
+    } catch {
+      // ignore quota/private mode errors
+    }
+  }, [angleUnit, normMode, fixDigits, chassisTheme, vars]);
+
   // Mode 2: Complex
-  const [complexExpr, setComplexExpr] = useState('(2+3i)*(1-i)');
+  const [complexExpr, setComplexExpr] = useState('');
   const [complexPolar, setComplexPolar] = useState(false);
 
-  // Mode 3: Matrix (string[][] for keypad entry)
-  const [matSize, setMatSize] = useState<2 | 3>(2);
+  // Mode 3: Base-N
+  const [baseMode, setBaseMode] = useState<CasioBaseMode>('DEC');
+  const [baseExpr, setBaseExpr] = useState('');
+
+  // Mode 4: Matrix (2x2, 3x3, 4x4) — initialized to 0 like real Casio
+  const [matSize, setMatSize] = useState<2 | 3 | 4>(2);
   const [matA, setMatA] = useState<string[][]>([
-    ['2', '1'],
-    ['1', '3'],
+    ['0', '0'],
+    ['0', '0'],
   ]);
   const [matB, setMatB] = useState<string[][]>([
-    ['1', '0'],
-    ['2', '4'],
+    ['0', '0'],
+    ['0', '0'],
   ]);
-  const [matOp, setMatOp] = useState<'det' | 'inv' | 'add' | 'mul'>('det');
+  const [matOp, setMatOp] = useState<CasioMatOp>('det');
 
-  // Mode 4: Vector (string[] for keypad entry)
+  // Mode 5: Vector
   const [vecDim, setVecDim] = useState<2 | 3>(3);
-  const [vecU, setVecU] = useState<string[]>(['1', '2', '-1']);
-  const [vecV, setVecV] = useState<string[]>(['2', '-1', '0']);
+  const [vecU, setVecU] = useState<string[]>(['0', '0', '0']);
+  const [vecV, setVecV] = useState<string[]>(['0', '0', '0']);
+  const [vecOp, setVecOp] = useState<CasioVecOp>('dot');
 
-  // Mode 5: Table f(x)
-  const [tableExpr, setTableExpr] = useState('x^2 - 2*x');
-  const [tableStart, setTableStart] = useState('-2');
-  const [tableEnd, setTableEnd] = useState('4');
-  const [tableStep, setTableStep] = useState('1');
-
-  // Mode 6 & 7: Equations & Inequality
-  const [eqSubMode, setEqSubMode] = useState<CasioEqSubMode>('sys2');
-  const [qa, setQa] = useState('1');
-  const [qb, setQb] = useState('-5');
-  const [qc, setQc] = useState('6');
-  const [qd, setQd] = useState('0');
-  const [sys2, setSys2] = useState<string[]>(['2', '1', '5', '1', '-1', '1']);
-  const [sys3, setSys3] = useState<string[][]>([
-    ['1', '1', '1', '6'],
-    ['2', '-1', '1', '3'],
-    ['1', '2', '-1', '2'],
+  // Mode 6: Stats (1-Var & Linear Regression)
+  const [statsScreen, setStatsScreen] = useState<CasioStatsScreen>('selectType');
+  const [statsSubMode, setStatsSubMode] = useState<CasioStatsSubMode>('1var');
+  const [statsRaw, setStatsRaw] = useState('');
+  const [statsPairs, setStatsPairs] = useState<{ x: string; y: string }[]>([
+    { x: '', y: '' },
+    { x: '', y: '' },
+    { x: '', y: '' },
+    { x: '', y: '' },
   ]);
-  const [ineqOp, setIneqOp] = useState<'>' | '<' | '>=' | '<='>('>');
-
-  // Mode 8: Stats
-  const [statsRaw, setStatsRaw] = useState('5, 7, 8, 8, 9, 10');
   const statsResult = useMemo(() => {
     const nums = statsRaw
       .split(/[\s,;]+/)
@@ -219,11 +277,80 @@ export const FloatingCalculator: React.FC = () => {
       .map(Number);
     return computeCasioStats1Var(nums);
   }, [statsRaw]);
+  const linRegResult = useMemo(() => {
+    const pairs = statsPairs
+      .filter((p) => p.x.trim() !== '' && p.y.trim() !== '')
+      .map((p) => ({ x: parseCasioCoeff(p.x), y: parseCasioCoeff(p.y) }));
+    return computeCasioLinReg(pairs);
+  }, [statsPairs]);
+
+  // Mode 7: Distribution
+  const [distScreen, setDistScreen] = useState<CasioDistScreen>('selectKind');
+  const [distKind, setDistKind] = useState<CasioDistKind>('normalCD');
+  const [distX, setDistX] = useState('0');
+  const [distLower, setDistLower] = useState('0');
+  const [distUpper, setDistUpper] = useState('0');
+  const [distMu, setDistMu] = useState('0');
+  const [distSigma, setDistSigma] = useState('1');
+  const [distArea, setDistArea] = useState('0.5');
+  const [distN, setDistN] = useState('0');
+  const [distP, setDistP] = useState('0');
+  const [distLambda, setDistLambda] = useState('1');
+
+  // Mode 8: Table f(x) & optional g(x) (default Start=1, End=5, Step=1 like Casio fx-580VN X)
+  const [tableScreen, setTableScreen] = useState<CasioTableScreen>('input');
+  const [tableExpr, setTableExpr] = useState('');
+  const [tableGExpr, setTableGExpr] = useState('');
+  const [tableStart, setTableStart] = useState('1');
+  const [tableEnd, setTableEnd] = useState('5');
+  const [tableStep, setTableStep] = useState('1');
+
+  // Mode 9 & A: Equations & Inequality (all 0 by default like real Casio)
+  const [eqScreen, setEqScreen] = useState<CasioEqScreen>('selectType');
+  const [eqSubMode, setEqSubMode] = useState<CasioEqSubMode>('quad');
+  const [eqResult, setEqResult] = useState<CasioEqFullResult | null>(null);
+  const [eqResultIdx, setEqResultIdx] = useState<number>(0);
+  const [eqShowDecimal, setEqShowDecimal] = useState<boolean>(false);
+  const [qa, setQa] = useState('0');
+  const [qb, setQb] = useState('0');
+  const [qc, setQc] = useState('0');
+  const [qd, setQd] = useState('0');
+  const [qe, setQe] = useState('0');
+  const [sys2, setSys2] = useState<string[]>(['0', '0', '0', '0', '0', '0']);
+  const [sys3, setSys3] = useState<string[][]>([
+    ['0', '0', '0', '0'],
+    ['0', '0', '0', '0'],
+    ['0', '0', '0', '0'],
+  ]);
+  const [sys4, setSys4] = useState<string[][]>([
+    ['0', '0', '0', '0', '0'],
+    ['0', '0', '0', '0', '0'],
+    ['0', '0', '0', '0', '0'],
+    ['0', '0', '0', '0', '0'],
+  ]);
+  const [ineqScreen, setIneqScreen] = useState<CasioIneqScreen>('selectDeg');
+  const [ineqDegree, setIneqDegree] = useState<2 | 3>(2);
+  const [ineqOp, setIneqOp] = useState<'>' | '<' | '>=' | '<='>('>');
+
+  // Mode B: Verify
+  const [verifyLhs, setVerifyLhs] = useState('');
+  const [verifyOp, setVerifyOp] = useState<CasioVerifyOp>('=');
+  const [verifyRhs, setVerifyRhs] = useState('');
+  const [verifyEvaluated, setVerifyEvaluated] = useState<boolean>(false);
+
+  // Mode C: Ratio
+  const [ratioScreen, setRatioScreen] = useState<CasioRatioScreen>('selectForm');
+  const [ratioUnknown, setRatioUnknown] = useState<'c' | 'd'>('c');
+  const [ratioA, setRatioA] = useState('0');
+  const [ratioB, setRatioB] = useState('0');
+  const [ratioC, setRatioC] = useState('0');
+  const [ratioD, setRatioD] = useState('0');
+  const [ratioShowDecimal, setRatioShowDecimal] = useState<boolean>(false);
 
   const calcVarsList = useMemo(() => {
     const found: string[] = [];
     for (const v of ['x', 'y', 'z', 'A', 'B', 'C', 'D', 'T', 'F', 'M']) {
-      if (new RegExp(`\\b${v}\\b`).test(expr)) found.push(v);
+      if (new RegExp(`(?<![a-zA-Z])${v}(?![a-zA-Z])`).test(expr)) found.push(v);
     }
     return found.length > 0 ? found : ['x'];
   }, [expr]);
@@ -239,23 +366,72 @@ export const FloatingCalculator: React.FC = () => {
       setActiveField(navSlots[0]?.id ?? 'slot-root');
     } else if (mode === 'complex') {
       setActiveField('complex-expr');
+    } else if (mode === 'basen') {
+      setActiveField('basen-expr');
     } else if (mode === 'matrix') {
       setActiveField('matA-0-0');
     } else if (mode === 'vector') {
       setActiveField('vecU-0');
-    } else if (mode === 'table') {
-      setActiveField('table-expr');
-    } else if (mode === 'equation') {
-      setActiveField(
-        eqSubMode === 'sys2' ? 'sys2-0' : eqSubMode === 'sys3' ? 'sys3-0-0' : 'eq-a'
-      );
-    } else if (mode === 'ineq') {
-      setActiveField('ineq-a');
     } else if (mode === 'stats') {
-      setActiveField('stats-raw');
+      if (statsScreen === 'input') {
+        setActiveField(statsSubMode === '1var' ? 'stats-raw' : 'linreg-x-0');
+      }
+    } else if (mode === 'dist') {
+      if (distScreen === 'input') {
+        setActiveField(
+          distKind === 'normalCD' ? 'dist-lower' : distKind === 'invNormal' ? 'dist-area' : 'dist-x'
+        );
+      }
+    } else if (mode === 'table') {
+      if (tableScreen === 'input') {
+        setActiveField('table-expr');
+      }
+    } else if (mode === 'equation') {
+      if (eqScreen === 'input') {
+        const defaultEqField =
+          eqSubMode === 'sys2'
+            ? 'sys2-0'
+            : eqSubMode === 'sys3'
+              ? 'sys3-0-0'
+              : eqSubMode === 'sys4'
+                ? 'sys4-0-0'
+                : 'eq-a';
+        setActiveField(defaultEqField);
+        requestAnimationFrame(() => {
+          const el = getFieldInputEl(defaultEqField);
+          if (el) {
+            el.focus();
+            el.select();
+          }
+        });
+      }
+    } else if (mode === 'ineq') {
+      if (ineqScreen === 'input') {
+        setActiveField('ineq-a');
+      }
+    } else if (mode === 'verify') {
+      setActiveField('verify-lhs');
+    } else if (mode === 'ratio') {
+      if (ratioScreen === 'input') {
+        setActiveField('ratio-a');
+      }
     }
     caretPosRef.current = null;
-  }, [isOpen, mode, overlay, eqSubMode, calcVarsList]);
+  }, [
+    isOpen,
+    mode,
+    overlay,
+    eqSubMode,
+    eqScreen,
+    statsScreen,
+    statsSubMode,
+    distScreen,
+    distKind,
+    tableScreen,
+    ineqScreen,
+    ratioScreen,
+    calcVarsList,
+  ]);
 
   if (!isOpen) return null;
 
@@ -271,7 +447,7 @@ export const FloatingCalculator: React.FC = () => {
 
   const focusFieldAtCaret = (fieldId: string, caret: number) => {
     setActiveField(fieldId);
-    caretPosRef.current = caret;
+    setCaretPos(caret);
     requestAnimationFrame(() => {
       const el = getFieldInputEl(fieldId);
       if (el) {
@@ -279,6 +455,7 @@ export const FloatingCalculator: React.FC = () => {
         try {
           const clamped = Math.max(0, Math.min(el.value.length, caret));
           el.setSelectionRange(clamped, clamped);
+          setCaretPos(clamped);
         } catch {
           // ignore if browser blocks selection range
         }
@@ -356,6 +533,15 @@ export const FloatingCalculator: React.FC = () => {
       };
     }
 
+    if (mode === 'basen') {
+      return {
+        fieldId: 'basen-expr',
+        getVal: () => baseExpr,
+        setVal: setBaseExpr,
+        isExpressionField: true,
+      };
+    }
+
     if (mode === 'matrix') {
       const mMatch = /^(matA|matB)-(\d)-(\d)$/.exec(id);
       const which = mMatch ? mMatch[1] : 'matA';
@@ -393,7 +579,27 @@ export const FloatingCalculator: React.FC = () => {
       };
     }
 
+    if (mode === 'dist') {
+      const distMap: Record<string, { get: () => string; set: (v: string) => void }> = {
+        'dist-x': { get: () => distX, set: setDistX },
+        'dist-lower': { get: () => distLower, set: setDistLower },
+        'dist-upper': { get: () => distUpper, set: setDistUpper },
+        'dist-mu': { get: () => distMu, set: setDistMu },
+        'dist-sigma': { get: () => distSigma, set: setDistSigma },
+        'dist-area': { get: () => distArea, set: setDistArea },
+        'dist-n': { get: () => distN, set: setDistN },
+        'dist-p': { get: () => distP, set: setDistP },
+        'dist-lambda': { get: () => distLambda, set: setDistLambda },
+      };
+      const hit = distMap[id] ?? distMap['dist-x'];
+      const targetId = distMap[id] ? id : 'dist-x';
+      return { fieldId: targetId, getVal: hit.get, setVal: hit.set, isExpressionField: false };
+    }
+
     if (mode === 'table') {
+      if (id === 'table-gexpr') {
+        return { fieldId: id, getVal: () => tableGExpr, setVal: setTableGExpr, isExpressionField: true };
+      }
       if (id === 'table-start') {
         return { fieldId: id, getVal: () => tableStart, setVal: setTableStart, isExpressionField: false };
       }
@@ -436,19 +642,65 @@ export const FloatingCalculator: React.FC = () => {
           isExpressionField: false,
         };
       }
+      if (eqSubMode === 'sys4') {
+        const s4Match = /^sys4-(\d)-(\d)$/.exec(id);
+        const r = s4Match ? Number(s4Match[1]) : 0;
+        const c = s4Match ? Number(s4Match[2]) : 0;
+        return {
+          fieldId: `sys4-${r}-${c}`,
+          getVal: () => sys4[r]?.[c] ?? '0',
+          setVal: (next) => {
+            setSys4(
+              sys4.map((row, ri) => row.map((cell, ci) => (ri === r && ci === c ? next : cell)))
+            );
+          },
+          isExpressionField: false,
+        };
+      }
       if (id === 'eq-b') return { fieldId: id, getVal: () => qb, setVal: setQb, isExpressionField: false };
       if (id === 'eq-c') return { fieldId: id, getVal: () => qc, setVal: setQc, isExpressionField: false };
       if (id === 'eq-d') return { fieldId: id, getVal: () => qd, setVal: setQd, isExpressionField: false };
+      if (id === 'eq-e') return { fieldId: id, getVal: () => qe, setVal: setQe, isExpressionField: false };
       return { fieldId: 'eq-a', getVal: () => qa, setVal: setQa, isExpressionField: false };
     }
 
     if (mode === 'ineq') {
       if (id === 'ineq-b') return { fieldId: id, getVal: () => qb, setVal: setQb, isExpressionField: false };
       if (id === 'ineq-c') return { fieldId: id, getVal: () => qc, setVal: setQc, isExpressionField: false };
+      if (id === 'ineq-d') return { fieldId: id, getVal: () => qd, setVal: setQd, isExpressionField: false };
       return { fieldId: 'ineq-a', getVal: () => qa, setVal: setQa, isExpressionField: false };
     }
 
+    if (mode === 'verify') {
+      if (id === 'verify-rhs') {
+        return { fieldId: id, getVal: () => verifyRhs, setVal: setVerifyRhs, isExpressionField: true };
+      }
+      return { fieldId: 'verify-lhs', getVal: () => verifyLhs, setVal: setVerifyLhs, isExpressionField: true };
+    }
+
+    if (mode === 'ratio') {
+      if (id === 'ratio-b') return { fieldId: id, getVal: () => ratioB, setVal: setRatioB, isExpressionField: false };
+      if (id === 'ratio-c') return { fieldId: id, getVal: () => ratioC, setVal: setRatioC, isExpressionField: false };
+      if (id === 'ratio-d') return { fieldId: id, getVal: () => ratioD, setVal: setRatioD, isExpressionField: false };
+      return { fieldId: 'ratio-a', getVal: () => ratioA, setVal: setRatioA, isExpressionField: false };
+    }
+
     if (mode === 'stats') {
+      const lrMatch = /^linreg-(x|y)-(\d+)$/.exec(id);
+      if (statsSubMode === 'linreg') {
+        const col = (lrMatch ? lrMatch[1] : 'x') as 'x' | 'y';
+        const idx = lrMatch ? Number(lrMatch[2]) : 0;
+        return {
+          fieldId: `linreg-${col}-${idx}`,
+          getVal: () => statsPairs[idx]?.[col] ?? '',
+          setVal: (next) => {
+            setStatsPairs(
+              statsPairs.map((p, i) => (i === idx ? { ...p, [col]: next } : p))
+            );
+          },
+          isExpressionField: false,
+        };
+      }
       return {
         fieldId: 'stats-raw',
         getVal: () => statsRaw,
@@ -519,10 +771,249 @@ export const FloatingCalculator: React.FC = () => {
     return true;
   };
 
+  const enterCasioMode = (nextMode: CasioMainMode) => {
+    setMode(nextMode);
+    if (nextMode === 'equation') {
+      setEqScreen('selectType');
+      setEqResult(null);
+      setEqResultIdx(0);
+      setEqShowDecimal(false);
+    } else if (nextMode === 'stats') {
+      setStatsScreen('selectType');
+    } else if (nextMode === 'dist') {
+      setDistScreen('selectKind');
+    } else if (nextMode === 'table') {
+      setTableScreen('input');
+    } else if (nextMode === 'ineq') {
+      setIneqScreen('selectDeg');
+    } else if (nextMode === 'verify') {
+      setVerifyEvaluated(false);
+    } else if (nextMode === 'ratio') {
+      setRatioScreen('selectForm');
+      setRatioShowDecimal(false);
+    }
+  };
+
+  const computeCurrentEqResult = (): CasioEqFullResult => {
+    if (eqSubMode === 'quad') {
+      return solveCasioQuadraticFull(parseCasioCoeff(qa), parseCasioCoeff(qb), parseCasioCoeff(qc));
+    }
+    if (eqSubMode === 'cubic') {
+      return solveCasioCubicFull(
+        parseCasioCoeff(qa),
+        parseCasioCoeff(qb),
+        parseCasioCoeff(qc),
+        parseCasioCoeff(qd)
+      );
+    }
+    if (eqSubMode === 'quartic') {
+      return solveCasioQuarticFull(
+        parseCasioCoeff(qa),
+        parseCasioCoeff(qb),
+        parseCasioCoeff(qc),
+        parseCasioCoeff(qd),
+        parseCasioCoeff(qe)
+      );
+    }
+    if (eqSubMode === 'sys2') {
+      const n = sys2.map(parseCasioCoeff);
+      return solveCasioLinearSystemFull([
+        [n[0], n[1], n[2]],
+        [n[3], n[4], n[5]],
+      ]);
+    }
+    if (eqSubMode === 'sys3') {
+      return solveCasioLinearSystemFull(sys3.map((r) => r.map(parseCasioCoeff)));
+    }
+    return solveCasioLinearSystemFull(sys4.map((r) => r.map(parseCasioCoeff)));
+  };
+
+  const handleSolveEquationMode = () => {
+    const res = computeCurrentEqResult();
+    setEqResult(res);
+    setEqResultIdx(0);
+    setEqShowDecimal(false);
+    setEqScreen('result');
+    const firstNum = res.steps[0]?.numeric;
+    if (firstNum !== undefined && Number.isFinite(firstNum)) {
+      setPreAns(lastResult.numeric);
+      setLastResult(formatCasioExact(firstNum, normMode, fixDigits));
+    }
+    clearModifiers();
+  };
+
   /**
-   * Universal Caret-Aware Token Insertion across ALL 8 Casio modes, 2D template boxes, & overlays.
+   * Authentic Casio fx-580VN X sub-menu key dispatch across Modes 6, 7, 9, A, and C:
+   * Lets users tap `MENU 9 2 2`, `MENU 6 1`, `MENU 7 2`, `MENU A 2 1`, `MENU C 1` straight on the keypad.
+   */
+  const tryHandleSubMenuKey = (rawKey: string): boolean => {
+    if (overlay !== null) return false;
+    const k = rawKey.trim();
+
+    if (mode === 'equation') {
+      if (eqScreen === 'selectType') {
+        if (k === '1') {
+          setEqScreen('selectSimulDeg');
+          clearModifiers();
+          return true;
+        }
+        if (k === '2') {
+          setEqScreen('selectPolyDeg');
+          clearModifiers();
+          return true;
+        }
+        return true;
+      }
+      if (eqScreen === 'selectSimulDeg') {
+        if (k === '2' || k === '3' || k === '4') {
+          setEqSubMode(k === '2' ? 'sys2' : k === '3' ? 'sys3' : 'sys4');
+          setEqScreen('input');
+          clearModifiers();
+          return true;
+        }
+        return true;
+      }
+      if (eqScreen === 'selectPolyDeg') {
+        if (k === '2' || k === '3' || k === '4') {
+          setEqSubMode(k === '2' ? 'quad' : k === '3' ? 'cubic' : 'quartic');
+          setEqScreen('input');
+          clearModifiers();
+          return true;
+        }
+        return true;
+      }
+    }
+
+    if (mode === 'stats' && statsScreen === 'selectType') {
+      if (k === '1') {
+        setStatsSubMode('1var');
+        setStatsScreen('input');
+        clearModifiers();
+        return true;
+      }
+      if (k === '2') {
+        setStatsSubMode('linreg');
+        setStatsScreen('input');
+        clearModifiers();
+        return true;
+      }
+      return true;
+    }
+
+    if (mode === 'dist' && distScreen === 'selectKind') {
+      const distMap: Record<string, CasioDistKind> = {
+        '1': 'normalPD',
+        '2': 'normalCD',
+        '3': 'invNormal',
+        '4': 'binomialPD',
+        '5': 'binomialCD',
+        '6': 'poissonPD',
+        '7': 'poissonCD',
+      };
+      if (distMap[k]) {
+        setDistKind(distMap[k]);
+        setDistScreen('input');
+        clearModifiers();
+        return true;
+      }
+      return true;
+    }
+
+    if (mode === 'ineq') {
+      if (ineqScreen === 'selectDeg') {
+        if (k === '2' || k === '3') {
+          setIneqDegree(k === '2' ? 2 : 3);
+          setIneqScreen('selectOp');
+          clearModifiers();
+          return true;
+        }
+        return true;
+      }
+      if (ineqScreen === 'selectOp') {
+        const opMap: Record<string, '>' | '<' | '>=' | '<='> = {
+          '1': '>',
+          '2': '<',
+          '3': '>=',
+          '4': '<=',
+        };
+        if (opMap[k]) {
+          setIneqOp(opMap[k]);
+          setIneqScreen('input');
+          clearModifiers();
+          return true;
+        }
+        return true;
+      }
+    }
+
+    if (mode === 'ratio' && ratioScreen === 'selectForm') {
+      if (k === '1') {
+        setRatioUnknown('c');
+        setRatioScreen('input');
+        clearModifiers();
+        return true;
+      }
+      if (k === '2') {
+        setRatioUnknown('d');
+        setRatioScreen('input');
+        clearModifiers();
+        return true;
+      }
+      return true;
+    }
+
+    return false;
+  };
+
+  /**
+   * Authentic Casio fx-580VN X MENU shortcut dispatch:
+   * Pressing 1..9 or A/B/C (or physical keys -, °, inv) while on MENU jumps directly into that mode.
+   */
+  const trySelectMenuByKey = (rawKey: string): boolean => {
+    if (mode !== 'menu' || overlay !== null) return false;
+    const k = rawKey.trim().toUpperCase();
+    const map: Record<string, CasioMainMode> = {
+      '1': 'calc',
+      '2': 'complex',
+      '3': 'basen',
+      '4': 'matrix',
+      '5': 'vector',
+      '6': 'stats',
+      '7': 'dist',
+      '8': 'table',
+      '9': 'equation',
+      A: 'ineq',
+      '-': 'ineq',
+      B: 'verify',
+      '°': 'verify',
+      C: 'ratio',
+      INV: 'ratio',
+    };
+    const targetMode = map[k];
+    if (!targetMode) return false;
+    enterCasioMode(targetMode);
+    clearModifiers();
+    return true;
+  };
+
+  /**
+   * Universal Caret-Aware Token Insertion across ALL 12 Casio modes, 2D template boxes, & overlays.
    */
   const insertTokenToActiveField = (tok: string, cursorOffsetInToken?: number) => {
+    if (trySelectMenuByKey(tok)) {
+      return;
+    }
+    if (tryHandleSubMenuKey(tok)) {
+      return;
+    }
+    if (mode === 'equation' && eqScreen === 'result') setEqScreen('input');
+    if (mode === 'stats' && statsScreen === 'result') setStatsScreen('input');
+    if (mode === 'dist' && distScreen === 'result') setDistScreen('input');
+    if (mode === 'table' && tableScreen === 'result') setTableScreen('input');
+    if (mode === 'ineq' && ineqScreen === 'result') setIneqScreen('input');
+    if (mode === 'ratio' && ratioScreen === 'result') setRatioScreen('input');
+    if (mode === 'verify') setVerifyEvaluated(false);
+
     if (stoActive && /^[ABCDFMTxyz]$/.test(tok)) {
       handleStoreToVar(tok);
       return;
@@ -637,7 +1128,8 @@ export const FloatingCalculator: React.FC = () => {
 
     if (selStart === selEnd) {
       const before = curSlot.value.slice(0, selStart);
-      const m = /([a-zA-Z0-9.π]+|\([^()]+\))$/.exec(before);
+      // Match parenthesized group, trailing number, OR single trailing variable/pi so `3x` + `x²` -> `3pow(x;2)` (NOT `(3x)²`)!
+      const m = /(\([^()]+\)|[0-9.]+|[a-zA-Zπ])$/.exec(before);
       if (m) {
         const baseTok = m[1];
         const tokStartInExpr = curSlot.start + selStart - baseTok.length;
@@ -716,6 +1208,10 @@ export const FloatingCalculator: React.FC = () => {
       const after = prev.slice(selStart);
       const multiSuffixes = [
         'PreAns',
+        'sin⁻¹(',
+        'cos⁻¹(',
+        'tan⁻¹(',
+        'cot⁻¹(',
         'asin(',
         'acos(',
         'atan(',
@@ -733,6 +1229,7 @@ export const FloatingCalculator: React.FC = () => {
         ' ÷R ',
         ' mod ',
         'Ans',
+        '×10^',
         '*10^',
       ];
       for (const suf of multiSuffixes) {
@@ -844,6 +1341,14 @@ export const FloatingCalculator: React.FC = () => {
   };
 
   const handleDpadVertical = (dir: 'up' | 'down') => {
+    if (mode === 'equation' && eqScreen === 'result' && eqResult && eqResult.steps.length > 0) {
+      setEqResultIdx((prev) =>
+        dir === 'down'
+          ? (prev + 1) % eqResult.steps.length
+          : (prev - 1 + eqResult.steps.length) % eqResult.steps.length
+      );
+      return;
+    }
     if (mode !== 'calc' || overlay !== null) {
       handleDpadHorizontal(dir === 'up' ? -1 : 1);
       return;
@@ -894,12 +1399,80 @@ export const FloatingCalculator: React.FC = () => {
       focusFieldAtCaret('complex-expr', 0);
       return;
     }
-    if (mode === 'stats') {
-      setStatsRaw('');
-      focusFieldAtCaret('stats-raw', 0);
+    if (mode === 'basen') {
+      setBaseExpr('');
+      focusFieldAtCaret('basen-expr', 0);
       return;
     }
-    if (mode === 'matrix' || mode === 'vector' || mode === 'equation' || mode === 'ineq' || mode === 'table') {
+    if (mode === 'stats') {
+      if (statsScreen === 'result') {
+        setStatsScreen('input');
+        return;
+      }
+      if (statsScreen === 'selectType') return;
+      if (statsSubMode === '1var') {
+        setStatsRaw('');
+        focusFieldAtCaret('stats-raw', 0);
+        return;
+      }
+    }
+    if (mode === 'dist') {
+      if (distScreen === 'result') {
+        setDistScreen('input');
+        return;
+      }
+      if (distScreen === 'selectKind') return;
+    }
+    if (mode === 'table') {
+      if (tableScreen === 'result') {
+        setTableScreen('input');
+        return;
+      }
+    }
+    if (mode === 'ineq') {
+      if (ineqScreen === 'result') {
+        setIneqScreen('input');
+        return;
+      }
+      if (ineqScreen === 'selectOp') {
+        setIneqScreen('selectDeg');
+        return;
+      }
+      if (ineqScreen === 'selectDeg') return;
+    }
+    if (mode === 'ratio') {
+      if (ratioScreen === 'result') {
+        setRatioScreen('input');
+        return;
+      }
+      if (ratioScreen === 'selectForm') return;
+    }
+    if (mode === 'verify') {
+      setVerifyEvaluated(false);
+    }
+    if (mode === 'equation') {
+      if (eqScreen === 'result') {
+        setEqScreen('input');
+        return;
+      }
+      if (eqScreen === 'selectSimulDeg' || eqScreen === 'selectPolyDeg') {
+        setEqScreen('selectType');
+        return;
+      }
+      if (eqScreen === 'selectType') {
+        return;
+      }
+    }
+    if (
+      mode === 'matrix' ||
+      mode === 'vector' ||
+      mode === 'dist' ||
+      mode === 'equation' ||
+      mode === 'ineq' ||
+      mode === 'table' ||
+      mode === 'verify' ||
+      mode === 'ratio'
+    ) {
       const binding = getTargetFieldBinding();
       binding.setVal('');
       focusFieldAtCaret(binding.fieldId, 0);
@@ -929,19 +1502,130 @@ export const FloatingCalculator: React.FC = () => {
       return;
     }
 
-    // In multi-field modes (Matrix, Vector, Equation, Inequality, Table), pressing `=` advances to the next cell!
-    if (mode !== 'calc') {
-      if (mode === 'stats') {
-        insertTokenToActiveField(', ');
+    // Mode 9 (Equation): authentic Casio `=` stepping (next coeff -> solve -> next root/extremum -> back to edit)
+    if (mode === 'equation') {
+      if (eqScreen === 'selectType' || eqScreen === 'selectSimulDeg' || eqScreen === 'selectPolyDeg') {
+        clearModifiers();
         return;
       }
+      if (eqScreen === 'result') {
+        if (eqResult && eqResult.kind === 'ok' && eqResultIdx < eqResult.steps.length - 1) {
+          setEqResultIdx((prev) => prev + 1);
+        } else {
+          setEqScreen('input');
+        }
+        clearModifiers();
+        return;
+      }
+      const fields = getAllVisibleFields();
+      const idx = fields.findIndex((f) => f.getAttribute('data-casio-field') === activeFieldIdRef.current);
+      if (fields.length > 0 && idx >= 0 && idx < fields.length - 1) {
+        const nextEl = fields[idx + 1];
+        const nextId = nextEl?.getAttribute('data-casio-field');
+        if (nextId && nextEl) {
+          setActiveField(nextId);
+          nextEl.focus();
+          nextEl.select();
+        }
+        clearModifiers();
+        return;
+      }
+      handleSolveEquationMode();
+      return;
+    }
+
+    // Modes with input -> result screens (Stats, Distribution, Table, Inequality, Verify, Ratio)
+    if (mode === 'stats') {
+      if (statsScreen === 'selectType') {
+        clearModifiers();
+        return;
+      }
+      if (statsScreen === 'result') {
+        setStatsScreen('input');
+        clearModifiers();
+        return;
+      }
+      if (statsSubMode === '1var') {
+        setStatsScreen('result');
+        clearModifiers();
+        return;
+      }
+      const fields = getAllVisibleFields();
+      const idx = fields.findIndex((f) => f.getAttribute('data-casio-field') === activeFieldIdRef.current);
+      if (fields.length > 0 && idx >= 0 && idx < fields.length - 1) {
+        const nextEl = fields[idx + 1];
+        const nextId = nextEl?.getAttribute('data-casio-field');
+        if (nextId && nextEl) {
+          setActiveField(nextId);
+          nextEl.focus();
+          nextEl.select();
+        }
+        clearModifiers();
+        return;
+      }
+      setStatsScreen('result');
+      clearModifiers();
+      return;
+    }
+
+    if (mode === 'dist' || mode === 'table' || mode === 'ineq' || mode === 'ratio') {
+      const isSelect =
+        (mode === 'dist' && distScreen === 'selectKind') ||
+        (mode === 'ineq' && (ineqScreen === 'selectDeg' || ineqScreen === 'selectOp')) ||
+        (mode === 'ratio' && ratioScreen === 'selectForm');
+      if (isSelect) {
+        clearModifiers();
+        return;
+      }
+      const isResult =
+        (mode === 'dist' && distScreen === 'result') ||
+        (mode === 'table' && tableScreen === 'result') ||
+        (mode === 'ineq' && ineqScreen === 'result') ||
+        (mode === 'ratio' && ratioScreen === 'result');
+      if (isResult) {
+        if (mode === 'dist') setDistScreen('input');
+        else if (mode === 'table') setTableScreen('input');
+        else if (mode === 'ineq') setIneqScreen('input');
+        else setRatioScreen('input');
+        clearModifiers();
+        return;
+      }
+      const fields = getAllVisibleFields();
+      const idx = fields.findIndex((f) => f.getAttribute('data-casio-field') === activeFieldIdRef.current);
+      if (fields.length > 0 && idx >= 0 && idx < fields.length - 1) {
+        const nextEl = fields[idx + 1];
+        const nextId = nextEl?.getAttribute('data-casio-field');
+        if (nextId && nextEl) {
+          setActiveField(nextId);
+          nextEl.focus();
+          nextEl.select();
+        }
+        clearModifiers();
+        return;
+      }
+      if (mode === 'dist') setDistScreen('result');
+      else if (mode === 'table') setTableScreen('result');
+      else if (mode === 'ineq') setIneqScreen('result');
+      else setRatioScreen('result');
+      clearModifiers();
+      return;
+    }
+
+    if (mode === 'verify') {
+      setVerifyEvaluated(true);
+      clearModifiers();
+      return;
+    }
+
+    // In remaining multi-field modes (Complex, Base-N, Matrix, Vector), pressing `=` advances to the next cell!
+    if (mode !== 'calc') {
       const fields = getAllVisibleFields();
       if (fields.length > 1) {
         const idx = fields.findIndex((f) => f.getAttribute('data-casio-field') === activeFieldIdRef.current);
         const nextEl = fields[(idx + 1) % fields.length];
         const nextId = nextEl?.getAttribute('data-casio-field');
         if (nextId && nextEl) {
-          activeFieldIdRef.current = nextId;
+          setActiveField(nextId);
           nextEl.focus();
           nextEl.select();
         }
@@ -954,7 +1638,7 @@ export const FloatingCalculator: React.FC = () => {
     if (!target) return;
 
     if (target.includes('=')) {
-      const solved = solveCasioEquation(
+      const solvedAll = solveCasioEquationAllRoots(
         target,
         {
           angleUnit,
@@ -967,22 +1651,32 @@ export const FloatingCalculator: React.FC = () => {
         },
         vars.x ?? 1
       );
-      if (!solved) {
+      if (!solvedAll || solvedAll.roots.length === 0) {
         setErrorMsg("Can't Solve");
         setIsEvaluated(false);
         clearModifiers();
         return;
       }
+      const primary = solvedAll.roots[0];
+      const hasAnyExact = solvedAll.roots.some((r) => r.hasExactForm);
       setErrorMsg(null);
       setIsEvaluated(true);
-      setInfoBanner('SOLVE: L − R = 0');
+      setInfoBanner(
+        solvedAll.roots.length === 1
+          ? 'SOLVE: 1 nghiệm thực (L − R = 0)'
+          : solvedAll.hasMoreRoots
+            ? `SOLVE: ${solvedAll.roots.length} nghiệm thực gần nhất`
+            : `SOLVE: ${solvedAll.roots.length} nghiệm thực`
+      );
       setPreAns(lastResult.numeric);
       setLastResult({
-        ...solved,
-        specialSummaryLatex: `x = ${solved.hasExactForm ? solved.exactLatex : solved.decimalText}`,
+        ...primary,
+        hasExactForm: hasAnyExact,
+        specialSummaryLatex: solvedAll.exactSummaryLatex,
+        specialDecimalLatex: solvedAll.decimalSummaryLatex,
       });
-      setVars((v) => ({ ...v, x: solved.numeric }));
-      setDisplayFormat(forceDecimal ? 'decimal' : solved.hasExactForm ? 'exact' : 'decimal');
+      setVars((v) => ({ ...v, x: primary.numeric }));
+      setDisplayFormat(forceDecimal ? 'decimal' : hasAnyExact ? 'exact' : 'decimal');
       clearModifiers();
       return;
     }
@@ -1027,7 +1721,7 @@ export const FloatingCalculator: React.FC = () => {
     setMode('calc');
     setOverlay(null);
     const target = expr.trim() || 'x^2 - 2';
-    const solved = solveCasioEquation(
+    const solvedAll = solveCasioEquationAllRoots(
       target,
       {
         angleUnit,
@@ -1040,19 +1734,31 @@ export const FloatingCalculator: React.FC = () => {
       },
       vars.x || 1
     );
-    if (!solved) {
+    if (!solvedAll || solvedAll.roots.length === 0) {
       setErrorMsg("Can't Solve");
+      setIsEvaluated(false);
       return;
     }
+    const primary = solvedAll.roots[0];
+    const hasAnyExact = solvedAll.roots.some((r) => r.hasExactForm);
     setErrorMsg(null);
-    setInfoBanner('SOLVE (x): L − R = 0');
+    setIsEvaluated(true);
+    setInfoBanner(
+      solvedAll.roots.length === 1
+        ? 'SOLVE (x): 1 nghiệm thực (L − R = 0)'
+        : solvedAll.hasMoreRoots
+          ? `SOLVE (x): ${solvedAll.roots.length} nghiệm thực gần nhất`
+          : `SOLVE (x): ${solvedAll.roots.length} nghiệm thực`
+    );
     setPreAns(lastResult.numeric);
     setLastResult({
-      ...solved,
-      specialSummaryLatex: `x = ${solved.hasExactForm ? solved.exactLatex : solved.decimalText}`,
+      ...primary,
+      hasExactForm: hasAnyExact,
+      specialSummaryLatex: solvedAll.exactSummaryLatex,
+      specialDecimalLatex: solvedAll.decimalSummaryLatex,
     });
-    setVars((v) => ({ ...v, x: solved.numeric }));
-    setDisplayFormat(solved.hasExactForm ? 'exact' : 'decimal');
+    setVars((v) => ({ ...v, x: primary.numeric }));
+    setDisplayFormat(hasAnyExact ? 'exact' : 'decimal');
   };
 
   const handleFactAction = () => {
@@ -1063,9 +1769,11 @@ export const FloatingCalculator: React.FC = () => {
     const factLatex = factorizeIntegerLatex(targetVal);
     if (!factLatex) {
       setErrorMsg('FACT: Cần số nguyên');
+      setIsEvaluated(false);
       return;
     }
     setErrorMsg(null);
+    setIsEvaluated(true);
     setInfoBanner(`FACT(${Math.round(targetVal)})`);
     setLastResult({
       ...formatCasioExact(targetVal, normMode, fixDigits),
@@ -1074,6 +1782,14 @@ export const FloatingCalculator: React.FC = () => {
   };
 
   const handleToggleSD = () => {
+    if (mode === 'equation' && eqScreen === 'result') {
+      setEqShowDecimal((v) => !v);
+      return;
+    }
+    if (mode === 'ratio' && ratioScreen === 'result') {
+      setRatioShowDecimal((v) => !v);
+      return;
+    }
     if (displayFormat === 'exact') setDisplayFormat('decimal');
     else setDisplayFormat('exact');
   };
@@ -1108,49 +1824,119 @@ export const FloatingCalculator: React.FC = () => {
     let fullLatex = '';
     let boxHeight = 62;
 
-    if (mode === 'equation' && eqSubMode === 'sys2') {
-      const res = solveLinearSystem2x2(...(sys2.map(toNum) as [number, number, number, number, number, number]));
-      fullLatex = `\\begin{cases} ${sys2[0]}x + (${sys2[1]})y = ${sys2[2]} \\\\ ${sys2[3]}x + (${sys2[4]})y = ${sys2[5]} \\end{cases} \\Rightarrow ${res.summaryLatex}`;
-      boxHeight = 86;
-    } else if (mode === 'equation' && eqSubMode === 'sys3') {
-      const res = solveLinearSystem3x3(sys3.map((r) => r.map(toNum)));
-      fullLatex = `\\text{Hệ 3 ẩn} \\Rightarrow ${res.summaryLatex}`;
-      boxHeight = 68;
-    } else if (mode === 'equation' && eqSubMode === 'quad') {
-      const res = solveQuadratic(toNum(qa), toNum(qb), toNum(qc));
-      fullLatex = `${qa}x^2 + (${qb})x + (${qc}) = 0 \\Rightarrow \\text{${res.summary}}`;
-    } else if (mode === 'equation' && eqSubMode === 'cubic') {
-      const res = solveCubicEquation(toNum(qa), toNum(qb), toNum(qc), toNum(qd));
-      fullLatex = `${qa}x^3 + (${qb})x^2 + (${qc})x + (${qd}) = 0 \\Rightarrow ${res.summaryLatex}`;
+    if (mode === 'equation') {
+      const res = eqResult ?? computeCurrentEqResult();
+      if (eqSubMode === 'sys2') {
+        fullLatex = `\\begin{cases} ${sys2[0]}x + (${sys2[1]})y = ${sys2[2]} \\\\ ${sys2[3]}x + (${sys2[4]})y = ${sys2[5]} \\end{cases} \\Rightarrow ${res.summaryLatex}`;
+        boxHeight = 86;
+      } else if (eqSubMode === 'sys3') {
+        fullLatex = `\\text{Hệ 3 ẩn} \\Rightarrow ${res.summaryLatex}`;
+        boxHeight = 68;
+      } else if (eqSubMode === 'sys4') {
+        fullLatex = `\\text{Hệ 4 ẩn} \\Rightarrow ${res.summaryLatex}`;
+        boxHeight = 68;
+      } else if (eqSubMode === 'quad') {
+        fullLatex = `${qa}x^2 + (${qb})x + (${qc}) = 0 \\Rightarrow ${res.summaryLatex}`;
+      } else if (eqSubMode === 'cubic') {
+        fullLatex = `${qa}x^3 + (${qb})x^2 + (${qc})x + (${qd}) = 0 \\Rightarrow ${res.summaryLatex}`;
+      } else {
+        fullLatex = `${qa}x^4 + (${qb})x^3 + (${qc})x^2 + (${qd})x + (${qe}) = 0 \\Rightarrow ${res.summaryLatex}`;
+      }
     } else if (mode === 'complex') {
       const cmp = evaluateCasioComplex(complexExpr, angleUnit);
       fullLatex = cmp
         ? `${complexExpr} = ${formatComplexLatex(cmp, complexPolar, angleUnit)}`
         : complexExpr;
+    } else if (mode === 'basen') {
+      const bn = evaluateCasioBaseN(baseExpr, baseMode);
+      fullLatex = bn
+        ? `(${baseExpr})_{${baseMode}} = ${bn.dec}_{10} = \\text{${bn.hex}}_{16} = ${bn.bin}_2`
+        : baseExpr;
     } else if (mode === 'matrix') {
-      const numA = matA.map((r) => r.map(toNum));
-      const numB = matB.map((r) => r.map(toNum));
+      const numA = matA.map((r) => r.map(parseCasioCoeff));
+      const numB = matB.map((r) => r.map(parseCasioCoeff));
       if (matOp === 'det') {
         fullLatex = `\\det(${matrixToLatex(numA)}) = ${formatCasioExact(computeMatrixDet(numA)).exactLatex}`;
       } else if (matOp === 'inv') {
         const inv = computeMatrixInverse(numA);
         fullLatex = inv ? `${matrixToLatex(numA)}^{-1} = ${matrixToLatex(inv)}` : `\\det(A) = 0`;
+      } else if (matOp === 'sq') {
+        fullLatex = `${matrixToLatex(numA)}^2 = ${matrixToLatex(multiplyMatrices(numA, numA))}`;
       } else if (matOp === 'add') {
         const sumM = numA.map((r, ri) => r.map((v, ci) => v + numB[ri][ci]));
         fullLatex = `${matrixToLatex(numA)} + ${matrixToLatex(numB)} = ${matrixToLatex(sumM)}`;
+      } else if (matOp === 'sub') {
+        fullLatex = `${matrixToLatex(numA)} - ${matrixToLatex(numB)} = ${matrixToLatex(subtractMatrices(numA, numB))}`;
+      } else if (matOp === 'trn') {
+        fullLatex = `${matrixToLatex(numA)}^T = ${matrixToLatex(transposeMatrix(numA))}`;
       } else {
         fullLatex = `${matrixToLatex(numA)} \\times ${matrixToLatex(numB)} = ${matrixToLatex(multiplyMatrices(numA, numB))}`;
       }
-      boxHeight = matSize === 3 ? 110 : 86;
+      boxHeight = matSize === 4 ? 132 : matSize === 3 ? 110 : 86;
     } else if (mode === 'vector') {
-      const u = vecU.slice(0, vecDim).map(toNum);
-      const v = vecV.slice(0, vecDim).map(toNum);
+      const u = vecU.slice(0, vecDim).map(parseCasioCoeff);
+      const v = vecV.slice(0, vecDim).map(parseCasioCoeff);
       const res = computeVectorMetrics(u, v, angleUnit);
       fullLatex = `\\vec{u}=(${u.join(';')}),\\; \\vec{v}=(${v.join(';')}) \\Rightarrow \\vec{u}\\cdot\\vec{v}=${Number(res.dot.toFixed(3))}`;
+    } else if (mode === 'dist') {
+      const res = computeCasioDistribution({
+        kind: distKind,
+        x: parseCasioCoeff(distX),
+        lower: parseCasioCoeff(distLower),
+        upper: parseCasioCoeff(distUpper),
+        mu: parseCasioCoeff(distMu),
+        sigma: parseCasioCoeff(distSigma),
+        area: parseCasioCoeff(distArea),
+        n: parseCasioCoeff(distN),
+        p: parseCasioCoeff(distP),
+        lambda: parseCasioCoeff(distLambda),
+      });
+      fullLatex = res ? res.summaryLatex : '\\text{Phân phối xác suất}';
     } else if (mode === 'ineq') {
       const opTex = ineqOp === '>=' ? '\\ge' : ineqOp === '<=' ? '\\le' : ineqOp;
-      const res = solveQuadraticInequality(toNum(qa), toNum(qb), toNum(qc), ineqOp);
-      fullLatex = `${qa}x^2 + (${qb})x + (${qc}) ${opTex} 0 \\Leftrightarrow ${res.summaryLatex}`;
+      if (ineqDegree === 3) {
+        const res = solveCubicInequality(
+          parseCasioCoeff(qa),
+          parseCasioCoeff(qb),
+          parseCasioCoeff(qc),
+          parseCasioCoeff(qd),
+          ineqOp
+        );
+        fullLatex = `${qa}x^3 + (${qb})x^2 + (${qc})x + (${qd}) ${opTex} 0 \\Leftrightarrow ${res.summaryLatex}`;
+      } else {
+        const res = solveQuadraticInequality(
+          parseCasioCoeff(qa),
+          parseCasioCoeff(qb),
+          parseCasioCoeff(qc),
+          ineqOp
+        );
+        fullLatex = `${qa}x^2 + (${qb})x + (${qc}) ${opTex} 0 \\Leftrightarrow ${res.summaryLatex}`;
+      }
+    } else if (mode === 'verify') {
+      const res = evaluateCasioVerify(verifyLhs, verifyOp, verifyRhs, {
+        angleUnit,
+        ans: lastResult.numeric,
+        preAns,
+        vars,
+        normMode,
+        fixDigits,
+      });
+      fullLatex = res ? res.summaryLatex : `${verifyLhs} ${verifyOp} ${verifyRhs}`;
+    } else if (mode === 'ratio') {
+      const res = solveCasioRatio(
+        parseCasioCoeff(ratioA),
+        parseCasioCoeff(ratioB),
+        parseCasioCoeff(ratioC),
+        parseCasioCoeff(ratioD),
+        ratioUnknown
+      );
+      const eqStr =
+        ratioUnknown === 'c'
+          ? `${ratioA} : ${ratioB} = X : ${ratioD}`
+          : `${ratioA} : ${ratioB} = ${ratioC} : X`;
+      fullLatex = `${eqStr} \\Rightarrow ${res.summaryLatex}`;
+    } else if (mode === 'stats' && statsSubMode === 'linreg' && linRegResult) {
+      fullLatex = linRegResult.summaryLatex;
     } else if (mode === 'stats' && statsResult) {
       fullLatex = `n=${statsResult.n},\\; \\bar{x}=${Number(statsResult.mean.toFixed(3))},\\; M_e=${Number(statsResult.median.toFixed(3))},\\; \\sigma=${Number(statsResult.popStd.toFixed(3))}`;
     } else {
@@ -1173,15 +1959,19 @@ export const FloatingCalculator: React.FC = () => {
       }
       const exprTex = casioExprToNaturalLatex(expr);
       const ansTex =
-        currentResult.specialSummaryLatex ??
-        (displayFormat === 'mixed' && currentResult.mixedLatex
-          ? currentResult.mixedLatex
-          : displayFormat === 'eng' && currentResult.engLatex
-            ? currentResult.engLatex
-            : displayFormat === 'exact' && currentResult.hasExactForm
-              ? currentResult.exactLatex
-              : currentResult.decimalText);
-      fullLatex = `${exprTex} = ${ansTex}`;
+        displayFormat === 'decimal' && currentResult.specialDecimalLatex
+          ? currentResult.specialDecimalLatex
+          : currentResult.specialSummaryLatex ??
+            (displayFormat === 'mixed' && currentResult.mixedLatex
+              ? currentResult.mixedLatex
+              : displayFormat === 'eng' && currentResult.engLatex
+                ? currentResult.engLatex
+                : displayFormat === 'exact' && currentResult.hasExactForm
+                  ? currentResult.exactLatex
+                  : currentResult.decimalText);
+      fullLatex = currentResult.specialDecimalLatex
+        ? `${exprTex}${expr.includes('=') ? '' : ' = 0'} \\Rightarrow ${ansTex}`
+        : `${exprTex} = ${ansTex}`;
     }
 
     const el: FormulaElement = {
@@ -1244,9 +2034,17 @@ export const FloatingCalculator: React.FC = () => {
       label: 'x²',
       labelLatex: 'x^{2}',
       shiftLabel: 'x³',
-      alphaLabel: 'mod',
-      title: 'Bình phương (SHIFT: Lập phương, ALPHA: Chia lấy dư mod)',
-      onPress: () => handleInsertSmartPower('2'),
+      alphaLabel: 'DEC',
+      title: 'Bình phương (SHIFT: lập phương, Mode 3 Base-N: DEC)',
+      onPress: () => {
+        if (mode === 'basen') {
+          const cur = evaluateCasioBaseN(baseExpr, baseMode);
+          setBaseMode('DEC');
+          if (cur) setBaseExpr(cur.dec);
+          return;
+        }
+        handleInsertSmartPower('2');
+      },
       onShiftPress: () => handleInsertSmartPower('3'),
       onAlphaPress: () => insertTokenToActiveField(' mod '),
     },
@@ -1255,9 +2053,17 @@ export const FloatingCalculator: React.FC = () => {
       label: 'x^□',
       labelLatex: 'x^{\\square}',
       shiftLabel: 'ˣ√□',
-      alphaLabel: 'cot',
-      title: 'Lũy thừa (SHIFT: Căn bậc n, ALPHA: cot)',
-      onPress: () => handleInsertSmartPower(''),
+      alphaLabel: 'HEX',
+      title: 'Lũy thừa (SHIFT: căn bậc n, Mode 3 Base-N: HEX, ALPHA: cot)',
+      onPress: () => {
+        if (mode === 'basen') {
+          const cur = evaluateCasioBaseN(baseExpr, baseMode);
+          setBaseMode('HEX');
+          if (cur) setBaseExpr(cur.hex);
+          return;
+        }
+        handleInsertSmartPower('');
+      },
       onShiftPress: () => insertTokenToActiveField('nroot(;)', 6),
       onAlphaPress: () => insertTokenToActiveField('cot('),
     },
@@ -1266,19 +2072,35 @@ export const FloatingCalculator: React.FC = () => {
       label: 'log□',
       labelLatex: '\\log_{\\square}\\square',
       shiftLabel: '10^□',
-      alphaLabel: 'cot⁻¹',
-      title: 'Logarit cơ số bất kỳ (SHIFT: 10^x, ALPHA: arccot)',
-      onPress: () => insertTokenToActiveField('logb(;)', 5),
+      alphaLabel: 'BIN',
+      title: 'Logarit cơ số bất kỳ (SHIFT: 10^x, Mode 3 Base-N: BIN, ALPHA: cot⁻¹)',
+      onPress: () => {
+        if (mode === 'basen') {
+          const cur = evaluateCasioBaseN(baseExpr, baseMode);
+          setBaseMode('BIN');
+          if (cur) setBaseExpr(cur.bin);
+          return;
+        }
+        insertTokenToActiveField('logb(;)', 5);
+      },
       onShiftPress: () => insertTokenToActiveField('pow(10;)', 7),
-      onAlphaPress: () => insertTokenToActiveField('acot('),
+      onAlphaPress: () => insertTokenToActiveField('cot⁻¹('),
     },
     {
       id: 'ln',
       label: 'ln',
       shiftLabel: 'e^□',
-      alphaLabel: '',
-      title: 'Logarit tự nhiên ln (SHIFT: e^x)',
-      onPress: () => insertTokenToActiveField('ln('),
+      alphaLabel: 'OCT',
+      title: 'Logarit tự nhiên ln (SHIFT: e^x, Mode 3 Base-N: OCT)',
+      onPress: () => {
+        if (mode === 'basen') {
+          const cur = evaluateCasioBaseN(baseExpr, baseMode);
+          setBaseMode('OCT');
+          if (cur) setBaseExpr(cur.oct);
+          return;
+        }
+        insertTokenToActiveField('ln(');
+      },
       onShiftPress: () => insertTokenToActiveField('pow(e;)', 6),
     },
   ];
@@ -1289,8 +2111,15 @@ export const FloatingCalculator: React.FC = () => {
       label: '(−)',
       shiftLabel: 'log',
       alphaLabel: 'A',
-      title: 'Dấu âm (SHIFT: log10, ALPHA: Biến A)',
-      onPress: () => insertTokenToActiveField('-'),
+      title: 'Dấu âm (SHIFT: log10, ALPHA: biến A · MENU A: bất PT · HEX: A)',
+      onPress: () => {
+        if (trySelectMenuByKey('A')) return;
+        if (mode === 'basen' && baseMode === 'HEX') {
+          insertTokenToActiveField('A');
+          return;
+        }
+        insertTokenToActiveField('-');
+      },
       onShiftPress: () => insertTokenToActiveField('log('),
       onAlphaPress: () => insertTokenToActiveField('A'),
     },
@@ -1299,8 +2128,13 @@ export const FloatingCalculator: React.FC = () => {
       label: `° ' "`,
       shiftLabel: 'FACT',
       alphaLabel: 'B',
-      title: `Độ Phút Giây (SHIFT: Phân tích thừa số NT FACT, ALPHA: Biến B)`,
+      title: `Độ phút giây (SHIFT: phân tích thừa số NT FACT, ALPHA: biến B · MENU B: đúng/sai · HEX: B)`,
       onPress: () => {
+        if (trySelectMenuByKey('B')) return;
+        if (mode === 'basen' && baseMode === 'HEX') {
+          insertTokenToActiveField('B');
+          return;
+        }
         if (expr.trim()) insertTokenToActiveField('°');
         else setDisplayFormat((f) => (f === 'dms' ? 'exact' : 'dms'));
       },
@@ -1313,8 +2147,15 @@ export const FloatingCalculator: React.FC = () => {
       labelLatex: 'x^{-1}',
       shiftLabel: 'x!',
       alphaLabel: 'C',
-      title: 'Nghịch đảo (SHIFT: Giai thừa !, ALPHA: Biến C)',
-      onPress: () => handleInsertSmartPower('-1'),
+      title: 'Nghịch đảo (SHIFT: giai thừa !, ALPHA: biến C · MENU C: tỉ lệ thức · HEX: C)',
+      onPress: () => {
+        if (trySelectMenuByKey('C')) return;
+        if (mode === 'basen' && baseMode === 'HEX') {
+          insertTokenToActiveField('C');
+          return;
+        }
+        handleInsertSmartPower('-1');
+      },
       onShiftPress: () => insertTokenToActiveField('!'),
       onAlphaPress: () => insertTokenToActiveField('C'),
     },
@@ -1323,29 +2164,47 @@ export const FloatingCalculator: React.FC = () => {
       label: 'sin',
       shiftLabel: 'sin⁻¹',
       alphaLabel: 'D',
-      title: 'Sin (SHIFT: arcsin)',
-      onPress: () => insertTokenToActiveField('sin('),
-      onShiftPress: () => insertTokenToActiveField('asin('),
+      title: 'Sin (SHIFT: sin⁻¹, ALPHA: biến D · HEX: D)',
+      onPress: () => {
+        if (mode === 'basen' && baseMode === 'HEX') {
+          insertTokenToActiveField('D');
+          return;
+        }
+        insertTokenToActiveField('sin(');
+      },
+      onShiftPress: () => insertTokenToActiveField('sin⁻¹('),
       onAlphaPress: () => insertTokenToActiveField('D'),
     },
     {
       id: 'cos',
       label: 'cos',
       shiftLabel: 'cos⁻¹',
-      alphaLabel: 'T',
-      title: 'Cos (SHIFT: arccos, ALPHA: Biến T)',
-      onPress: () => insertTokenToActiveField('cos('),
-      onShiftPress: () => insertTokenToActiveField('acos('),
-      onAlphaPress: () => insertTokenToActiveField('T'),
+      alphaLabel: 'E',
+      title: 'Cos (SHIFT: cos⁻¹, ALPHA: biến T / HEX: E)',
+      onPress: () => {
+        if (mode === 'basen' && baseMode === 'HEX') {
+          insertTokenToActiveField('E');
+          return;
+        }
+        insertTokenToActiveField('cos(');
+      },
+      onShiftPress: () => insertTokenToActiveField('cos⁻¹('),
+      onAlphaPress: () => insertTokenToActiveField(mode === 'basen' ? 'E' : 'T'),
     },
     {
       id: 'tan',
       label: 'tan',
       shiftLabel: 'tan⁻¹',
       alphaLabel: 'F',
-      title: 'Tan (SHIFT: arctan, ALPHA: Biến F)',
-      onPress: () => insertTokenToActiveField('tan('),
-      onShiftPress: () => insertTokenToActiveField('atan('),
+      title: 'Tan (SHIFT: tan⁻¹, ALPHA: biến F · HEX: F)',
+      onPress: () => {
+        if (mode === 'basen' && baseMode === 'HEX') {
+          insertTokenToActiveField('F');
+          return;
+        }
+        insertTokenToActiveField('tan(');
+      },
+      onShiftPress: () => insertTokenToActiveField('tan⁻¹('),
       onAlphaPress: () => insertTokenToActiveField('F'),
     },
   ];
@@ -1493,7 +2352,7 @@ export const FloatingCalculator: React.FC = () => {
         label: '4',
         shiftLabel: 'MATRIX',
         alphaLabel: '▦',
-        title: 'Số 4 (SHIFT: Chế độ Ma trận)',
+        title: 'Số 4 (SHIFT: chế độ ma trận)',
         onPress: () => insertTokenToActiveField('4'),
         onShiftPress: () => {
           setOverlay(null);
@@ -1504,8 +2363,28 @@ export const FloatingCalculator: React.FC = () => {
           setMode('matrix');
         },
       },
-      { id: 'k5', label: '5', title: 'Số 5', onPress: () => insertTokenToActiveField('5') },
-      { id: 'k6', label: '6', title: 'Số 6', onPress: () => insertTokenToActiveField('6') },
+      {
+        id: 'k5',
+        label: '5',
+        shiftLabel: 'VECTOR',
+        title: 'Số 5 (SHIFT: chế độ vectơ)',
+        onPress: () => insertTokenToActiveField('5'),
+        onShiftPress: () => {
+          setOverlay(null);
+          setMode('vector');
+        },
+      },
+      {
+        id: 'k6',
+        label: '6',
+        shiftLabel: 'STAT',
+        title: 'Số 6 (SHIFT: chế độ thống kê)',
+        onPress: () => insertTokenToActiveField('6'),
+        onShiftPress: () => {
+          setOverlay(null);
+          enterCasioMode('stats');
+        },
+      },
       {
         id: 'mul',
         label: '×',
@@ -1579,9 +2458,9 @@ export const FloatingCalculator: React.FC = () => {
         label: '×10ˣ',
         shiftLabel: 'π',
         alphaLabel: 'e',
-        title: 'Nhân 10 mũ x (SHIFT: Số π, ALPHA: Số e)',
+        title: 'Nhân 10 mũ x (SHIFT: số π, ALPHA: số e)',
         onPress: () => insertTokenToActiveField('×10^'),
-        onShiftPress: () => insertTokenToActiveField('pi'),
+        onShiftPress: () => insertTokenToActiveField('π'),
         onAlphaPress: () => insertTokenToActiveField('e'),
       },
       {
@@ -1609,13 +2488,17 @@ export const FloatingCalculator: React.FC = () => {
   const modeBadgeLabel: Record<CasioMainMode, string> = {
     calc: '1: Tính toán',
     complex: '2: Số phức',
-    matrix: '3: Ma trận',
-    vector: '4: Vectơ',
-    table: '5: Bảng f(x)',
-    equation: '6: Phương trình',
-    ineq: '7: Bất phương trình',
-    stats: '8: Thống kê',
-    menu: 'Menu chính',
+    basen: '3: Cơ số n',
+    matrix: '4: Ma trận',
+    vector: '5: Vectơ',
+    stats: '6: Thống kê',
+    dist: '7: Phân phối',
+    table: '8: Bảng f(x)',
+    equation: '9: Phương trình',
+    ineq: 'A: Bất PT',
+    verify: 'B: Đúng / Sai',
+    ratio: 'C: Tỉ lệ thức',
+    menu: 'Menu chính (1–9, A–C)',
   };
 
   const chassisClass =
@@ -1634,6 +2517,9 @@ export const FloatingCalculator: React.FC = () => {
   };
 
   const renderResultLatex = (): string => {
+    if (displayFormat === 'decimal' && lastResult.specialDecimalLatex) {
+      return lastResult.specialDecimalLatex;
+    }
     if (lastResult.specialSummaryLatex) return lastResult.specialSummaryLatex;
     if (displayFormat === 'mixed' && lastResult.mixedLatex) return lastResult.mixedLatex;
     if (displayFormat === 'eng' && lastResult.engLatex) return lastResult.engLatex;
@@ -1645,7 +2531,58 @@ export const FloatingCalculator: React.FC = () => {
     <div
       ref={calcRootRef}
       data-testid="floating-calculator"
+      tabIndex={-1}
       style={{ left: pos.x, top: pos.y }}
+      onKeyDownCapture={(e) => {
+        if (e.key === 'Escape') {
+          if (overlay) {
+            e.preventDefault();
+            setOverlay(null);
+            return;
+          }
+          if (mode === 'menu') {
+            e.preventDefault();
+            setMode('calc');
+            return;
+          }
+          if (mode === 'equation') {
+            e.preventDefault();
+            if (eqScreen === 'result') setEqScreen('input');
+            else if (eqScreen === 'selectSimulDeg' || eqScreen === 'selectPolyDeg') setEqScreen('selectType');
+            return;
+          }
+        }
+        if (mode === 'menu' && overlay === null && /^[1-9a-cA-C]$/.test(e.key)) {
+          e.preventDefault();
+          trySelectMenuByKey(e.key);
+          return;
+        }
+        if (overlay === null && /^[1-7]$/.test(e.key)) {
+          const isInSubMenu =
+            (mode === 'equation' &&
+              (eqScreen === 'selectType' || eqScreen === 'selectSimulDeg' || eqScreen === 'selectPolyDeg')) ||
+            (mode === 'stats' && statsScreen === 'selectType') ||
+            (mode === 'dist' && distScreen === 'selectKind') ||
+            (mode === 'ineq' && (ineqScreen === 'selectDeg' || ineqScreen === 'selectOp')) ||
+            (mode === 'ratio' && ratioScreen === 'selectForm');
+          if (isInSubMenu) {
+            e.preventDefault();
+            tryHandleSubMenuKey(e.key);
+            return;
+          }
+        }
+        if (mode === 'equation' && overlay === null && eqScreen === 'result') {
+          if (e.key === 'ArrowDown' || e.key === 'Enter') {
+            e.preventDefault();
+            evaluateNow(false);
+            return;
+          }
+          if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            handleDpadVertical('up');
+          }
+        }
+      }}
       onFocusCapture={(e) => {
         const target = e.target as HTMLElement;
         const fieldId = target.getAttribute?.('data-casio-field');
@@ -1723,29 +2660,52 @@ export const FloatingCalculator: React.FC = () => {
       {/* Authentic Natural-V.P.A.M. LCD Screen */}
       <div className="px-2.5 pt-1.5 pb-1">
         <div className="rounded-xl p-[2.5px] bg-gradient-to-b from-slate-700 to-slate-800 shadow-inner border border-slate-600/70">
-          <div className="casio-lcd-screen rounded-[8px] bg-[#d6e2d0] text-slate-900 shadow-inner border border-[#9eb098] overflow-hidden">
-            {/* LCD Status Indicator Bar */}
-            <div className="px-2 py-0.5 bg-[#c5d3be] border-b border-[#adbd9f] flex items-center justify-between text-[9px] font-mono font-bold">
-              <div className="flex items-center gap-1">
+          <div className="casio-lcd-screen rounded-[8px] bg-[#d6e2d0] text-[#1e345a] shadow-inner border border-[#9eb098] overflow-hidden">
+            {/* Authentic fx-580VN X LCD Indicator Bar (modeled after CasioEmuX rsd_* flags) */}
+            <div className="px-2 py-0.5 bg-[#c5d3be] border-b border-[#adbd9f] flex items-center justify-between gap-1 text-[8.5px] font-mono font-bold">
+              <div className="flex items-center gap-0.5 min-w-0 overflow-hidden">
                 {shiftActive && (
-                  <span className="px-1 rounded-[2px] bg-slate-900 text-amber-300 leading-tight">S</span>
+                  <span className="px-1 rounded-[2px] bg-[#1e345a] text-amber-300 leading-tight shrink-0">S</span>
                 )}
                 {alphaActive && (
-                  <span className="px-1 rounded-[2px] bg-slate-900 text-rose-300 leading-tight">A</span>
+                  <span className="px-1 rounded-[2px] bg-[#1e345a] text-rose-300 leading-tight shrink-0">A</span>
                 )}
                 {stoActive && (
-                  <span className="px-1 rounded-[2px] bg-indigo-700 text-white leading-tight">STO</span>
+                  <span className="px-1 rounded-[2px] bg-indigo-700 text-white leading-tight shrink-0">STO</span>
                 )}
                 {(vars.M ?? 0) !== 0 && (
-                  <span className="px-1 rounded-[2px] bg-slate-700 text-[#d6e2d0] leading-tight">M</span>
+                  <span className="px-1 rounded-[2px] bg-[#1e345a] text-[#d6e2d0] leading-tight shrink-0">M</span>
                 )}
-                <span className="text-slate-800 truncate max-w-[130px]">{modeBadgeLabel[mode]}</span>
+                <span className="px-1 rounded-[2px] border border-[#1e345a]/40 text-[#1e345a] leading-tight shrink-0">
+                  {angleUnit}
+                </span>
+                {normMode !== 'NORM' && (
+                  <span className="px-1 rounded-[2px] bg-[#1e345a]/90 text-[#e6f0e1] leading-tight shrink-0">
+                    {normMode}
+                  </span>
+                )}
+                {mode === 'complex' && (
+                  <span className="px-1 rounded-[2px] bg-[#1e345a] text-[#e6f0e1] italic leading-tight shrink-0">
+                    i
+                  </span>
+                )}
+                {mode === 'calc' && (
+                  <span className="text-[7.5px] font-serif italic text-[#1e345a]/85 leading-tight shrink-0">
+                    Math
+                  </span>
+                )}
+                {mode === 'calc' && history.length > 1 && (
+                  <span className="text-[7.5px] text-[#1e345a]/70 leading-tight shrink-0" title="Có lịch sử (bấm ▲/▼)">
+                    ▲▼
+                  </span>
+                )}
+                <span className="text-[#1e345a] truncate ml-0.5">{modeBadgeLabel[mode]}</span>
               </div>
               <button
                 type="button"
                 onClick={handleStampToBoard}
-                title="Dán kết quả này lên bảng trắng"
-                className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-slate-800/90 hover:bg-indigo-700 text-[#eef5ea] text-[9px] font-sans font-semibold cursor-pointer"
+                title="Dán kết quả này lên bảng trắng (SHIFT + OPTN)"
+                className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-[#1e345a] hover:bg-indigo-700 text-[#eef5ea] text-[8.5px] font-sans font-semibold cursor-pointer shrink-0"
               >
                 <Share2 className="w-2.5 h-2.5" />
                 <span>Lên bảng</span>
@@ -1757,9 +2717,10 @@ export const FloatingCalculator: React.FC = () => {
                 <CasioNaturalEditor
                   expr={expr}
                   activeFieldId={activeFieldId}
+                  activeCaret={activeCaret}
                   onSelectSlot={(slotId, caret) => {
                     setActiveField(slotId);
-                    caretPosRef.current = caret;
+                    setCaretPos(caret);
                   }}
                   onChangeSlotValue={(slot, nextVal, nextCaret) => {
                     setErrorMsg(null);
@@ -1769,7 +2730,7 @@ export const FloatingCalculator: React.FC = () => {
                       if (nextExpr !== prev) setUndoStack((st) => [...st.slice(-19), prev]);
                       return nextExpr;
                     });
-                    caretPosRef.current = nextCaret;
+                    setCaretPos(nextCaret);
                   }}
                   onNavigateHorizontal={handleDpadHorizontal}
                   onNavigateVertical={(dir) => handleDpadVertical(dir)}
@@ -1791,19 +2752,19 @@ export const FloatingCalculator: React.FC = () => {
                     <span className="text-xs font-mono font-bold text-rose-700">{errorMsg}</span>
                   ) : isEvaluated ? (
                     displayFormat === 'dms' && lastResult.dmsText ? (
-                      <span className="text-[15px] font-mono font-bold text-slate-950">
+                      <span className="text-[15px] font-mono font-bold text-[#1e345a]">
                         {lastResult.dmsText}
                       </span>
                     ) : (
                       <>
                         {displayFormat === 'exact' && lastResult.hasExactForm && !lastResult.specialSummaryLatex && (
-                          <span className="text-[9.5px] font-mono text-slate-600 mr-auto select-none">
+                          <span className="text-[9.5px] font-mono text-[#1e345a]/70 mr-auto select-none">
                             S⇔D ({lastResult.decimalText})
                           </span>
                         )}
                         <MathTex
                           latex={renderResultLatex()}
-                          className="text-[16px] font-bold text-slate-950"
+                          className="text-[16px] font-bold text-[#1e345a]"
                         />
                       </>
                     )
@@ -1813,7 +2774,7 @@ export const FloatingCalculator: React.FC = () => {
             ) : (
               <CasioLcdModes
                 mode={mode}
-                setMode={setMode}
+                setMode={enterCasioMode}
                 overlay={overlay}
                 setOverlay={setOverlay}
                 angleUnit={angleUnit}
@@ -1832,6 +2793,7 @@ export const FloatingCalculator: React.FC = () => {
                   const rep = formatCasioExact(converted, normMode, fixDigits);
                   setPreAns(lastResult.numeric);
                   setLastResult(rep);
+                  setIsEvaluated(true);
                   setInfoBanner(lbl);
                   setDisplayFormat('decimal');
                 }}
@@ -1849,6 +2811,10 @@ export const FloatingCalculator: React.FC = () => {
                 setComplexExpr={setComplexExpr}
                 complexPolar={complexPolar}
                 setComplexPolar={setComplexPolar}
+                baseMode={baseMode}
+                setBaseMode={setBaseMode}
+                baseExpr={baseExpr}
+                setBaseExpr={setBaseExpr}
                 matSize={matSize}
                 setMatSize={setMatSize}
                 matA={matA}
@@ -1863,16 +2829,61 @@ export const FloatingCalculator: React.FC = () => {
                 setVecU={setVecU}
                 vecV={vecV}
                 setVecV={setVecV}
+                vecOp={vecOp}
+                setVecOp={setVecOp}
+                statsScreen={statsScreen}
+                setStatsScreen={setStatsScreen}
+                statsSubMode={statsSubMode}
+                setStatsSubMode={setStatsSubMode}
+                statsRaw={statsRaw}
+                setStatsRaw={setStatsRaw}
+                statsPairs={statsPairs}
+                setStatsPairs={setStatsPairs}
+                statsResult={statsResult}
+                linRegResult={linRegResult}
+                distScreen={distScreen}
+                setDistScreen={setDistScreen}
+                distKind={distKind}
+                setDistKind={setDistKind}
+                distX={distX}
+                setDistX={setDistX}
+                distLower={distLower}
+                setDistLower={setDistLower}
+                distUpper={distUpper}
+                setDistUpper={setDistUpper}
+                distMu={distMu}
+                setDistMu={setDistMu}
+                distSigma={distSigma}
+                setDistSigma={setDistSigma}
+                distArea={distArea}
+                setDistArea={setDistArea}
+                distN={distN}
+                setDistN={setDistN}
+                distP={distP}
+                setDistP={setDistP}
+                distLambda={distLambda}
+                setDistLambda={setDistLambda}
+                tableScreen={tableScreen}
+                setTableScreen={setTableScreen}
                 tableExpr={tableExpr}
                 setTableExpr={setTableExpr}
+                tableGExpr={tableGExpr}
+                setTableGExpr={setTableGExpr}
                 tableStart={tableStart}
                 setTableStart={setTableStart}
                 tableEnd={tableEnd}
                 setTableEnd={setTableEnd}
                 tableStep={tableStep}
                 setTableStep={setTableStep}
+                eqScreen={eqScreen}
+                setEqScreen={setEqScreen}
                 eqSubMode={eqSubMode}
                 setEqSubMode={setEqSubMode}
+                eqResult={eqResult}
+                eqResultIdx={eqResultIdx}
+                setEqResultIdx={setEqResultIdx}
+                eqShowDecimal={eqShowDecimal}
+                onSolveEquationMode={handleSolveEquationMode}
                 qa={qa}
                 setQa={setQa}
                 qb={qb}
@@ -1881,15 +2892,41 @@ export const FloatingCalculator: React.FC = () => {
                 setQc={setQc}
                 qd={qd}
                 setQd={setQd}
+                qe={qe}
+                setQe={setQe}
                 sys2={sys2}
                 setSys2={setSys2}
                 sys3={sys3}
                 setSys3={setSys3}
+                sys4={sys4}
+                setSys4={setSys4}
+                ineqScreen={ineqScreen}
+                setIneqScreen={setIneqScreen}
+                ineqDegree={ineqDegree}
+                setIneqDegree={setIneqDegree}
                 ineqOp={ineqOp}
                 setIneqOp={setIneqOp}
-                statsRaw={statsRaw}
-                setStatsRaw={setStatsRaw}
-                statsResult={statsResult}
+                verifyLhs={verifyLhs}
+                setVerifyLhs={setVerifyLhs}
+                verifyOp={verifyOp}
+                setVerifyOp={setVerifyOp}
+                verifyRhs={verifyRhs}
+                setVerifyRhs={setVerifyRhs}
+                verifyEvaluated={verifyEvaluated}
+                setVerifyEvaluated={setVerifyEvaluated}
+                ratioScreen={ratioScreen}
+                setRatioScreen={setRatioScreen}
+                ratioUnknown={ratioUnknown}
+                setRatioUnknown={setRatioUnknown}
+                ratioA={ratioA}
+                setRatioA={setRatioA}
+                ratioB={ratioB}
+                setRatioB={setRatioB}
+                ratioC={ratioC}
+                setRatioC={setRatioC}
+                ratioD={ratioD}
+                setRatioD={setRatioD}
+                ratioShowDecimal={ratioShowDecimal}
                 calcVarsList={calcVarsList}
                 calcVarInputs={calcVarInputs}
                 onSetCalcVarInput={(k, raw) => {
@@ -1910,10 +2947,13 @@ export const FloatingCalculator: React.FC = () => {
                   });
                   if (res) {
                     setErrorMsg(null);
+                    setIsEvaluated(true);
                     setPreAns(lastResult.numeric);
                     setLastResult(res);
+                    setDisplayFormat(res.hasExactForm ? 'exact' : 'decimal');
                   } else {
                     setErrorMsg('Syntax ERROR');
+                    setIsEvaluated(false);
                   }
                 }}
               />
@@ -1927,11 +2967,11 @@ export const FloatingCalculator: React.FC = () => {
         <div className="flex items-center gap-1">
           <button
             type="button"
-            onClick={() => setAngleUnit((u) => (u === 'D' ? 'R' : 'D'))}
-            title="Chuyển đổi Độ (DEG) ↔ Radian (RAD)"
+            onClick={() => setAngleUnit((u) => (u === 'D' ? 'R' : u === 'R' ? 'G' : 'D'))}
+            title="Chuyển đổi Độ (DEG) ↔ Radian (RAD) ↔ Gradian (GRAD)"
             className="px-1.5 py-0.5 rounded bg-white/10 hover:bg-white/20 border border-white/15 text-slate-200 cursor-pointer"
           >
-            {angleUnit === 'D' ? 'DEG' : 'RAD'}
+            {angleUnit === 'D' ? 'DEG' : angleUnit === 'R' ? 'RAD' : 'GRAD'}
           </button>
           <button
             type="button"
@@ -2035,11 +3075,16 @@ export const FloatingCalculator: React.FC = () => {
               </div>
 
               <div className="flex flex-col items-center">
-                <span className="h-2.5" />
+                <span className="h-2.5 text-[7px] font-bold text-amber-400 leading-none">QR</span>
                 <button
                   type="button"
-                  title="Tùy chọn nhanh OPTN"
-                  onClick={() => setOverlay((o) => (o === 'optn' ? null : 'optn'))}
+                  title="Tùy chọn nhanh OPTN (SHIFT: QR — dán kết quả lên bảng trắng)"
+                  onClick={() =>
+                    runKey(
+                      () => setOverlay((o) => (o === 'optn' ? null : 'optn')),
+                      handleStampToBoard
+                    )
+                  }
                   className="w-full h-5.5 rounded-md bg-[#2e3440] hover:bg-[#3a4252] border border-slate-600 text-[8.5px] font-bold text-slate-100 cursor-pointer"
                 >
                   OPTN

@@ -64,9 +64,9 @@ export default defineConfig(() => {
                 .slice(0, 12);
 
               const versionManifest = {
-                version: 'v_fz.1.1.1.1.2',
+                version: 'v_fz.1.1.1.1.3',
                 buildId,
-                notes: 'Bản cập nhật chính thức Bảng Trắng Thông Minh (Windows .exe & macOS .app)',
+                notes: 'Bản cập nhật chính thức Bảng Trắng Thông Minh (Windows .exe & macOS Apple Silicon / Intel)',
                 updateOrigin: 'https://whiteboardfz.pages.dev',
               };
 

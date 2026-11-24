@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { detectUserOS, useOnlineStatus, usePWAInstall } from '../../hooks/usePWAInstall';
+import { detectMacArchitecture, MacArch } from '../../engine/macArch';
 import { useBoardStore } from '../../store/useBoardStore';
 import { AppLogo } from '../ui/AppLogo';
 import {
@@ -343,7 +344,7 @@ export const HomeSettingsMenu: React.FC<{
   const addToast = useBoardStore((s) => s.addToast);
   const [isOpen, setIsOpen] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
-  const [latestDesktopVersion, setLatestDesktopVersion] = useState<string>('v_fz.1.1.1.1.2');
+  const [latestDesktopVersion, setLatestDesktopVersion] = useState<string>('v_fz.1.1.1.1.3');
   const [checkResult, setCheckResult] = useState<
     | { status: 'idle' }
     | { status: 'up-to-date'; version: string; buildId: string }
@@ -393,7 +394,7 @@ export const HomeSettingsMenu: React.FC<{
       void syncInitialBadge();
       const onDownloaded = () => {
         setHasUpdateBadge(false);
-        const ver = getDownloadedVersion() || 'v_fz.1.1.1.1.2';
+        const ver = getDownloadedVersion() || 'v_fz.1.1.1.1.3';
         const id = getDownloadedBuildId() || '';
         setCheckResult({ status: 'up-to-date', version: ver, buildId: id });
       };
@@ -495,7 +496,7 @@ export const HomeSettingsMenu: React.FC<{
   const currentVersionLabel =
     getDownloadedVersion() ||
     (typeof window !== 'undefined' && window.__BTTM_EMBEDDED_BUILD__?.version) ||
-    'v_fz.1.1.1.1.2';
+    'v_fz.1.1.1.1.3';
 
   return (
     <div className="relative" ref={menuRef}>
@@ -656,7 +657,7 @@ export const HomeSettingsMenu: React.FC<{
                 {checkResult.status === 'not-installed' && (
                   <div className="p-2.5 rounded-lg bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200/70 dark:border-indigo-800/60 space-y-2 text-[11px]">
                     <div className="text-indigo-900 dark:text-indigo-200">
-                      Phiên bản mới nhất: <strong>{checkResult.latestManifest?.version || 'v_fz.1.1.1.1.2'}</strong>
+                      Phiên bản mới nhất: <strong>{checkResult.latestManifest?.version || 'v_fz.1.1.1.1.3'}</strong>
                     </div>
                     <button
                       type="button"
@@ -802,8 +803,10 @@ export const DESKTOP_RELEASES_PAGE = `https://github.com/${GITHUB_REPO}/releases
 export const DOWNLOAD_LINKS = {
   windowsSetup: `${DESKTOP_RELEASE_BASE}/BangTrangThongMinh-Setup.exe`,
   windowsPortable: `${DESKTOP_RELEASE_BASE}/BangTrangThongMinh-Portable.exe`,
-  macosDmg: `${DESKTOP_RELEASE_BASE}/BangTrangThongMinh-macOS.dmg`,
-  macosZip: `${DESKTOP_RELEASE_BASE}/BangTrangThongMinh-macOS.zip`,
+  macosArm64Dmg: `${DESKTOP_RELEASE_BASE}/BangTrangThongMinh-macOS-arm64.dmg`,
+  macosArm64Zip: `${DESKTOP_RELEASE_BASE}/BangTrangThongMinh-macOS-arm64.zip`,
+  macosX64Dmg: `${DESKTOP_RELEASE_BASE}/BangTrangThongMinh-macOS-x64.dmg`,
+  macosX64Zip: `${DESKTOP_RELEASE_BASE}/BangTrangThongMinh-macOS-x64.zip`,
 };
 
 // Standard market SVG logos for Windows & macOS (matching official branding specs)
@@ -848,10 +851,37 @@ function triggerDirectDownload(url: string, fileName: string) {
 export const DesktopAppModal: React.FC<DesktopAppModalProps> = ({ isOpen, onClose }) => {
   const addToast = useBoardStore((s) => s.addToast);
   const { isInstallable, install } = usePWAInstall();
+  const os = detectUserOS();
+  const [macArch, setMacArch] = useState<MacArch>('arm64');
+  const [detectedMacArch, setDetectedMacArch] = useState<MacArch | null>(null);
+  const userPickedMacArchRef = useRef(false);
+
+  useEffect(() => {
+    if (!isOpen || os !== 'macos') return;
+    let cancelled = false;
+    void detectMacArchitecture().then((result) => {
+      if (cancelled || !result.detected) return;
+      setDetectedMacArch(result.arch);
+      if (!userPickedMacArchRef.current) {
+        setMacArch(result.arch);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, os]);
 
   if (!isOpen) return null;
 
-  const os = detectUserOS();
+  const macDmgFileName = `BangTrangThongMinh-macOS-${macArch}.dmg`;
+  const macZipFileName = `BangTrangThongMinh-macOS-${macArch}.zip`;
+  const macDmgUrl = macArch === 'arm64' ? DOWNLOAD_LINKS.macosArm64Dmg : DOWNLOAD_LINKS.macosX64Dmg;
+  const macZipUrl = macArch === 'arm64' ? DOWNLOAD_LINKS.macosArm64Zip : DOWNLOAD_LINKS.macosX64Zip;
+
+  const handleSelectMacArch = (arch: MacArch) => {
+    userPickedMacArchRef.current = true;
+    setMacArch(arch);
+  };
 
   const handleDownloadWindowsSetup = () => {
     addToast('Đang tải bộ cài đặt BangTrangThongMinh-Setup.exe...', 'info');
@@ -866,14 +896,14 @@ export const DesktopAppModal: React.FC<DesktopAppModalProps> = ({ isOpen, onClos
   };
 
   const handleDownloadMacDmg = () => {
-    addToast('Đang tải ứng dụng macOS (BangTrangThongMinh-macOS.dmg)...', 'info');
-    triggerDirectDownload(DOWNLOAD_LINKS.macosDmg, 'BangTrangThongMinh-macOS.dmg');
+    addToast(`Đang tải ứng dụng macOS (${macDmgFileName})...`, 'info');
+    triggerDirectDownload(macDmgUrl, macDmgFileName);
     markDesktopAppAsDownloaded();
   };
 
   const handleDownloadMacZip = () => {
-    addToast('Đang tải bản nén macOS (BangTrangThongMinh-macOS.zip)...', 'info');
-    triggerDirectDownload(DOWNLOAD_LINKS.macosZip, 'BangTrangThongMinh-macOS.zip');
+    addToast(`Đang tải bản nén macOS (${macZipFileName})...`, 'info');
+    triggerDirectDownload(macZipUrl, macZipFileName);
     markDesktopAppAsDownloaded();
   };
 
@@ -1005,12 +1035,61 @@ export const DesktopAppModal: React.FC<DesktopAppModalProps> = ({ isOpen, onClos
                     macOS
                   </h3>
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                    Apple Silicon & Intel (Universal)
+                    {os === 'macos' && detectedMacArch
+                      ? `Đã tự nhận diện: ${detectedMacArch === 'arm64' ? 'Apple Silicon (M1–M4)' : 'chip Intel (x64)'}`
+                      : 'macOS 11 trở lên • Apple Silicon & Intel'}
                   </p>
+                </div>
+
+                {/* Mac CPU architecture selector */}
+                <div
+                  role="radiogroup"
+                  aria-label="Chọn kiến trúc chip macOS"
+                  className="mt-3 grid grid-cols-2 gap-1.5 p-1 rounded-xl bg-slate-100/90 dark:bg-slate-800/80 border border-slate-200/70 dark:border-slate-700/70"
+                >
+                  {(
+                    [
+                      { id: 'arm64' as const, label: 'Apple Silicon', sub: 'M1–M4' },
+                      { id: 'x64' as const, label: 'Intel', sub: 'x64' },
+                    ]
+                  ).map((option) => {
+                    const isSelected = macArch === option.id;
+                    const isAutoMatched = os === 'macos' && detectedMacArch === option.id;
+                    return (
+                      <button
+                        key={option.id}
+                        type="button"
+                        role="radio"
+                        aria-checked={isSelected}
+                        data-testid={`mac-arch-${option.id}-button`}
+                        onClick={() => handleSelectMacArch(option.id)}
+                        className={`px-2 py-1.5 rounded-lg text-left transition-all cursor-pointer ${
+                          isSelected
+                            ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs ring-1 ring-slate-200 dark:ring-slate-700'
+                            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="text-[11px] font-semibold leading-tight truncate">
+                            {option.label}
+                          </span>
+                          {isAutoMatched && (
+                            <span
+                              title="Phù hợp với máy Mac của bạn"
+                              className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"
+                            />
+                          )}
+                        </div>
+                        <div className="text-[10px] text-slate-400 dark:text-slate-500 leading-tight mt-0.5">
+                          {isAutoMatched ? `${option.sub} • Máy này` : option.sub}
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
-              <div className="mt-5 space-y-2">
+              <div className="mt-4 space-y-2">
                 <button
                   type="button"
                   data-testid="download-macos-app-button"
@@ -1027,8 +1106,8 @@ export const DesktopAppModal: React.FC<DesktopAppModalProps> = ({ isOpen, onClos
                 >
                   <span>Gói ứng dụng (.zip)</span>
                 </button>
-                <div className="text-[11px] font-mono text-center text-slate-400 dark:text-slate-500">
-                  BangTrangThongMinh-macOS.dmg
+                <div className="text-[11px] font-mono text-center text-slate-400 dark:text-slate-500 truncate">
+                  {macDmgFileName}
                 </div>
               </div>
             </div>

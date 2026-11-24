@@ -1,9 +1,97 @@
 import { evaluateMathExpression } from './mathUtils';
 import { formatPrimeFactorizationLatex, friendlyMathToLatex } from './mathDisplay';
 
-export type CasioAngleUnit = 'D' | 'R';
+export type CasioAngleUnit = 'D' | 'R' | 'G';
 export type CasioNormMode = 'NORM' | 'FIX' | 'SCI';
 export type CasioDisplayFormat = 'exact' | 'decimal' | 'mixed' | 'dms' | 'eng';
+export type CasioBaseMode = 'DEC' | 'HEX' | 'BIN' | 'OCT';
+export type CasioVerifyOp = '=' | '!=' | '>' | '<' | '>=' | '<=';
+export type CasioDistKind =
+  | 'normalPD'
+  | 'normalCD'
+  | 'invNormal'
+  | 'binomialPD'
+  | 'binomialCD'
+  | 'poissonPD'
+  | 'poissonCD';
+
+export function angleToRad(val: number, unit: CasioAngleUnit): number {
+  if (unit === 'D') return (val * Math.PI) / 180;
+  if (unit === 'G') return (val * Math.PI) / 200;
+  return val;
+}
+
+export function radToAngle(rad: number, unit: CasioAngleUnit): number {
+  if (unit === 'D') return (rad * 180) / Math.PI;
+  if (unit === 'G') return (rad * 200) / Math.PI;
+  return rad;
+}
+
+export function angleUnitSuffixLatex(unit: CasioAngleUnit): string {
+  if (unit === 'D') return '^\\circ';
+  if (unit === 'G') return '^g';
+  return '';
+}
+
+export interface CasioBaseNResult {
+  value: number;
+  dec: string;
+  hex: string;
+  bin: string;
+  oct: string;
+}
+
+export interface CasioSystem4x4Result {
+  kind: 'unique' | 'degenerate';
+  x?: number;
+  y?: number;
+  z?: number;
+  t?: number;
+  summaryLatex: string;
+}
+
+export interface CasioQuarticResult {
+  roots: number[];
+  complexCount: number;
+  summaryLatex: string;
+}
+
+export interface CasioVerifyResult {
+  isTrue: boolean;
+  lhsVal: number;
+  rhsVal: number;
+  lhsLatex: string;
+  rhsLatex: string;
+  summaryLatex: string;
+}
+
+export interface CasioRatioResult {
+  kind: 'ok' | 'error';
+  value?: number;
+  exactLatex?: string;
+  decimalText?: string;
+  summaryLatex: string;
+}
+
+export interface CasioDistResult {
+  value: number;
+  summaryLatex: string;
+  label: string;
+}
+
+export interface CasioEqStepItem {
+  label: string;
+  exactLatex: string;
+  decimalLatex: string;
+  numeric?: number;
+}
+
+export interface CasioEqFullResult {
+  kind: 'ok' | 'infinite' | 'none' | 'error';
+  message?: string;
+  steps: CasioEqStepItem[];
+  summaryLatex: string;
+}
 
 export interface CasioExactRepresentation {
   numeric: number;
@@ -14,7 +102,15 @@ export interface CasioExactRepresentation {
   engLatex?: string;
   hasExactForm: boolean;
   specialSummaryLatex?: string;
+  specialDecimalLatex?: string;
   secondaryVars?: Partial<Record<'x' | 'y' | 'r' | 'theta' | 'Q' | 'R', number>>;
+}
+
+export interface CasioSolveAllResult {
+  roots: CasioExactRepresentation[];
+  exactSummaryLatex: string;
+  decimalSummaryLatex: string;
+  hasMoreRoots: boolean;
 }
 
 export interface CasioSystem2x2Result {
@@ -56,6 +152,17 @@ export interface CasioStats1VarResult {
   median: number;
   q3: number;
   max: number;
+}
+
+export interface CasioLinRegResult {
+  n: number;
+  a: number;
+  b: number;
+  r: number;
+  r2: number;
+  meanX: number;
+  meanY: number;
+  summaryLatex: string;
 }
 
 export interface CasioComplexValue {
@@ -422,6 +529,19 @@ export interface CasioEvalOptions {
 }
 
 /**
+ * Converts a JS number into a parser-safe literal without scientific `e-7` notation
+ * (so `mathUtils` never confuses `1.5e-7` with `1.5 * Math.E - 7`).
+ */
+function numToSafeLiteral(v: number): string {
+  if (!Number.isFinite(v)) return 'NaN';
+  if (Math.abs(v) < 1e-14) return '0';
+  const str = String(v);
+  if (!/[eE]/.test(str)) return str;
+  const [mantissa, exp] = str.split(/[eE]/);
+  return `(${mantissa}*10^(${Number(exp)}))`;
+}
+
+/**
  * Evaluates a Casio fx-580VN X expression string supporting:
  * - Ans, PreAns, M, and variables A, B, C, D, T, F, x, y, z
  * - Degree / Radian trig (`sin`, `cos`, `tan`, `cot`, `asin`, `acos`, `atan`, `acot`)
@@ -439,6 +559,13 @@ export function evaluateCasioExpression(
   let s = raw.trim();
   if (!s) return null;
 
+  // Normalize authentic Casio inverse-trig notation (`sin⁻¹(`, `cos⁻¹(`, `tan⁻¹(`, `cot⁻¹(`) before parsing
+  s = s
+    .replace(/sin\s*(?:⁻\s*¹|\^\s*-?\s*1)\s*\(/gi, 'asin(')
+    .replace(/cos\s*(?:⁻\s*¹|\^\s*-?\s*1)\s*\(/gi, 'acos(')
+    .replace(/tan\s*(?:⁻\s*¹|\^\s*-?\s*1)\s*\(/gi, 'atan(')
+    .replace(/cot\s*(?:⁻\s*¹|\^\s*-?\s*1)\s*\(/gi, 'acot(');
+
   // Handle special 2-output commands first: Pol(x;y), Rec(r;θ), a ÷R b
   const polCall = findBalancedFunctionCall(s, 'Pol');
   if (polCall && polCall.start === 0 && polCall.end === s.length && polCall.args.length === 2) {
@@ -446,14 +573,13 @@ export function evaluateCasioExpression(
     const yv = evaluateCasioExpression(polCall.args[1], options)?.numeric;
     if (xv === undefined || yv === undefined) return null;
     const r = Math.hypot(xv, yv);
-    let theta = Math.atan2(yv, xv);
-    if (options.angleUnit === 'D') theta = (theta * 180) / Math.PI;
+    const theta = radToAngle(Math.atan2(yv, xv), options.angleUnit);
     const base = formatCasioExact(r, normMode, fixDigits);
     const rTex = base.hasExactForm ? base.exactLatex : base.decimalText;
     const tStr = formatDecimalForMode(theta, normMode, fixDigits);
     return {
       ...base,
-      specialSummaryLatex: `r = ${rTex},\\; \\theta = ${tStr}${options.angleUnit === 'D' ? '^\\circ' : ''}`,
+      specialSummaryLatex: `r = ${rTex},\\; \\theta = ${tStr}${angleUnitSuffixLatex(options.angleUnit)}`,
       secondaryVars: { r, theta },
     };
   }
@@ -463,7 +589,7 @@ export function evaluateCasioExpression(
     const rv = evaluateCasioExpression(recCall.args[0], options)?.numeric;
     const tv = evaluateCasioExpression(recCall.args[1], options)?.numeric;
     if (rv === undefined || tv === undefined) return null;
-    const rad = options.angleUnit === 'D' ? (tv * Math.PI) / 180 : tv;
+    const rad = angleToRad(tv, options.angleUnit);
     const xv = rv * Math.cos(rad);
     const yv = rv * Math.sin(rad);
     const xRep = formatCasioExact(xv, normMode, fixDigits);
@@ -741,7 +867,17 @@ export function evaluateCasioExpression(
     guard += 1;
   }
 
-  // Symbols & operators
+  // Combinatorics MUST run before substituting single-letter variables (so `5C2` doesn't treat `C` as variable C)
+  s = s.replace(/(\d+)\s*C\s*(\d+)/g, (_, n: string, r: string) => {
+    const val = nCr(Number(n), Number(r));
+    return Number.isFinite(val) ? String(val) : 'NaN';
+  });
+  s = s.replace(/(\d+)\s*P\s*(\d+)/g, (_, n: string, r: string) => {
+    const val = nPr(Number(n), Number(r));
+    return Number.isFinite(val) ? String(val) : 'NaN';
+  });
+
+  // Symbols & operators (use letter-only boundaries so implicit multiplication like `3x`, `2A`, `2Ans`, `2sin(30)` works!)
   s = s
     .replace(/×/g, '*')
     .replace(/÷/g, '/')
@@ -749,15 +885,15 @@ export function evaluateCasioExpression(
     .replace(/π/g, 'pi')
     .replace(/∞/g, '1000000')
     .replace(/√\(/g, 'sqrt(')
-    .replace(/\bPreAns\b/gi, `(${preAnsVal})`)
-    .replace(/\bAns\b/gi, `(${ansVal})`)
-    .replace(/\bM\b/g, `(${vars.M ?? memVal})`)
-    .replace(/\b([ABCDFyzT])\b/g, (_, vName: string) => `(${vars[vName] ?? 0})`);
+    .replace(/(?<![a-zA-Z])PreAns(?![a-zA-Z])/gi, `(${numToSafeLiteral(preAnsVal)})`)
+    .replace(/(?<![a-zA-Z])Ans(?![a-zA-Z])/gi, `(${numToSafeLiteral(ansVal)})`)
+    .replace(/(?<![a-zA-Z])M(?![a-zA-Z])/g, `(${numToSafeLiteral(vars.M ?? memVal)})`)
+    .replace(/(?<![a-zA-Z])([ABCDFyzT])(?![a-zA-Z])/g, (_, vName: string) => `(${numToSafeLiteral(vars[vName] ?? 0)})`);
 
   if (options.xVal !== undefined) {
-    s = s.replace(/\bx\b/gi, `(${options.xVal})`);
+    s = s.replace(/(?<![a-zA-Z])x(?![a-zA-Z])/gi, `(${numToSafeLiteral(options.xVal)})`);
   } else if (vars.x !== undefined) {
-    s = s.replace(/\bx\b/gi, `(${vars.x})`);
+    s = s.replace(/(?<![a-zA-Z])x(?![a-zA-Z])/gi, `(${numToSafeLiteral(vars.x)})`);
   }
 
   // Infix `a mod b`
@@ -769,17 +905,7 @@ export function evaluateCasioExpression(
   });
 
   // Ceil / Intg aliases
-  s = s.replace(/\bCeil\s*\(/gi, 'ceil(').replace(/\bIntg\s*\(/gi, 'floor(');
-
-  // Combinatorics: 5C2 -> nCr, 5P2 -> nPr
-  s = s.replace(/(\d+)\s*C\s*(\d+)/g, (_, n: string, r: string) => {
-    const val = nCr(Number(n), Number(r));
-    return Number.isFinite(val) ? String(val) : 'NaN';
-  });
-  s = s.replace(/(\d+)\s*P\s*(\d+)/g, (_, n: string, r: string) => {
-    const val = nPr(Number(n), Number(r));
-    return Number.isFinite(val) ? String(val) : 'NaN';
-  });
+  s = s.replace(/(?<![a-zA-Z])Ceil\s*\(/gi, 'ceil(').replace(/(?<![a-zA-Z])Intg\s*\(/gi, 'floor(');
 
   // Factorials: 5!
   s = s.replace(/(\d+)!/g, (_, n: string) => {
@@ -806,7 +932,7 @@ export function evaluateCasioExpression(
     const v = evaluateCasioExpression(call.args[0], options)?.numeric;
     if (v === undefined) return null;
     const rad = Math.PI / 2 - Math.atan(v);
-    const res = options.angleUnit === 'D' ? (rad * 180) / Math.PI : rad;
+    const res = radToAngle(rad, options.angleUnit);
     s = `${s.slice(0, call.start)}(${res})${s.slice(call.end)}`;
     guard += 1;
   }
@@ -816,31 +942,42 @@ export function evaluateCasioExpression(
     if (!call || call.args.length < 1) break;
     const v = evaluateCasioExpression(call.args[0], options)?.numeric;
     if (v === undefined) return null;
-    const rad = options.angleUnit === 'D' ? (v * Math.PI) / 180 : v;
+    const rad = angleToRad(v, options.angleUnit);
     const t = Math.tan(rad);
     if (Math.abs(t) < 1e-12) return null;
     s = `${s.slice(0, call.start)}(${1 / t})${s.slice(call.end)}`;
     guard += 1;
   }
 
-  // Convert trig functions when in Degree mode ('D')
-  if (options.angleUnit === 'D') {
+  // Convert trig functions when in Degree ('D') or Gradian ('G') mode
+  if (options.angleUnit === 'D' || options.angleUnit === 'G') {
+    const scaleDen = options.angleUnit === 'D' ? 180 : 200;
     guard = 0;
-    while (guard < 10) {
-      const m = /\b(asin|acos|atan)\s*\(([^()]+)\)/i.exec(s);
+    while (guard < 12) {
+      const m = /(?<![a-zA-Z])(asin|acos|atan)\s*\(([^()]+)\)/i.exec(s);
       if (!m) break;
       const fn = m[1].toLowerCase();
       const argVal = evaluateMathExpression(m[2], 0);
       if (argVal === null) return null;
       const rad = fn === 'asin' ? Math.asin(argVal) : fn === 'acos' ? Math.acos(argVal) : Math.atan(argVal);
       if (!Number.isFinite(rad)) return null;
-      const deg = (rad * 180) / Math.PI;
-      s = `${s.slice(0, m.index)}(${deg})${s.slice(m.index + m[0].length)}`;
+      const converted = radToAngle(rad, options.angleUnit);
+      s = `${s.slice(0, m.index)}(${converted})${s.slice(m.index + m[0].length)}`;
       guard += 1;
     }
-    s = s.replace(/\b(sin|cos|tan)\s*\(([^()]+)\)/gi, (_, fn: string, inner: string) => {
-      return `${fn}((${inner})*pi/180)`;
-    });
+    guard = 0;
+    while (guard < 12) {
+      const m = /(?<![a-zA-Z])(sin|cos|tan)\s*\(([^()]+)\)/i.exec(s);
+      if (!m) break;
+      const fn = m[1].toLowerCase();
+      const argVal = evaluateMathExpression(m[2], 0);
+      if (argVal === null) return null;
+      const rad = (argVal * Math.PI) / scaleDen;
+      const trigVal = fn === 'sin' ? Math.sin(rad) : fn === 'cos' ? Math.cos(rad) : Math.tan(rad);
+      if (!Number.isFinite(trigVal)) return null;
+      s = `${s.slice(0, m.index)}(${trigVal})${s.slice(m.index + m[0].length)}`;
+      guard += 1;
+    }
   }
 
   if (s.includes('NaN')) return null;
@@ -851,45 +988,208 @@ export function evaluateCasioExpression(
 }
 
 /**
- * Numerical equation SOLVE (`SHIFT` + `CALC`):
- * Solves `LHS = RHS` (or `expr = 0`) for `x` using damped Newton-Raphson + multi-start search.
+ * Full real-root numerical equation SOLVE (`SHIFT` + `CALC`):
+ * Finds ALL distinct real roots of `LHS = RHS` (or `expr = 0`) using:
+ *  1) Multi-scale grid bracketing + bisection + Newton-Raphson polish (filters out vertical asymptotes),
+ *  2) Local-minimum & multi-seed damped Newton search for even-multiplicity roots (e.g. `(x-2)^2 = 0`).
  */
-export function solveCasioEquation(
+export function solveCasioEquationAllRoots(
   equationRaw: string,
   options: CasioEvalOptions,
   initialGuess = 1
-): CasioExactRepresentation | null {
+): CasioSolveAllResult | null {
   const parts = equationRaw.split('=');
   if (parts.length > 2) return null;
   const fExpr = parts.length === 2 ? `(${parts[0]}) - (${parts[1]})` : parts[0];
+  if (!fExpr.trim()) return null;
 
   const evalF = (x: number): number => {
     const r = evaluateCasioExpression(fExpr, { ...options, xVal: x });
     return r ? r.numeric : NaN;
   };
 
-  const seeds = [initialGuess, 0, 1, -1, 2, -2, 5, -5, 10, -10];
-  for (const seed of seeds) {
-    let x = seed;
-    for (let iter = 0; iter < 50; iter += 1) {
+  // Validate expression is not constant-unparseable everywhere
+  const rawCandidates: { x: number; err: number }[] = [];
+
+  const acceptRoot = (xVal: number) => {
+    if (!Number.isFinite(xVal) || Math.abs(xVal) > 1e7) return;
+    const xNorm = Math.abs(xVal) < 1e-8 ? 0 : xVal;
+    const fx = evalF(xNorm);
+    if (!Number.isFinite(fx) || Math.abs(fx) > 1e-5) return;
+    // Guard against false roots near vertical asymptotes: verify nearby values aren't exploding
+    const fLeft = evalF(xNorm - 1e-5);
+    const fRight = evalF(xNorm + 1e-5);
+    if (
+      (Number.isFinite(fLeft) && Math.abs(fLeft) > 1e4) ||
+      (Number.isFinite(fRight) && Math.abs(fRight) > 1e4)
+    ) {
+      return;
+    }
+    rawCandidates.push({ x: xNorm, err: Math.abs(fx) });
+  };
+
+  const polishNewton = (startX: number, maxIter = 50): number | null => {
+    let x = startX;
+    for (let iter = 0; iter < maxIter; iter += 1) {
       const fx = evalF(x);
-      if (!Number.isFinite(fx)) break;
-      if (Math.abs(fx) < 1e-10) {
-        return formatCasioExact(x, options.normMode, options.fixDigits);
+      if (!Number.isFinite(fx)) return null;
+      if (Math.abs(fx) < 1e-11) return x;
+      const h = Math.max(1e-7, Math.abs(x) * 1e-7);
+      const fPlus = evalF(x + h);
+      const fMinus = evalF(x - h);
+      if (!Number.isFinite(fPlus) || !Number.isFinite(fMinus)) return null;
+      const dfx = (fPlus - fMinus) / (2 * h);
+      if (!Number.isFinite(dfx) || Math.abs(dfx) < 1e-13) {
+        return Math.abs(fx) < 1e-6 ? x : null;
       }
-      const h = 1e-6;
-      const dfx = (evalF(x + h) - evalF(x - h)) / (2 * h);
-      if (!Number.isFinite(dfx) || Math.abs(dfx) < 1e-12) break;
-      const next = x - fx / dfx;
-      if (!Number.isFinite(next) || Math.abs(next) > 1e8) break;
+      let step = fx / dfx;
+      if (Math.abs(step) > 50) step = Math.sign(step) * 50;
+      const next = x - step;
+      if (!Number.isFinite(next) || Math.abs(next) > 1e7) return null;
       x = next;
     }
-    const check = evalF(x);
-    if (Number.isFinite(check) && Math.abs(check) < 1e-6) {
-      return formatCasioExact(x, options.normMode, options.fixDigits);
+    const finalFx = evalF(x);
+    return Number.isFinite(finalFx) && Math.abs(finalFx) < 1e-5 ? x : null;
+  };
+
+  // Multi-scale scanning grid: dense near [-12, 12], medium in [-100, 100], coarse in [-1000, 1000]
+  const gridSet = new Set<number>([initialGuess]);
+  for (let i = -48; i <= 48; i += 1) gridSet.add(i * 0.25); // [-12, 12] step 0.25
+  for (let v = -100; v <= 100; v += 2) gridSet.add(v);
+  for (let v = -1000; v <= 1000; v += 25) gridSet.add(v);
+  const grid = Array.from(gridSet).sort((a, b) => a - b);
+  const fGrid = grid.map((x) => evalF(x));
+
+  // 1) Sign-change bracketing + bisection + Newton polish
+  for (let i = 0; i < grid.length; i += 1) {
+    const fCur = fGrid[i];
+    if (Number.isFinite(fCur) && Math.abs(fCur) < 1e-8) {
+      acceptRoot(grid[i]);
+    }
+    if (i === grid.length - 1) continue;
+    let lo = grid[i];
+    let hi = grid[i + 1];
+    let fLo = fCur;
+    let fHi = fGrid[i + 1];
+    if (!Number.isFinite(fLo) || !Number.isFinite(fHi)) continue;
+    if (fLo * fHi < 0) {
+      for (let iter = 0; iter < 50; iter += 1) {
+        const mid = (lo + hi) / 2;
+        const fMid = evalF(mid);
+        if (!Number.isFinite(fMid)) break;
+        if (Math.abs(fMid) < 1e-11 || Math.abs(hi - lo) < 1e-12) {
+          lo = mid;
+          hi = mid;
+          break;
+        }
+        if (fLo * fMid < 0) {
+          hi = mid;
+          fHi = fMid;
+        } else {
+          lo = mid;
+          fLo = fMid;
+        }
+      }
+      const mid = (lo + hi) / 2;
+      const polished = polishNewton(mid, 15) ?? mid;
+      acceptRoot(polished);
     }
   }
-  return null;
+
+  // 2) Even-multiplicity roots & touching zeros (local minima of |f(x)|) + multi-seed Newton
+  for (let i = 1; i < grid.length - 1; i += 1) {
+    const a = Math.abs(fGrid[i - 1]);
+    const b = Math.abs(fGrid[i]);
+    const c = Math.abs(fGrid[i + 1]);
+    if (Number.isFinite(a) && Number.isFinite(b) && Number.isFinite(c) && b <= a && b <= c && b < 2) {
+      const polished = polishNewton(grid[i], 60);
+      if (polished !== null) acceptRoot(polished);
+    }
+  }
+
+  const extraSeeds = [initialGuess, 0, 0.5, -0.5, 1, -1, 2, -2, 5, -5, 10, -10];
+  for (const seed of extraSeeds) {
+    const polished = polishNewton(seed, 60);
+    if (polished !== null) acceptRoot(polished);
+  }
+
+  if (rawCandidates.length === 0) return null;
+
+  // 3) Deduplicate roots within tolerance 1e-4, keeping the candidate with smallest |f(x)|
+  rawCandidates.sort((a, b) => a.x - b.x);
+  const merged: { x: number; err: number }[] = [];
+  for (const cand of rawCandidates) {
+    const last = merged[merged.length - 1];
+    if (last && Math.abs(cand.x - last.x) < 1e-4) {
+      if (cand.err < last.err) {
+        merged[merged.length - 1] = cand;
+      }
+    } else {
+      merged.push(cand);
+    }
+  }
+
+  // Limit displayed roots if periodic equation has infinitely many roots (e.g. sin(x) = 0)
+  const MAX_DISPLAY_ROOTS = 8;
+  let hasMoreRoots = false;
+  let selected = merged;
+  if (merged.length > MAX_DISPLAY_ROOTS) {
+    hasMoreRoots = true;
+    selected = [...merged]
+      .sort((a, b) => Math.abs(a.x) - Math.abs(b.x))
+      .slice(0, MAX_DISPLAY_ROOTS)
+      .sort((a, b) => a.x - b.x);
+  }
+
+  const roots = selected.map((r) => formatCasioExact(r.x, options.normMode, options.fixDigits));
+
+  if (roots.length === 1) {
+    const r0 = roots[0];
+    return {
+      roots,
+      exactSummaryLatex: `x = ${r0.hasExactForm ? r0.exactLatex : r0.decimalText}`,
+      decimalSummaryLatex: `x = ${r0.decimalText}`,
+      hasMoreRoots,
+    };
+  }
+
+  const exactSummaryLatex = roots
+    .map((r, idx) => `x_{${idx + 1}} = ${r.hasExactForm ? r.exactLatex : r.decimalText}`)
+    .join(',\\; ');
+  const decimalSummaryLatex = roots
+    .map((r, idx) => `x_{${idx + 1}} = ${r.decimalText}`)
+    .join(',\\; ');
+
+  return {
+    roots,
+    exactSummaryLatex,
+    decimalSummaryLatex,
+    hasMoreRoots,
+  };
+}
+
+/**
+ * Numerical equation SOLVE (`SHIFT` + `CALC`):
+ * Returns the primary real root of `LHS = RHS` (or `expr = 0`) for backward compatibility.
+ */
+export function solveCasioEquation(
+  equationRaw: string,
+  options: CasioEvalOptions,
+  initialGuess = 1
+): CasioExactRepresentation | null {
+  const all = solveCasioEquationAllRoots(equationRaw, options, initialGuess);
+  if (!all || all.roots.length === 0) return null;
+  // Prefer the root closest to initialGuess
+  let best = all.roots[0];
+  let bestDist = Math.abs(best.numeric - initialGuess);
+  for (const r of all.roots) {
+    const d = Math.abs(r.numeric - initialGuess);
+    if (d < bestDist) {
+      best = r;
+      bestDist = d;
+    }
+  }
+  return best;
 }
 
 function replaceBalancedCallToLatex(
@@ -992,13 +1292,20 @@ export function casioExprToNaturalLatex(expr: string): string {
     (args) => `\\text{RanInt}\\#\\left(${orBox(args[0])};\\,${orBox(args[1])}\\right)`
   );
 
+  // Format authentic Casio inverse trig to LaTeX (`sin⁻¹(` or `asin(` -> `\sin^{-1}(`)
+  s = s
+    .replace(/(?<![a-zA-Z])(?:sin\s*⁻\s*¹|asin)\s*\(/gi, '\\sin^{-1}(')
+    .replace(/(?<![a-zA-Z])(?:cos\s*⁻\s*¹|acos)\s*\(/gi, '\\cos^{-1}(')
+    .replace(/(?<![a-zA-Z])(?:tan\s*⁻\s*¹|atan)\s*\(/gi, '\\tan^{-1}(')
+    .replace(/(?<![a-zA-Z])(?:cot\s*⁻\s*¹|acot)\s*\(/gi, '\\cot^{-1}(');
+
   if (!/\\[a-zA-Z]+/.test(s)) {
     s = friendlyMathToLatex(s);
   } else {
     // Even if LaTeX commands already exist from multi-arg calls, still convert surrounding sin/cos/sqrt/fractions
     s = s
-      .replace(/(?<![a-zA-Z])sqrt\s*\(([^()]*)\)/gi, (_, inner: string) => `\\sqrt{${inner.trim() || '\\square'}}`)
-      .replace(/(?:(?<=[0-9])|\b)(sin|cos|tan|cot|ln|log)\b/gi, (m) => `\\${m.toLowerCase()}`)
+      .replace(/(?<![\\a-zA-Z])sqrt\s*\(([^()]*)\)/gi, (_, inner: string) => `\\sqrt{${inner.trim() || '\\square'}}`)
+      .replace(/(?<![\\a-zA-Z])(sin|cos|tan|cot|ln|log)(?![a-zA-Z])/gi, (m) => `\\${m.toLowerCase()}`)
       .replace(/(\d+)\s*\/\s*(\d+)/g, '\\frac{$1}{$2}');
   }
 
@@ -1025,10 +1332,9 @@ export function formatComplexLatex(c: CasioComplexValue, polar = false, angleUni
   const im = Math.abs(c.im) < 1e-10 ? 0 : Number(c.im.toFixed(6));
   if (polar) {
     const r = Number(Math.hypot(re, im).toFixed(6));
-    let ang = Math.atan2(im, re);
-    if (angleUnit === 'D') ang = (ang * 180) / Math.PI;
+    const ang = radToAngle(Math.atan2(im, re), angleUnit);
     const angRounded = Number(ang.toFixed(4));
-    return `${r}\\angle ${angRounded}${angleUnit === 'D' ? '^\\circ' : ''}`;
+    return `${r}\\angle ${angRounded}${angleUnitSuffixLatex(angleUnit)}`;
   }
   if (im === 0) return String(re);
   const imAbs = Math.abs(im);
@@ -1120,7 +1426,7 @@ export function evaluateCasioComplex(raw: string, angleUnit: CasioAngleUnit = 'D
       pos += 1;
       const angAtom = parseUnary();
       if (!angAtom) return null;
-      const rad = angleUnit === 'D' ? (angAtom.re * Math.PI) / 180 : angAtom.re;
+      const rad = angleToRad(angAtom.re, angleUnit);
       base = { re: base.re * Math.cos(rad), im: base.re * Math.sin(rad) };
     }
     if (s[pos] === '^') {
@@ -1145,7 +1451,7 @@ export function evaluateCasioComplex(raw: string, angleUnit: CasioAngleUnit = 'D
       if (fn === 'conjg') return { re: inner.re, im: -inner.im };
       if (fn === 'arg') {
         const rad = Math.atan2(inner.im, inner.re);
-        return { re: angleUnit === 'D' ? (rad * 180) / Math.PI : rad, im: 0 };
+        return { re: radToAngle(rad, angleUnit), im: 0 };
       }
       if (fn === 'sqrt') {
         const r = Math.hypot(inner.re, inner.im);
@@ -1194,43 +1500,90 @@ export function evaluateCasioComplex(raw: string, angleUnit: CasioAngleUnit = 'D
 }
 
 /**
- * Matrix Operations (`MODE 3: MATRIX`) for 2×2 & 3×3 matrices.
+ * Matrix Operations (`MODE 4: MATRIX`) for 2×2, 3×3 & 4×4 matrices.
  */
 export function computeMatrixDet(m: number[][]): number {
-  if (m.length === 2) {
+  const n = m.length;
+  if (n === 0 || m.some((row) => row.length !== n)) return NaN;
+  if (n === 1) return m[0][0];
+  if (n === 2) {
     return m[0][0] * m[1][1] - m[0][1] * m[1][0];
   }
-  if (m.length === 3) {
+  if (n === 3) {
     return (
       m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1]) -
       m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0]) +
       m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0])
     );
   }
-  return NaN;
+  // Gaussian elimination with partial pivoting for n >= 4
+  const a = m.map((row) => [...row]);
+  let det = 1;
+  for (let col = 0; col < n; col += 1) {
+    let pivotRow = col;
+    for (let r = col + 1; r < n; r += 1) {
+      if (Math.abs(a[r][col]) > Math.abs(a[pivotRow][col])) pivotRow = r;
+    }
+    if (Math.abs(a[pivotRow][col]) < 1e-12) return 0;
+    if (pivotRow !== col) {
+      [a[col], a[pivotRow]] = [a[pivotRow], a[col]];
+      det = -det;
+    }
+    det *= a[col][col];
+    for (let r = col + 1; r < n; r += 1) {
+      const factor = a[r][col] / a[col][col];
+      for (let c = col; c < n; c += 1) {
+        a[r][c] -= factor * a[col][c];
+      }
+    }
+  }
+  return det;
 }
 
 export function computeMatrixInverse(m: number[][]): number[][] | null {
+  const n = m.length;
+  if (n === 0 || m.some((row) => row.length !== n)) return null;
   const det = computeMatrixDet(m);
   if (!Number.isFinite(det) || Math.abs(det) < 1e-10) return null;
-  if (m.length === 2) {
+  if (n === 2) {
     return [
       [m[1][1] / det, -m[0][1] / det],
       [-m[1][0] / det, m[0][0] / det],
     ];
   }
-  const n = m.length;
-  const inv: number[][] = Array.from({ length: n }, () => Array(n).fill(0));
-  for (let r = 0; r < n; r += 1) {
-    for (let c = 0; c < n; c += 1) {
-      const sub = m
-        .filter((_, ri) => ri !== r)
-        .map((row) => row.filter((_, ci) => ci !== c));
-      const cofactor = ((r + c) % 2 === 0 ? 1 : -1) * computeMatrixDet(sub);
-      inv[c][r] = cofactor / det;
+  // Gauss-Jordan elimination with partial pivoting (supports 3×3, 4×4, ...)
+  const aug = m.map((row, ri) => [
+    ...row,
+    ...Array.from({ length: n }, (_, ci) => (ri === ci ? 1 : 0)),
+  ]);
+  for (let col = 0; col < n; col += 1) {
+    let pivotRow = col;
+    for (let r = col + 1; r < n; r += 1) {
+      if (Math.abs(aug[r][col]) > Math.abs(aug[pivotRow][col])) pivotRow = r;
+    }
+    if (Math.abs(aug[pivotRow][col]) < 1e-12) return null;
+    if (pivotRow !== col) {
+      [aug[col], aug[pivotRow]] = [aug[pivotRow], aug[col]];
+    }
+    const pivot = aug[col][col];
+    for (let c = 0; c < 2 * n; c += 1) aug[col][c] /= pivot;
+    for (let r = 0; r < n; r += 1) {
+      if (r === col) continue;
+      const factor = aug[r][col];
+      for (let c = 0; c < 2 * n; c += 1) aug[r][c] -= factor * aug[col][c];
     }
   }
-  return inv;
+  return aug.map((row) => row.slice(n));
+}
+
+export function transposeMatrix(m: number[][]): number[][] {
+  if (m.length === 0) return [];
+  const cols = m[0].length;
+  return Array.from({ length: cols }, (_, c) => m.map((row) => row[c]));
+}
+
+export function subtractMatrices(a: number[][], b: number[][]): number[][] {
+  return a.map((row, ri) => row.map((v, ci) => v - (b[ri]?.[ci] ?? 0)));
 }
 
 export function multiplyMatrices(a: number[][], b: number[][]): number[][] {
@@ -1273,7 +1626,7 @@ export function computeVectorMetrics(u: number[], v: number[], angleUnit: CasioA
   if (magU > 1e-10 && magV > 1e-10) {
     const cosA = Math.max(-1, Math.min(1, dot / (magU * magV)));
     const rad = Math.acos(cosA);
-    angle = angleUnit === 'D' ? (rad * 180) / Math.PI : rad;
+    angle = radToAngle(rad, angleUnit);
   }
   const cross =
     len === 3
@@ -1283,7 +1636,9 @@ export function computeVectorMetrics(u: number[], v: number[], angleUnit: CasioA
           u[0] * v[1] - u[1] * v[0],
         ]
       : [u[0] * v[1] - u[1] * v[0]];
-  return { sum, dot, magU, magV, angle, cross };
+  const diff = u.slice(0, len).map((val, i) => val - v[i]);
+  const unitU = magU > 1e-10 ? u.slice(0, len).map((val) => val / magU) : null;
+  return { sum, diff, dot, magU, magV, angle, cross, unitU };
 }
 
 /**
@@ -1491,4 +1846,1215 @@ export function computeCasioStats1Var(values: number[]): CasioStats1VarResult | 
     q3: upper.length > 0 ? getMed(upper) : sorted[n - 1],
     max: sorted[n - 1],
   };
+}
+
+/**
+ * Mode 6 → 2: Linear Regression (`y = a + bx`, correlation `r`, `r²`)
+ */
+export function computeCasioLinReg(pairs: { x: number; y: number }[]): CasioLinRegResult | null {
+  const clean = pairs.filter((p) => Number.isFinite(p.x) && Number.isFinite(p.y));
+  const n = clean.length;
+  if (n < 2) return null;
+  const sumX = clean.reduce((acc, p) => acc + p.x, 0);
+  const sumY = clean.reduce((acc, p) => acc + p.y, 0);
+  const meanX = sumX / n;
+  const meanY = sumY / n;
+  let sxx = 0;
+  let syy = 0;
+  let sxy = 0;
+  for (const p of clean) {
+    const dx = p.x - meanX;
+    const dy = p.y - meanY;
+    sxx += dx * dx;
+    syy += dy * dy;
+    sxy += dx * dy;
+  }
+  if (sxx < 1e-12) return null;
+  const b = sxy / sxx;
+  const a = meanY - b * meanX;
+  const r = syy > 1e-12 ? sxy / Math.sqrt(sxx * syy) : 1;
+  const r2 = r * r;
+  const aStr = Number(a.toFixed(4));
+  const bStr = Number(b.toFixed(4));
+  const rStr = Number(r.toFixed(4));
+  return {
+    n,
+    a,
+    b,
+    r,
+    r2,
+    meanX,
+    meanY,
+    summaryLatex: `y = ${aStr} ${bStr < 0 ? '-' : '+'} ${Math.abs(bStr)}x,\\; r = ${rStr}`,
+  };
+}
+
+/**
+ * Mode 3: Base-N Arithmetic & Conversion (32-bit signed integers: DEC, HEX, BIN, OCT)
+ * Supports +, -, ×, ÷, (), AND, OR, XOR, XNOR, NOT, NEG and 0x/0b/0o prefixes.
+ */
+export function formatBaseN(int32: number): CasioBaseNResult {
+  const v = int32 | 0;
+  const u = v >>> 0;
+  return {
+    value: v,
+    dec: String(v),
+    hex: u.toString(16).toUpperCase(),
+    bin: u.toString(2),
+    oct: u.toString(8),
+  };
+}
+
+export function evaluateCasioBaseN(raw: string, base: CasioBaseMode): CasioBaseNResult | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+
+  const radix = base === 'HEX' ? 16 : base === 'BIN' ? 2 : base === 'OCT' ? 8 : 10;
+  const s = trimmed
+    .replace(/×/g, '*')
+    .replace(/÷/g, '/')
+    .replace(/−|–/g, '-');
+
+  type Tok =
+    | { type: 'num'; val: number }
+    | { type: 'op'; val: string }
+    | { type: 'lparen' }
+    | { type: 'rparen' };
+
+  const tokens: Tok[] = [];
+  let i = 0;
+  const validDigitForBase = (ch: string, r: number): boolean => {
+    const code = ch.toUpperCase();
+    if (r === 2) return code === '0' || code === '1';
+    if (r === 8) return code >= '0' && code <= '7';
+    if (r === 10) return code >= '0' && code <= '9';
+    return (code >= '0' && code <= '9') || (code >= 'A' && code <= 'F');
+  };
+
+  while (i < s.length) {
+    if (/\s/.test(s[i])) {
+      i += 1;
+      continue;
+    }
+    if (s[i] === '(') {
+      tokens.push({ type: 'lparen' });
+      i += 1;
+      continue;
+    }
+    if (s[i] === ')') {
+      tokens.push({ type: 'rparen' });
+      i += 1;
+      continue;
+    }
+    if (['+', '-', '*', '/', '&', '|', '^', '~'].includes(s[i])) {
+      const opMap: Record<string, string> = {
+        '&': 'AND',
+        '|': 'OR',
+        '^': 'XOR',
+        '~': 'NOT',
+      };
+      tokens.push({ type: 'op', val: opMap[s[i]] ?? s[i] });
+      i += 1;
+      continue;
+    }
+
+    // Explicit prefixes: 0x..., 0b..., 0o...
+    const prefMatch = /^0([xXbBoO])([0-9a-fA-F]+)/.exec(s.slice(i));
+    if (prefMatch) {
+      const pChar = prefMatch[1].toLowerCase();
+      const pRadix = pChar === 'x' ? 16 : pChar === 'b' ? 2 : 8;
+      const digits = prefMatch[2];
+      for (const ch of digits) {
+        if (!validDigitForBase(ch, pRadix)) return null;
+      }
+      const parsed = parseInt(digits, pRadix);
+      if (!Number.isFinite(parsed)) return null;
+      tokens.push({ type: 'num', val: parsed | 0 });
+      i += prefMatch[0].length;
+      continue;
+    }
+
+    // Keyword operators: XNOR, XOR, AND, OR, NOT, NEG (must not consume valid hex digits unless followed by boundary)
+    const kwMatch = /^(XNOR|XOR|AND|OR|NOT|NEG)\b/i.exec(s.slice(i));
+    if (kwMatch) {
+      tokens.push({ type: 'op', val: kwMatch[1].toUpperCase() });
+      i += kwMatch[0].length;
+      continue;
+    }
+
+    // Number in active radix
+    let start = i;
+    while (i < s.length && validDigitForBase(s[i], radix)) {
+      i += 1;
+    }
+    if (i > start) {
+      const parsed = parseInt(s.slice(start, i), radix);
+      if (!Number.isFinite(parsed)) return null;
+      tokens.push({ type: 'num', val: parsed | 0 });
+      continue;
+    }
+    return null;
+  }
+
+  let pos = 0;
+  const peek = () => tokens[pos];
+  const consume = () => tokens[pos++];
+
+  // Precedence (Casio Base-N): () -> NOT/NEG/unary -> * / -> + - -> AND -> XOR/XNOR -> OR
+  const parseOr = (): number | null => {
+    let left = parseXor();
+    if (left === null) return null;
+    while (peek()?.type === 'op' && (peek() as { type: 'op'; val: string }).val === 'OR') {
+      consume();
+      const right = parseXor();
+      if (right === null) return null;
+      left = (left | right) | 0;
+    }
+    return left;
+  };
+
+  const parseXor = (): number | null => {
+    let left = parseAnd();
+    if (left === null) return null;
+    while (
+      peek()?.type === 'op' &&
+      ((peek() as { type: 'op'; val: string }).val === 'XOR' ||
+        (peek() as { type: 'op'; val: string }).val === 'XNOR')
+    ) {
+      const op = (consume() as { type: 'op'; val: string }).val;
+      const right = parseAnd();
+      if (right === null) return null;
+      left = op === 'XOR' ? (left ^ right) | 0 : ~(left ^ right) | 0;
+    }
+    return left;
+  };
+
+  const parseAnd = (): number | null => {
+    let left = parseAddSub();
+    if (left === null) return null;
+    while (peek()?.type === 'op' && (peek() as { type: 'op'; val: string }).val === 'AND') {
+      consume();
+      const right = parseAddSub();
+      if (right === null) return null;
+      left = (left & right) | 0;
+    }
+    return left;
+  };
+
+  const parseAddSub = (): number | null => {
+    let left = parseMulDiv();
+    if (left === null) return null;
+    while (
+      peek()?.type === 'op' &&
+      ((peek() as { type: 'op'; val: string }).val === '+' ||
+        (peek() as { type: 'op'; val: string }).val === '-')
+    ) {
+      const op = (consume() as { type: 'op'; val: string }).val;
+      const right = parseMulDiv();
+      if (right === null) return null;
+      left = op === '+' ? (left + right) | 0 : (left - right) | 0;
+    }
+    return left;
+  };
+
+  const parseMulDiv = (): number | null => {
+    let left = parseUnary();
+    if (left === null) return null;
+    while (
+      peek()?.type === 'op' &&
+      ((peek() as { type: 'op'; val: string }).val === '*' ||
+        (peek() as { type: 'op'; val: string }).val === '/')
+    ) {
+      const op = (consume() as { type: 'op'; val: string }).val;
+      const right = parseUnary();
+      if (right === null) return null;
+      if (op === '*') {
+        left = Math.imul(left, right) | 0;
+      } else {
+        if (right === 0) return null;
+        left = Math.trunc(left / right) | 0;
+      }
+    }
+    return left;
+  };
+
+  const parseUnary = (): number | null => {
+    const t = peek();
+    if (t?.type === 'op') {
+      if (t.val === '+') {
+        consume();
+        return parseUnary();
+      }
+      if (t.val === '-' || t.val === 'NEG') {
+        consume();
+        const inner = parseUnary();
+        return inner === null ? null : -inner | 0;
+      }
+      if (t.val === 'NOT') {
+        consume();
+        const inner = parseUnary();
+        return inner === null ? null : ~inner | 0;
+      }
+    }
+    return parsePrimary();
+  };
+
+  const parsePrimary = (): number | null => {
+    const t = peek();
+    if (!t) return null;
+    if (t.type === 'lparen') {
+      consume();
+      const inner = parseOr();
+      if (inner === null || peek()?.type !== 'rparen') return null;
+      consume();
+      return inner;
+    }
+    if (t.type === 'num') {
+      consume();
+      return t.val | 0;
+    }
+    return null;
+  };
+
+  const out = parseOr();
+  if (out === null || pos !== tokens.length) return null;
+  return formatBaseN(out);
+}
+
+/**
+ * Mode 7: Probability Distributions (Normal PD/CD, Inverse Normal, Binomial PD/CD, Poisson PD/CD)
+ */
+function erfApprox(x: number): number {
+  const sign = x < 0 ? -1 : 1;
+  const ax = Math.abs(x);
+  const t = 1 / (1 + 0.3275911 * ax);
+  const y =
+    1 -
+    (((((1.061405429 * t - 1.453152027) * t + 1.421413741) * t - 0.284496736) * t + 0.254829592) *
+      t) *
+      Math.exp(-ax * ax);
+  return sign * y;
+}
+
+function standardNormalCDF(z: number): number {
+  return 0.5 * (1 + erfApprox(z / Math.SQRT2));
+}
+
+/**
+ * Acklam's rational approximation for inverse standard normal CDF (accuracy ~1e-9).
+ */
+function inverseStandardNormal(p: number): number {
+  if (p <= 0 || p >= 1) return NaN;
+  const a = [
+    -3.969683028665376e1, 2.209460984245205e2, -2.759285104469687e2,
+    1.38357751867269e2, -3.066479806614716e1, 2.506628277459239,
+  ];
+  const b = [
+    -5.447609879822406e1, 1.615858368580409e2, -1.556989798598866e2,
+    6.680131188771972e1, -1.328068155288572e1,
+  ];
+  const c = [
+    -7.784894002430293e-3, -3.223964580411365e-1, -2.400758277161838,
+    -2.549732539343734, 4.374664141464968, 2.938163982698783,
+  ];
+  const d = [
+    7.784695709041462e-3, 3.224671290700398e-1, 2.445134137142996, 3.754408661907416,
+  ];
+  const pLow = 0.02425;
+  const pHigh = 1 - pLow;
+  if (p < pLow) {
+    const q = Math.sqrt(-2 * Math.log(p));
+    return (
+      (((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) /
+      ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1)
+    );
+  }
+  if (p <= pHigh) {
+    const q = p - 0.5;
+    const r = q * q;
+    return (
+      ((((((a[0] * r + a[1]) * r + a[2]) * r + a[3]) * r + a[4]) * r + a[5]) * q) /
+      (((((b[0] * r + b[1]) * r + b[2]) * r + b[3]) * r + b[4]) * r + 1)
+    );
+  }
+  const q = Math.sqrt(-2 * Math.log(1 - p));
+  return -(
+    (((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) /
+    ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1)
+  );
+}
+
+function logFactorial(n: number): number {
+  let sum = 0;
+  for (let i = 2; i <= n; i += 1) sum += Math.log(i);
+  return sum;
+}
+
+function binomialPMF(k: number, n: number, p: number): number {
+  if (!Number.isInteger(k) || !Number.isInteger(n) || n < 0 || k < 0 || k > n || p < 0 || p > 1) {
+    return NaN;
+  }
+  if (p === 0) return k === 0 ? 1 : 0;
+  if (p === 1) return k === n ? 1 : 0;
+  const logComb = logFactorial(n) - logFactorial(k) - logFactorial(n - k);
+  return Math.exp(logComb + k * Math.log(p) + (n - k) * Math.log(1 - p));
+}
+
+function poissonPMF(k: number, lambda: number): number {
+  if (!Number.isInteger(k) || k < 0 || lambda <= 0) return NaN;
+  return Math.exp(k * Math.log(lambda) - lambda - logFactorial(k));
+}
+
+export interface CasioDistInput {
+  kind: CasioDistKind;
+  x?: number;
+  lower?: number;
+  upper?: number;
+  mu?: number;
+  sigma?: number;
+  area?: number;
+  n?: number;
+  p?: number;
+  lambda?: number;
+}
+
+export function computeCasioDistribution(input: CasioDistInput): CasioDistResult | null {
+  const { kind } = input;
+  let value = NaN;
+  let label = '';
+
+  if (kind === 'normalPD') {
+    const x = input.x ?? 0;
+    const mu = input.mu ?? 0;
+    const sigma = input.sigma ?? 1;
+    if (!Number.isFinite(sigma) || sigma <= 0) return null;
+    const z = (x - mu) / sigma;
+    value = Math.exp(-0.5 * z * z) / (sigma * Math.sqrt(2 * Math.PI));
+    label = `Normal\\;PD(${x})`;
+  } else if (kind === 'normalCD') {
+    const lower = input.lower ?? -1;
+    const upper = input.upper ?? 1;
+    const mu = input.mu ?? 0;
+    const sigma = input.sigma ?? 1;
+    if (!Number.isFinite(sigma) || sigma <= 0 || upper < lower) return null;
+    value = standardNormalCDF((upper - mu) / sigma) - standardNormalCDF((lower - mu) / sigma);
+    label = `P(${lower} \\le X \\le ${upper})`;
+  } else if (kind === 'invNormal') {
+    const area = input.area ?? 0.95;
+    const mu = input.mu ?? 0;
+    const sigma = input.sigma ?? 1;
+    if (!Number.isFinite(sigma) || sigma <= 0 || area <= 0 || area >= 1) return null;
+    value = mu + sigma * inverseStandardNormal(area);
+    label = `\\text{InvNorm}(${area})`;
+  } else if (kind === 'binomialPD') {
+    const k = Math.round(input.x ?? 0);
+    const n = Math.round(input.n ?? 10);
+    const p = input.p ?? 0.5;
+    if (n > 2000) return null;
+    value = binomialPMF(k, n, p);
+    label = `P(X = ${k})`;
+  } else if (kind === 'binomialCD') {
+    const k = Math.round(input.x ?? 0);
+    const n = Math.round(input.n ?? 10);
+    const p = input.p ?? 0.5;
+    if (n < 0 || n > 2000 || k < 0 || k > n || p < 0 || p > 1) return null;
+    let sum = 0;
+    for (let i = 0; i <= k; i += 1) sum += binomialPMF(i, n, p);
+    value = Math.min(1, sum);
+    label = `P(X \\le ${k})`;
+  } else if (kind === 'poissonPD') {
+    const k = Math.round(input.x ?? 0);
+    const lambda = input.lambda ?? 1;
+    if (k < 0 || k > 2000 || lambda <= 0) return null;
+    value = poissonPMF(k, lambda);
+    label = `P(X = ${k})`;
+  } else if (kind === 'poissonCD') {
+    const k = Math.round(input.x ?? 0);
+    const lambda = input.lambda ?? 1;
+    if (k < 0 || k > 2000 || lambda <= 0) return null;
+    let sum = 0;
+    for (let i = 0; i <= k; i += 1) sum += poissonPMF(i, lambda);
+    value = Math.min(1, sum);
+    label = `P(X \\le ${k})`;
+  }
+
+  if (!Number.isFinite(value)) return null;
+  const formatted = Number(value.toFixed(6));
+  return {
+    value,
+    label,
+    summaryLatex: `${label} \\approx ${formatted}`,
+  };
+}
+
+/**
+ * Mode 9: 4×4 Linear System (`Hệ PT 4 ẩn` — đặc trưng của Casio fx-580VN X)
+ */
+export function solveLinearSystem4x4(rows: number[][]): CasioSystem4x4Result {
+  if (rows.length !== 4 || rows.some((r) => r.length !== 5)) {
+    return { kind: 'degenerate', summaryLatex: '\\text{Dữ liệu không hợp lệ}' };
+  }
+  const n = 4;
+  const aug = rows.map((r) => [...r]);
+  for (let col = 0; col < n; col += 1) {
+    let pivotRow = col;
+    for (let r = col + 1; r < n; r += 1) {
+      if (Math.abs(aug[r][col]) > Math.abs(aug[pivotRow][col])) pivotRow = r;
+    }
+    if (Math.abs(aug[pivotRow][col]) < 1e-10) {
+      return { kind: 'degenerate', summaryLatex: '\\text{Hệ vô nghiệm hoặc vô số nghiệm}' };
+    }
+    if (pivotRow !== col) {
+      [aug[col], aug[pivotRow]] = [aug[pivotRow], aug[col]];
+    }
+    const pivot = aug[col][col];
+    for (let c = col; c <= n; c += 1) aug[col][c] /= pivot;
+    for (let r = 0; r < n; r += 1) {
+      if (r === col) continue;
+      const factor = aug[r][col];
+      for (let c = col; c <= n; c += 1) aug[r][c] -= factor * aug[col][c];
+    }
+  }
+  const [x, y, z, t] = [aug[0][4], aug[1][4], aug[2][4], aug[3][4]];
+  const xr = formatCasioExact(x);
+  const yr = formatCasioExact(y);
+  const zr = formatCasioExact(z);
+  const tr = formatCasioExact(t);
+  return {
+    kind: 'unique',
+    x,
+    y,
+    z,
+    t,
+    summaryLatex: `x=${xr.exactLatex},\\; y=${yr.exactLatex},\\; z=${zr.exactLatex},\\; t=${tr.exactLatex}`,
+  };
+}
+
+/**
+ * Mode 9: Quartic Equation `ax⁴ + bx³ + cx² + dx + e = 0` (`PT bậc 4` — đặc trưng fx-580VN X)
+ * Uses Durand-Kerner complex iteration to find all roots accurately, then extracts real roots.
+ */
+export function solveQuarticEquation(
+  a: number,
+  b: number,
+  c: number,
+  d: number,
+  e: number
+): CasioQuarticResult {
+  if (Math.abs(a) < 1e-10) {
+    const cub = solveCubicEquation(b, c, d, e);
+    return {
+      roots: cub.roots,
+      complexCount: cub.roots.length === 1 ? 2 : 0,
+      summaryLatex: cub.summaryLatex,
+    };
+  }
+  // Normalize to monic: z⁴ + p z³ + q z² + r z + s = 0
+  const p = b / a;
+  const q = c / a;
+  const r = d / a;
+  const s = e / a;
+
+  const evalPoly = (z: CasioComplexValue): CasioComplexValue => {
+    const mul = (u: CasioComplexValue, v: CasioComplexValue): CasioComplexValue => ({
+      re: u.re * v.re - u.im * v.im,
+      im: u.re * v.im + u.im * v.re,
+    });
+    const addR = (u: CasioComplexValue, k: number): CasioComplexValue => ({ re: u.re + k, im: u.im });
+    let acc: CasioComplexValue = { re: 1, im: 0 };
+    acc = addR(mul(acc, z), p);
+    acc = addR(mul(acc, z), q);
+    acc = addR(mul(acc, z), r);
+    acc = addR(mul(acc, z), s);
+    return acc;
+  };
+
+  const cSub = (u: CasioComplexValue, v: CasioComplexValue): CasioComplexValue => ({
+    re: u.re - v.re,
+    im: u.im - v.im,
+  });
+  const cMul = (u: CasioComplexValue, v: CasioComplexValue): CasioComplexValue => ({
+    re: u.re * v.re - u.im * v.im,
+    im: u.re * v.im + u.im * v.re,
+  });
+  const cDiv = (u: CasioComplexValue, v: CasioComplexValue): CasioComplexValue => {
+    const den = v.re * v.re + v.im * v.im;
+    if (den < 1e-18) return { re: 0, im: 0 };
+    return { re: (u.re * v.re + u.im * v.im) / den, im: (u.im * v.re - u.re * v.im) / den };
+  };
+
+  // Asymmetric initial guesses on a circle of radius R
+  const radius = 1 + Math.max(Math.abs(p), Math.abs(q), Math.abs(r), Math.abs(s));
+  const rootsC: CasioComplexValue[] = [0, 1, 2, 3].map((k) => {
+    const ang = (2 * Math.PI * k) / 4 + 0.37;
+    return { re: radius * Math.cos(ang) - p / 4, im: radius * Math.sin(ang) };
+  });
+
+  for (let iter = 0; iter < 120; iter += 1) {
+    let maxStep = 0;
+    for (let i = 0; i < 4; i += 1) {
+      const fz = evalPoly(rootsC[i]);
+      let denom: CasioComplexValue = { re: 1, im: 0 };
+      for (let j = 0; j < 4; j += 1) {
+        if (i !== j) denom = cMul(denom, cSub(rootsC[i], rootsC[j]));
+      }
+      const step = cDiv(fz, denom);
+      rootsC[i] = cSub(rootsC[i], step);
+      maxStep = Math.max(maxStep, Math.hypot(step.re, step.im));
+    }
+    if (maxStep < 1e-12) break;
+  }
+
+  const realRaw = rootsC
+    .filter((z) => Math.abs(z.im) < 1e-5)
+    .map((z) => (Math.abs(z.re) < 1e-9 ? 0 : z.re))
+    .sort((u, v) => u - v);
+
+  // Deduplicate repeated roots (within 1e-4)
+  const uniqueReal: number[] = [];
+  for (const rt of realRaw) {
+    if (uniqueReal.length === 0 || Math.abs(rt - uniqueReal[uniqueReal.length - 1]) > 1e-4) {
+      uniqueReal.push(rt);
+    }
+  }
+  const complexCount = 4 - realRaw.length;
+
+  if (uniqueReal.length === 0) {
+    return { roots: [], complexCount: 4, summaryLatex: '\\text{Vô nghiệm thực}' };
+  }
+
+  const summaryLatex = uniqueReal
+    .map((rt, idx) => {
+      const rep = formatCasioExact(rt);
+      return `x_{${idx + 1}} = ${rep.hasExactForm ? rep.exactLatex : rep.decimalText}`;
+    })
+    .join(',\\; ');
+
+  return {
+    roots: uniqueReal,
+    complexCount,
+    summaryLatex,
+  };
+}
+
+/**
+ * Mode A: Cubic Inequality `ax³ + bx² + cx + d (> | < | >= | <=) 0` (chuẩn Casio fx-580VN X)
+ */
+export function solveCubicInequality(
+  a: number,
+  b: number,
+  c: number,
+  d: number,
+  op: '>' | '<' | '>=' | '<='
+): CasioInequalityResult {
+  if (Math.abs(a) < 1e-10) {
+    return solveQuadraticInequality(b, c, d, op);
+  }
+  const strict = op === '>' || op === '<';
+  const wantPositive = op === '>' || op === '>=';
+  const f = (x: number) => ((a * x + b) * x + c) * x + d;
+  const satisfies = (val: number) => (wantPositive ? val > 1e-9 : val < -1e-9);
+
+  const cub = solveCubicEquation(a, b, c, d);
+  const pts: number[] = [];
+  for (const r of cub.roots) {
+    if (pts.length === 0 || Math.abs(r - pts[pts.length - 1]) > 1e-5) {
+      pts.push(r);
+    }
+  }
+
+  // Test sign in each open interval divided by real roots
+  const intervals: { lo: number; hi: number }[] = [];
+  const bounds = [-Infinity, ...pts, Infinity];
+  for (let i = 0; i < bounds.length - 1; i += 1) {
+    const lo = bounds[i];
+    const hi = bounds[i + 1];
+    let sample: number;
+    if (lo === -Infinity && hi === Infinity) sample = 0;
+    else if (lo === -Infinity) sample = hi - 1;
+    else if (hi === Infinity) sample = lo + 1;
+    else sample = (lo + hi) / 2;
+    if (satisfies(f(sample))) {
+      intervals.push({ lo, hi });
+    }
+  }
+
+  // Merge adjacent intervals if non-strict (<= or >=), and collect isolated roots if non-strict
+  const merged: { lo: number; hi: number }[] = [];
+  for (const iv of intervals) {
+    if (!strict && merged.length > 0 && Math.abs(merged[merged.length - 1].hi - iv.lo) < 1e-5) {
+      merged[merged.length - 1].hi = iv.hi;
+    } else {
+      merged.push({ ...iv });
+    }
+  }
+
+  const fmt = (v: number) => {
+    const rep = formatCasioExact(v);
+    return rep.hasExactForm ? rep.exactLatex : rep.decimalText;
+  };
+  const lt = strict ? '<' : '\\le';
+  const gt = strict ? '>' : '\\ge';
+
+  const parts: string[] = [];
+  for (const iv of merged) {
+    if (iv.lo === -Infinity && iv.hi === Infinity) {
+      return { summaryLatex: 'x \\in \\mathbb{R}' };
+    }
+    if (iv.lo === -Infinity) {
+      parts.push(`x ${lt} ${fmt(iv.hi)}`);
+    } else if (iv.hi === Infinity) {
+      parts.push(`x ${gt} ${fmt(iv.lo)}`);
+    } else {
+      parts.push(`${fmt(iv.lo)} ${lt} x ${lt} ${fmt(iv.hi)}`);
+    }
+  }
+
+  if (!strict) {
+    for (const r of pts) {
+      const covered = merged.some(
+        (iv) => (r >= iv.lo - 1e-5 && r <= iv.hi + 1e-5)
+      );
+      if (!covered) {
+        parts.push(`x = ${fmt(r)}`);
+      }
+    }
+  }
+
+  if (parts.length === 0) {
+    return { summaryLatex: '\\text{Vô nghiệm}' };
+  }
+  return { summaryLatex: parts.join('\\;\\text{hoặc}\\;') };
+}
+
+/**
+ * Mode B: Verify (`Đúng / Sai`) — evaluates LHS and RHS and checks relation
+ */
+export function evaluateCasioVerify(
+  lhsRaw: string,
+  op: CasioVerifyOp,
+  rhsRaw: string,
+  options: CasioEvalOptions
+): CasioVerifyResult | null {
+  const lhs = evaluateCasioExpression(lhsRaw, options);
+  const rhs = evaluateCasioExpression(rhsRaw, options);
+  if (!lhs || !rhs) return null;
+  const diff = lhs.numeric - rhs.numeric;
+  const tol = 1e-8;
+  let isTrue = false;
+  if (op === '=') isTrue = Math.abs(diff) <= tol;
+  else if (op === '!=') isTrue = Math.abs(diff) > tol;
+  else if (op === '>') isTrue = diff > tol;
+  else if (op === '<') isTrue = diff < -tol;
+  else if (op === '>=') isTrue = diff >= -tol;
+  else if (op === '<=') isTrue = diff <= tol;
+
+  const opTex =
+    op === '!=' ? '\\ne' : op === '>=' ? '\\ge' : op === '<=' ? '\\le' : op;
+  const lhsTex = lhs.hasExactForm ? lhs.exactLatex : lhs.decimalText;
+  const rhsTex = rhs.hasExactForm ? rhs.exactLatex : rhs.decimalText;
+  return {
+    isTrue,
+    lhsVal: lhs.numeric,
+    rhsVal: rhs.numeric,
+    lhsLatex: lhsTex,
+    rhsLatex: rhsTex,
+    summaryLatex: `${lhsTex} ${opTex} ${rhsTex} \\Rightarrow \\text{${isTrue ? 'TRUE (Đúng)' : 'FALSE (Sai)'}}`,
+  };
+}
+
+/**
+ * Mode C: Ratio (`Tỉ lệ thức`) — solves `a : b = X : d` (`unknown = 'c'`) or `a : b = c : X` (`unknown = 'd'`)
+ */
+export function solveCasioRatio(
+  a: number,
+  b: number,
+  c: number,
+  d: number,
+  unknown: 'c' | 'd'
+): CasioRatioResult {
+  if (unknown === 'c') {
+    if (!Number.isFinite(b) || Math.abs(b) < 1e-12) {
+      return { kind: 'error', summaryLatex: '\\text{Math ERROR (}b = 0\\text{)}' };
+    }
+    const val = (a * d) / b;
+    const rep = formatCasioExact(val);
+    const valTex = rep.hasExactForm ? rep.exactLatex : rep.decimalText;
+    return {
+      kind: 'ok',
+      value: val,
+      exactLatex: rep.exactLatex,
+      decimalText: rep.decimalText,
+      summaryLatex: `X = ${valTex}`,
+    };
+  }
+  if (!Number.isFinite(a) || Math.abs(a) < 1e-12) {
+    return { kind: 'error', summaryLatex: '\\text{Math ERROR (}a = 0\\text{)}' };
+  }
+  const val = (b * c) / a;
+  const rep = formatCasioExact(val);
+  const valTex = rep.hasExactForm ? rep.exactLatex : rep.decimalText;
+  return {
+    kind: 'ok',
+    value: val,
+    exactLatex: rep.exactLatex,
+    decimalText: rep.decimalText,
+    summaryLatex: `X = ${valTex}`,
+  };
+}
+
+/**
+ * Evaluates a coefficient cell in Mode 9 (supports plain decimals as well as fractions/expressions like `1/2`, `-sqrt(2)`).
+ */
+export function parseCasioCoeff(raw: string): number {
+  const cleaned = raw.trim().replace(/−/g, '-');
+  if (!cleaned || cleaned === '-') return 0;
+  const direct = Number(cleaned);
+  if (Number.isFinite(direct)) return direct;
+  const evald = evaluateCasioExpression(cleaned, { angleUnit: 'D' });
+  return evald && Number.isFinite(evald.numeric) ? evald.numeric : 0;
+}
+
+function simplifySquareFree(n: number): { out: number; rad: number } {
+  const absN = Math.round(Math.abs(n));
+  if (absN <= 1) return { out: absN, rad: absN === 0 ? 0 : 1 };
+  let out = 1;
+  let rem = absN;
+  for (let d = 2; d * d <= rem; d += d === 2 ? 1 : 2) {
+    while (rem % (d * d) === 0) {
+      out *= d;
+      rem /= d * d;
+    }
+  }
+  return { out, rad: rem };
+}
+
+function formatQuadraticExactRoot(
+  a: number,
+  b: number,
+  disc: number,
+  sign: 1 | -1
+): { exactLatex: string; decimalLatex: string } {
+  const twoA = 2 * a;
+  const isIntCoeff =
+    Math.abs(a - Math.round(a)) < 1e-9 &&
+    Math.abs(b - Math.round(b)) < 1e-9 &&
+    Math.abs(disc - Math.round(disc)) < 1e-9 &&
+    Math.abs(disc) <= 1e7;
+
+  if (disc >= 0) {
+    const val = (-b + sign * Math.sqrt(disc)) / twoA;
+    const dec = formatDecimalForMode(val, 'NORM');
+    if (isIntCoeff) {
+      const bi = Math.round(b);
+      const ai = Math.round(a);
+      const di = Math.round(disc);
+      const { out, rad } = simplifySquareFree(di);
+      if (rad === 1 || rad === 0) {
+        const rep = formatCasioExact(val);
+        return { exactLatex: rep.hasExactForm ? rep.exactLatex : dec, decimalLatex: dec };
+      }
+      // (-bi + sign * out * sqrt(rad)) / (2 * ai)
+      let p = -bi;
+      let q = sign * out;
+      let den = 2 * ai;
+      if (den < 0) {
+        p = -p;
+        q = -q;
+        den = -den;
+      }
+      const g = gcdInt(gcdInt(Math.abs(p), Math.abs(q)), den);
+      p /= g;
+      q /= g;
+      den /= g;
+      const absQ = Math.abs(q);
+      const surdTerm = absQ === 1 ? `\\sqrt{${rad}}` : `${absQ}\\sqrt{${rad}}`;
+      let numLatex = '';
+      if (p === 0) {
+        numLatex = q < 0 ? `-${surdTerm}` : surdTerm;
+      } else {
+        numLatex = `${p} ${q < 0 ? '-' : '+'} ${surdTerm}`;
+      }
+      const exactLatex = den === 1 ? numLatex : `\\frac{${numLatex}}{${den}}`;
+      return { exactLatex, decimalLatex: dec };
+    }
+    const rep = formatCasioExact(val);
+    return { exactLatex: rep.hasExactForm ? rep.exactLatex : dec, decimalLatex: dec };
+  }
+
+  // Complex conjugate root: re ± im·i
+  const re = -b / twoA;
+  const im = (sign * Math.sqrt(-disc)) / Math.abs(twoA);
+  const reDec = Math.abs(re) < 1e-10 ? 0 : Number(re.toFixed(6));
+  const imDec = Math.abs(im) < 1e-10 ? 0 : Number(im.toFixed(6));
+  const decStr = formatComplexLatex({ re: reDec, im: imDec });
+
+  if (isIntCoeff) {
+    const ai = Math.round(a);
+    const bi = Math.round(b);
+    const absDisc = Math.round(-disc);
+    const { out, rad } = simplifySquareFree(absDisc);
+    const denRaw = Math.abs(2 * ai);
+    const reNumRaw = ai < 0 ? bi : -bi;
+    const gRe = gcdInt(Math.abs(reNumRaw), denRaw);
+    const reN = reNumRaw / gRe;
+    const reD = denRaw / gRe;
+    const reTex = reN === 0 ? '' : reD === 1 ? String(reN) : `\\frac{${reN}}{${reD}}`;
+
+    const gIm = gcdInt(out, denRaw);
+    const imN = out / gIm;
+    const imD = denRaw / gIm;
+    let imMagTex = '';
+    if (rad === 1) {
+      imMagTex = imD === 1 ? (imN === 1 ? '' : String(imN)) : `\\frac{${imN}}{${imD}}`;
+    } else {
+      const s = imN === 1 ? `\\sqrt{${rad}}` : `${imN}\\sqrt{${rad}}`;
+      imMagTex = imD === 1 ? s : `\\frac{${s}}{${imD}}`;
+    }
+    const imSign = sign > 0 ? '+' : '-';
+    const exactLatex = !reTex
+      ? `${sign < 0 ? '-' : ''}${imMagTex}i`
+      : `${reTex} ${imSign} ${imMagTex}i`;
+    return { exactLatex, decimalLatex: decStr };
+  }
+
+  const reRep = formatCasioExact(re);
+  const imRep = formatCasioExact(Math.abs(im));
+  const reTex = Math.abs(re) < 1e-10 ? '' : reRep.hasExactForm ? reRep.exactLatex : reRep.decimalText;
+  const imMagTex =
+    Math.abs(Math.abs(im) - 1) < 1e-8
+      ? ''
+      : imRep.hasExactForm
+        ? imRep.exactLatex
+        : imRep.decimalText;
+  const exactLatex = !reTex
+    ? `${im < 0 ? '-' : ''}${imMagTex}i`
+    : `${reTex} ${im < 0 ? '-' : '+'} ${imMagTex}i`;
+  return { exactLatex, decimalLatex: decStr };
+}
+
+function makeRealStep(label: string, val: number): CasioEqStepItem {
+  const clean = Math.abs(val) < 1e-10 ? 0 : val;
+  const rep = formatCasioExact(clean);
+  return {
+    label,
+    exactLatex: rep.hasExactForm ? rep.exactLatex : rep.decimalText,
+    decimalLatex: rep.decimalText,
+    numeric: clean,
+  };
+}
+
+function makeComplexStep(label: string, re: number, im: number): CasioEqStepItem {
+  const rClean = Math.abs(re) < 1e-9 ? 0 : re;
+  const iClean = Math.abs(im) < 1e-9 ? 0 : im;
+  if (iClean === 0) return makeRealStep(label, rClean);
+  const reRep = formatCasioExact(rClean);
+  const imRep = formatCasioExact(Math.abs(iClean));
+  const reTex = rClean === 0 ? '' : reRep.hasExactForm ? reRep.exactLatex : reRep.decimalText;
+  const imMagTex =
+    Math.abs(Math.abs(iClean) - 1) < 1e-7
+      ? ''
+      : imRep.hasExactForm
+        ? imRep.exactLatex
+        : imRep.decimalText;
+  const exactLatex = !reTex
+    ? `${iClean < 0 ? '-' : ''}${imMagTex}i`
+    : `${reTex} ${iClean < 0 ? '-' : '+'} ${imMagTex}i`;
+  const decimalLatex = formatComplexLatex({ re: rClean, im: iClean });
+  return { label, exactLatex, decimalLatex };
+}
+
+/**
+ * Mode 9 → 2 → 2: Authentic Casio fx-580VN X Quadratic Equation Solver (`ax² + bx + c = 0`)
+ * Returns exact surd/complex roots + parabola extremum (GTNN if a > 0, GTLN if a < 0).
+ */
+export function solveCasioQuadraticFull(a: number, b: number, c: number): CasioEqFullResult {
+  if (Math.abs(a) < 1e-12) {
+    return {
+      kind: 'error',
+      message: 'Cần hệ số a ≠ 0',
+      steps: [],
+      summaryLatex: '\\text{Cần hệ số } a \\ne 0',
+    };
+  }
+  const disc = b * b - 4 * a * c;
+  const steps: CasioEqStepItem[] = [];
+
+  if (Math.abs(disc) < 1e-10) {
+    const x0 = -b / (2 * a);
+    steps.push(makeRealStep('x =', x0));
+  } else if (disc > 0) {
+    const r1 = formatQuadraticExactRoot(a, b, disc, 1);
+    const r2 = formatQuadraticExactRoot(a, b, disc, -1);
+    const v1 = (-b + Math.sqrt(disc)) / (2 * a);
+    const v2 = (-b - Math.sqrt(disc)) / (2 * a);
+    steps.push({ label: 'x₁ =', exactLatex: r1.exactLatex, decimalLatex: r1.decimalLatex, numeric: v1 });
+    steps.push({ label: 'x₂ =', exactLatex: r2.exactLatex, decimalLatex: r2.decimalLatex, numeric: v2 });
+  } else {
+    const r1 = formatQuadraticExactRoot(a, b, disc, 1);
+    const r2 = formatQuadraticExactRoot(a, b, disc, -1);
+    steps.push({ label: 'x₁ =', exactLatex: r1.exactLatex, decimalLatex: r1.decimalLatex });
+    steps.push({ label: 'x₂ =', exactLatex: r2.exactLatex, decimalLatex: r2.decimalLatex });
+  }
+
+  // Authentic fx-580VN X feature: Min/Max vertex of y = ax² + bx + c
+  const vx = -b / (2 * a);
+  const vy = a * vx * vx + b * vx + c;
+  const extTag = a > 0 ? 'GTNN của y' : 'GTLN của y';
+  steps.push(makeRealStep(`${extTag} · x =`, vx));
+  steps.push(makeRealStep(`${extTag} · y =`, vy));
+
+  const rootSteps = steps.filter((s) => s.label.startsWith('x'));
+  const summaryLatex = rootSteps
+    .map((s) => `${s.label.replace('₁', '_{1}').replace('₂', '_{2}')} ${s.exactLatex}`)
+    .join(',\\; ');
+
+  return { kind: 'ok', steps, summaryLatex };
+}
+
+/**
+ * Mode 9 → 2 → 3: Authentic Casio fx-580VN X Cubic Equation Solver (`ax³ + bx² + cx + d = 0`)
+ * Returns all 3 roots (including complex conjugate pair) + local Max/Min if derivative has 2 real roots.
+ */
+export function solveCasioCubicFull(a: number, b: number, c: number, d: number): CasioEqFullResult {
+  if (Math.abs(a) < 1e-12) {
+    return solveCasioQuadraticFull(b, c, d);
+  }
+  const p = (3 * a * c - b * b) / (3 * a * a);
+  const q = (2 * b ** 3 - 9 * a * b * c + 27 * a * a * d) / (27 * a ** 3);
+  const disc = (q * q) / 4 + (p * p * p) / 27;
+  const shift = -b / (3 * a);
+
+  const steps: CasioEqStepItem[] = [];
+
+  if (disc > 1e-10) {
+    // 1 real root + 2 complex conjugate roots
+    const sqrtD = Math.sqrt(disc);
+    const r1 = Math.cbrt(-q / 2 + sqrtD) + Math.cbrt(-q / 2 - sqrtD) + shift;
+    steps.push(makeRealStep('x₁ =', r1));
+    // Factor out (x - r1): a x² + (b + a r1) x + (c + b r1 + a r1²) = 0
+    const qa = a;
+    const qb = b + a * r1;
+    const qc = c + qb * r1;
+    const qDisc = qb * qb - 4 * qa * qc;
+    const re = -qb / (2 * qa);
+    const im = Math.sqrt(Math.max(0, -qDisc)) / Math.abs(2 * qa);
+    steps.push(makeComplexStep('x₂ =', re, im));
+    steps.push(makeComplexStep('x₃ =', re, -im));
+  } else if (Math.abs(disc) <= 1e-10) {
+    if (Math.abs(q) < 1e-10) {
+      steps.push(makeRealStep('x =', shift));
+    } else {
+      const t1 = 2 * Math.cbrt(-q / 2) + shift;
+      const t2 = -Math.cbrt(-q / 2) + shift;
+      const sorted = [t1, t2].sort((u, v) => v - u);
+      steps.push(makeRealStep('x₁ =', sorted[0]));
+      steps.push(makeRealStep('x₂ =', sorted[1]));
+    }
+  } else {
+    const r = Math.sqrt((-p * p * p) / 27);
+    const phi = Math.acos(Math.max(-1, Math.min(1, -q / (2 * r))));
+    const m = 2 * Math.cbrt(r);
+    const roots = [
+      m * Math.cos(phi / 3) + shift,
+      m * Math.cos((phi + 2 * Math.PI) / 3) + shift,
+      m * Math.cos((phi + 4 * Math.PI) / 3) + shift,
+    ].sort((u, v) => v - u);
+    steps.push(makeRealStep('x₁ =', roots[0]));
+    steps.push(makeRealStep('x₂ =', roots[1]));
+    steps.push(makeRealStep('x₃ =', roots[2]));
+  }
+
+  // Authentic fx-580VN X feature: Local Maximum & Local Minimum of y = ax³ + bx² + cx + d
+  // y' = 3ax² + 2bx + c = 0 => Δ' = b² - 3ac
+  const dPrime = b * b - 3 * a * c;
+  if (dPrime > 1e-10) {
+    const sD = Math.sqrt(dPrime);
+    const xA = (-b - sD) / (3 * a);
+    const xB = (-b + sD) / (3 * a);
+    const evalY = (xv: number) => ((a * xv + b) * xv + c) * xv + d;
+    // Second derivative y'' = 6ax + 2b: < 0 is local max, > 0 is local min
+    const y2A = 6 * a * xA + 2 * b;
+    const xMax = y2A < 0 ? xA : xB;
+    const xMin = y2A < 0 ? xB : xA;
+    steps.push(makeRealStep('Cực đại · x =', xMax));
+    steps.push(makeRealStep('Cực đại · y =', evalY(xMax)));
+    steps.push(makeRealStep('Cực tiểu · x =', xMin));
+    steps.push(makeRealStep('Cực tiểu · y =', evalY(xMin)));
+  }
+
+  const rootSteps = steps.filter((s) => s.label.startsWith('x'));
+  const summaryLatex = rootSteps
+    .map((s) => `${s.label.replace('₁', '_{1}').replace('₂', '_{2}').replace('₃', '_{3}')} ${s.exactLatex}`)
+    .join(',\\; ');
+
+  return { kind: 'ok', steps, summaryLatex };
+}
+
+/**
+ * Mode 9 → 2 → 4: Authentic Casio fx-580VN X Quartic Equation Solver (`ax⁴ + bx³ + cx² + dx + e = 0`)
+ * Returns all 4 roots (real + complex conjugate pairs).
+ */
+export function solveCasioQuarticFull(
+  a: number,
+  b: number,
+  c: number,
+  d: number,
+  e: number
+): CasioEqFullResult {
+  if (Math.abs(a) < 1e-12) {
+    return solveCasioCubicFull(b, c, d, e);
+  }
+  const p = b / a;
+  const q = c / a;
+  const r = d / a;
+  const s = e / a;
+
+  const cSub = (u: CasioComplexValue, v: CasioComplexValue): CasioComplexValue => ({
+    re: u.re - v.re,
+    im: u.im - v.im,
+  });
+  const cMul = (u: CasioComplexValue, v: CasioComplexValue): CasioComplexValue => ({
+    re: u.re * v.re - u.im * v.im,
+    im: u.re * v.im + u.im * v.re,
+  });
+  const cDiv = (u: CasioComplexValue, v: CasioComplexValue): CasioComplexValue => {
+    const den = v.re * v.re + v.im * v.im;
+    if (den < 1e-18) return { re: 0, im: 0 };
+    return { re: (u.re * v.re + u.im * v.im) / den, im: (u.im * v.re - u.re * v.im) / den };
+  };
+  const evalPoly = (z: CasioComplexValue): CasioComplexValue => {
+    let acc: CasioComplexValue = { re: 1, im: 0 };
+    acc = { re: cMul(acc, z).re + p, im: cMul(acc, z).im };
+    acc = { re: cMul(acc, z).re + q, im: cMul(acc, z).im };
+    acc = { re: cMul(acc, z).re + r, im: cMul(acc, z).im };
+    acc = { re: cMul(acc, z).re + s, im: cMul(acc, z).im };
+    return acc;
+  };
+
+  const radius = 1 + Math.max(Math.abs(p), Math.abs(q), Math.abs(r), Math.abs(s));
+  const rootsC: CasioComplexValue[] = [0, 1, 2, 3].map((k) => {
+    const ang = (2 * Math.PI * k) / 4 + 0.37;
+    return { re: radius * Math.cos(ang) - p / 4, im: radius * Math.sin(ang) };
+  });
+
+  for (let iter = 0; iter < 140; iter += 1) {
+    let maxStep = 0;
+    for (let i = 0; i < 4; i += 1) {
+      const fz = evalPoly(rootsC[i]);
+      let denom: CasioComplexValue = { re: 1, im: 0 };
+      for (let j = 0; j < 4; j += 1) {
+        if (i !== j) denom = cMul(denom, cSub(rootsC[i], rootsC[j]));
+      }
+      const step = cDiv(fz, denom);
+      rootsC[i] = cSub(rootsC[i], step);
+      maxStep = Math.max(maxStep, Math.hypot(step.re, step.im));
+    }
+    if (maxStep < 1e-12) break;
+  }
+
+  // Sort real roots descending first, then complex pairs by real part then positive imaginary first
+  const cleaned = rootsC.map((z) => ({
+    re: Math.abs(z.re) < 1e-8 ? 0 : z.re,
+    im: Math.abs(z.im) < 1e-5 ? 0 : z.im,
+  }));
+  cleaned.sort((u, v) => {
+    const uReal = u.im === 0 ? 0 : 1;
+    const vReal = v.im === 0 ? 0 : 1;
+    if (uReal !== vReal) return uReal - vReal;
+    if (Math.abs(u.re - v.re) > 1e-4) return v.re - u.re;
+    return v.im - u.im;
+  });
+
+  // Deduplicate identical roots (e.g. multiple roots)
+  const uniqueRoots: CasioComplexValue[] = [];
+  for (const rt of cleaned) {
+    const dup = uniqueRoots.some(
+      (u) => Math.abs(u.re - rt.re) < 1e-4 && Math.abs(u.im - rt.im) < 1e-4
+    );
+    if (!dup) uniqueRoots.push(rt);
+  }
+
+  const subDigits = ['₁', '₂', '₃', '₄'];
+  const steps: CasioEqStepItem[] = uniqueRoots.map((rt, idx) => {
+    const lbl = uniqueRoots.length === 1 ? 'x =' : `x${subDigits[idx] ?? idx + 1} =`;
+    return makeComplexStep(lbl, rt.re, rt.im);
+  });
+
+  const summaryLatex = steps
+    .map(
+      (st) =>
+        `${st.label
+          .replace('₁', '_{1}')
+          .replace('₂', '_{2}')
+          .replace('₃', '_{3}')
+          .replace('₄', '_{4}')} ${st.exactLatex}`
+    )
+    .join(',\\; ');
+
+  return { kind: 'ok', steps, summaryLatex };
+}
+
+/**
+ * Mode 9 → 1 → (2|3|4): Authentic Casio fx-580VN X Simultaneous Linear System Solver (RREF)
+ * Accurately distinguishes Unique Solution, No Solution (`Vô nghiệm`), and Infinite Solutions (`Vô số nghiệm`).
+ */
+export function solveCasioLinearSystemFull(rows: number[][]): CasioEqFullResult {
+  const n = rows.length;
+  if (n < 2 || n > 4 || rows.some((r) => r.length !== n + 1)) {
+    return {
+      kind: 'error',
+      message: 'Dữ liệu không hợp lệ',
+      steps: [],
+      summaryLatex: '\\text{Dữ liệu không hợp lệ}',
+    };
+  }
+
+  const aug = rows.map((r) => [...r]);
+  let pivotRow = 0;
+  for (let col = 0; col < n && pivotRow < n; col += 1) {
+    let best = pivotRow;
+    for (let r = pivotRow + 1; r < n; r += 1) {
+      if (Math.abs(aug[r][col]) > Math.abs(aug[best][col])) best = r;
+    }
+    if (Math.abs(aug[best][col]) < 1e-10) continue;
+    if (best !== pivotRow) [aug[pivotRow], aug[best]] = [aug[best], aug[pivotRow]];
+    const pv = aug[pivotRow][col];
+    for (let c = col; c <= n; c += 1) aug[pivotRow][c] /= pv;
+    for (let r = 0; r < n; r += 1) {
+      if (r === pivotRow) continue;
+      const factor = aug[r][col];
+      for (let c = col; c <= n; c += 1) aug[r][c] -= factor * aug[pivotRow][c];
+    }
+    pivotRow += 1;
+  }
+
+  // Check for inconsistency (0 = k != 0)
+  for (let r = 0; r < n; r += 1) {
+    const allZeroCoeff = aug[r].slice(0, n).every((v) => Math.abs(v) < 1e-9);
+    if (allZeroCoeff && Math.abs(aug[r][n]) > 1e-8) {
+      return {
+        kind: 'none',
+        message: 'Vô nghiệm',
+        steps: [],
+        summaryLatex: '\\text{Vô nghiệm}',
+      };
+    }
+  }
+
+  if (pivotRow < n) {
+    return {
+      kind: 'infinite',
+      message: 'Vô số nghiệm',
+      steps: [],
+      summaryLatex: '\\text{Vô số nghiệm}',
+    };
+  }
+
+  const varNames = ['x', 'y', 'z', 't'];
+  const steps: CasioEqStepItem[] = Array.from({ length: n }, (_, i) =>
+    makeRealStep(`${varNames[i]} =`, aug[i][n])
+  );
+  const summaryLatex = steps.map((st) => `${st.label} ${st.exactLatex}`).join(',\\; ');
+  return { kind: 'ok', steps, summaryLatex };
 }

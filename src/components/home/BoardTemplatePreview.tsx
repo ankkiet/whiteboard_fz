@@ -109,9 +109,9 @@ export const BoardTemplatePreview: React.FC<BoardTemplatePreviewProps> = ({
 
           {/* Left red margin line */}
           <line
-            x1="52"
+            x1="38"
             y1="5"
-            x2="52"
+            x2="38"
             y2="103"
             className="stroke-rose-400/85 dark:stroke-rose-800/80"
             strokeWidth="1"
@@ -130,7 +130,7 @@ export const BoardTemplatePreview: React.FC<BoardTemplatePreviewProps> = ({
 
           {/* Header text watermark */}
           <text
-            x="56"
+            x="42"
             y="17"
             className="fill-slate-400 dark:fill-slate-600 font-sans"
             fontSize="5.5"

@@ -1,8 +1,16 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useBoardStore } from '../../store/useBoardStore';
 import { DriveSyncStatus, formatSyncTime } from '../../services/driveSyncUtils';
-import { BoardType, BoardPattern, ToolType } from '../../types/board';
+import { BoardType, BoardPattern, NotebookPaperSize, ToolType } from '../../types/board';
 import { computeFitCamera, zoomCameraAtPoint } from '../../engine/geometry';
+import {
+  clampNotebookCamera,
+  computeTotalNotebookPages,
+  getNotebookConfig,
+  getNotebookFitCamera,
+  NOTEBOOK_PAPER_STYLES,
+  normalizeNotebookPaperStyle,
+} from '../../engine/notebookEngine';
 import {
   clampEraserSize,
   clampStrokeWidth,
@@ -49,6 +57,7 @@ import {
   Pipette,
   SquareDashed,
   RotateCcw,
+  BookOpen,
 } from 'lucide-react';
 
 interface UnifiedTopBarProps {
@@ -188,6 +197,8 @@ export const UnifiedTopBar: React.FC<UnifiedTopBarProps> = ({
   const setTheme = useBoardStore((s) => s.setTheme);
   const boardPattern = useBoardStore((s) => s.boardPattern);
   const setBoardPattern = useBoardStore((s) => s.setBoardPattern);
+  const notebookPaperSize = useBoardStore((s) => s.notebookPaperSize);
+  const setNotebookPaperSize = useBoardStore((s) => s.setNotebookPaperSize);
   const camera = useBoardStore((s) => s.camera);
   const setCamera = useBoardStore((s) => s.setCamera);
 
@@ -196,12 +207,14 @@ export const UnifiedTopBar: React.FC<UnifiedTopBarProps> = ({
   const [isPinned, setIsPinned] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
   const [showPatternMenu, setShowPatternMenu] = useState(false);
+  const [showPaperSizeMenu, setShowPaperSizeMenu] = useState(false);
 
   // Previous non-eraser tool for quick toggle
   const prevToolRef = useRef<ToolType>('pen');
   const containerRef = useRef<HTMLDivElement>(null);
   const clearPopoverRef = useRef<HTMLDivElement>(null);
   const patternMenuRef = useRef<HTMLDivElement>(null);
+  const paperSizeMenuRef = useRef<HTMLDivElement>(null);
   const customColorInputRef = useRef<HTMLInputElement>(null);
 
   // Close clear popover on outside click
@@ -216,17 +229,20 @@ export const UnifiedTopBar: React.FC<UnifiedTopBarProps> = ({
     return () => document.removeEventListener('mousedown', onOutside);
   }, [confirmClear]);
 
-  // Close pattern dropdown on outside click
+  // Close pattern / paper size dropdowns on outside click
   useEffect(() => {
-    if (!showPatternMenu) return;
+    if (!showPatternMenu && !showPaperSizeMenu) return;
     const onOutside = (e: MouseEvent) => {
       if (patternMenuRef.current && !patternMenuRef.current.contains(e.target as Node)) {
         setShowPatternMenu(false);
       }
+      if (paperSizeMenuRef.current && !paperSizeMenuRef.current.contains(e.target as Node)) {
+        setShowPaperSizeMenu(false);
+      }
     };
     document.addEventListener('mousedown', onOutside);
     return () => document.removeEventListener('mousedown', onOutside);
-  }, [showPatternMenu]);
+  }, [showPatternMenu, showPaperSizeMenu]);
 
   // Auto-collapse when clicking outside the unified bar on the canvas, unless pinned
   useEffect(() => {
@@ -278,22 +294,48 @@ export const UnifiedTopBar: React.FC<UnifiedTopBarProps> = ({
   const handleZoomIn = () => {
     const cx = window.innerWidth / 2;
     const cy = window.innerHeight / 2;
-    setCamera((prev) => zoomCameraAtPoint(prev, prev.zoom * 1.2, cx, cy));
+    setCamera((prev) => {
+      const next = zoomCameraAtPoint(prev, prev.zoom * 1.2, cx, cy);
+      if (boardType === 'notebook') {
+        const config = getNotebookConfig(notebookPaperSize);
+        const totalPages = computeTotalNotebookPages(elements, next, window.innerHeight, config);
+        return clampNotebookCamera(next, { width: window.innerWidth, height: window.innerHeight }, config, totalPages);
+      }
+      return next;
+    });
   };
 
   const handleZoomOut = () => {
     const cx = window.innerWidth / 2;
     const cy = window.innerHeight / 2;
-    setCamera((prev) => zoomCameraAtPoint(prev, prev.zoom / 1.2, cx, cy));
+    setCamera((prev) => {
+      const next = zoomCameraAtPoint(prev, prev.zoom / 1.2, cx, cy);
+      if (boardType === 'notebook') {
+        const config = getNotebookConfig(notebookPaperSize);
+        const totalPages = computeTotalNotebookPages(elements, next, window.innerHeight, config);
+        return clampNotebookCamera(next, { width: window.innerWidth, height: window.innerHeight }, config, totalPages);
+      }
+      return next;
+    });
   };
 
   const handleResetZoom = () => {
+    if (boardType === 'notebook') {
+      const config = getNotebookConfig(notebookPaperSize);
+      setCamera(getNotebookFitCamera({ width: window.innerWidth, height: window.innerHeight }, config));
+      return;
+    }
     const cx = window.innerWidth / 2;
     const cy = window.innerHeight / 2;
     setCamera((prev) => zoomCameraAtPoint(prev, 1, cx, cy));
   };
 
   const handleFitToScreen = () => {
+    if (boardType === 'notebook') {
+      const config = getNotebookConfig(notebookPaperSize);
+      setCamera(getNotebookFitCamera({ width: window.innerWidth, height: window.innerHeight }, config));
+      return;
+    }
     setCamera(computeFitCamera(elements, window.innerWidth, window.innerHeight, 100));
   };
 
@@ -798,41 +840,159 @@ export const UnifiedTopBar: React.FC<UnifiedTopBarProps> = ({
             <div className="flex items-center justify-between gap-2 flex-wrap">
               {/* Cụm Nền bảng & Giao diện sáng tối */}
               <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                {/* Pattern Menu */}
-                <div className="relative" ref={patternMenuRef}>
-                  <button
-                    type="button"
-                    onClick={() => setShowPatternMenu((v) => !v)}
-                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-xs font-medium transition-colors"
-                  >
-                    <Grid className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-                    <span>Nền: {PATTERNS.find((p) => p.id === boardPattern)?.label || 'Ô ly'}</span>
-                    <ChevronDown className="w-3 h-3 text-slate-400" />
-                  </button>
+                {/* Pattern / Notebook Paper Style Menu */}
+                {boardType === 'notebook' ? (
+                  <>
+                    <div className="relative" ref={patternMenuRef}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowPaperSizeMenu(false);
+                          setShowPatternMenu((v) => !v);
+                        }}
+                        aria-label="Chọn loại giấy viết"
+                        aria-expanded={showPatternMenu}
+                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-medium transition-colors cursor-pointer"
+                      >
+                        <Grid className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                        <span>
+                          Giấy:{' '}
+                          {NOTEBOOK_PAPER_STYLES.find(
+                            (s) => s.id === normalizeNotebookPaperStyle(boardPattern)
+                          )?.shortLabel || 'Kẻ ngang'}
+                        </span>
+                        <ChevronDown className="w-3 h-3 text-slate-400" />
+                      </button>
 
-                  {showPatternMenu && (
-                    <div className="absolute left-0 bottom-full mb-2 w-44 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 p-1.5 z-40">
-                      {PATTERNS.map((pat) => (
-                        <button
-                          key={pat.id}
-                          type="button"
-                          onClick={() => {
-                            setBoardPattern(pat.id);
-                            setShowPatternMenu(false);
-                          }}
-                          className={`w-full flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg transition-colors ${
-                            boardPattern === pat.id
-                              ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 font-semibold'
-                              : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200'
-                          }`}
-                        >
-                          <span>{pat.label}</span>
-                          {boardPattern === pat.id && <Check className="w-3.5 h-3.5" />}
-                        </button>
-                      ))}
+                      {showPatternMenu && (
+                        <div className="absolute left-0 bottom-full mb-2 w-56 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 p-1.5 z-40">
+                          <div className="text-[11px] font-medium px-2.5 py-1 text-slate-500 dark:text-slate-400">
+                            Loại giấy viết
+                          </div>
+                          {NOTEBOOK_PAPER_STYLES.map((style) => {
+                            const isSelected = normalizeNotebookPaperStyle(boardPattern) === style.id;
+                            return (
+                              <button
+                                key={style.id}
+                                type="button"
+                                onClick={() => {
+                                  setBoardPattern(style.id);
+                                  setShowPatternMenu(false);
+                                }}
+                                className={`w-full flex items-center justify-between gap-2 px-2.5 py-1.5 text-left text-xs rounded-lg transition-colors cursor-pointer ${
+                                  isSelected
+                                    ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 font-semibold'
+                                    : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200'
+                                }`}
+                              >
+                                <div>
+                                  <div>{style.label}</div>
+                                  <div className="text-[10px] text-slate-400 dark:text-slate-500 font-normal">
+                                    {style.description}
+                                  </div>
+                                </div>
+                                {isSelected && <Check className="w-3.5 h-3.5 shrink-0" />}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
+
+                    <div className="relative" ref={paperSizeMenuRef}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowPatternMenu(false);
+                          setShowPaperSizeMenu((v) => !v);
+                        }}
+                        aria-label="Chọn khổ giấy vở ghi chú"
+                        aria-expanded={showPaperSizeMenu}
+                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-medium transition-colors cursor-pointer"
+                      >
+                        <BookOpen className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                        <span>{getNotebookConfig(notebookPaperSize).label}</span>
+                        <ChevronDown className="w-3 h-3 text-slate-400" />
+                      </button>
+
+                      {showPaperSizeMenu && (
+                        <div className="absolute left-0 bottom-full mb-2 w-48 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 p-1.5 z-40">
+                          <div className="text-[11px] font-medium px-2.5 py-1 text-slate-500 dark:text-slate-400">
+                            Khổ giấy vở ghi chú
+                          </div>
+                          {(
+                            [
+                              { id: 'a4', label: 'Khổ A4', desc: '210 × 297 mm' },
+                              { id: 'a3', label: 'Khổ A3', desc: '297 × 420 mm' },
+                              { id: 'b5', label: 'Khổ B5', desc: '176 × 250 mm' },
+                              { id: 'letter', label: 'Khổ Letter', desc: '216 × 279 mm' },
+                            ] as { id: NotebookPaperSize; label: string; desc: string }[]
+                          ).map((paper) => {
+                            const isSelected = notebookPaperSize === paper.id;
+                            return (
+                              <button
+                                key={paper.id}
+                                type="button"
+                                onClick={() => {
+                                  setNotebookPaperSize(paper.id);
+                                  setShowPaperSizeMenu(false);
+                                }}
+                                className={`w-full flex items-center justify-between px-2.5 py-1.5 text-left text-xs rounded-lg transition-colors cursor-pointer ${
+                                  isSelected
+                                    ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 font-semibold'
+                                    : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200'
+                                }`}
+                              >
+                                <div>
+                                  <div>{paper.label}</div>
+                                  <div className="text-[10px] text-slate-400 dark:text-slate-500 font-normal">
+                                    {paper.desc}
+                                  </div>
+                                </div>
+                                {isSelected && <Check className="w-3.5 h-3.5 shrink-0" />}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <div className="relative" ref={patternMenuRef}>
+                    <button
+                      type="button"
+                      onClick={() => setShowPatternMenu((v) => !v)}
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-xs font-medium transition-colors"
+                    >
+                      <Grid className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                      <span>Nền: {PATTERNS.find((p) => p.id === boardPattern)?.label || 'Ô ly'}</span>
+                      <ChevronDown className="w-3 h-3 text-slate-400" />
+                    </button>
+
+                    {showPatternMenu && (
+                      <div className="absolute left-0 bottom-full mb-2 w-44 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 p-1.5 z-40">
+                        {PATTERNS.map((pat) => (
+                          <button
+                            key={pat.id}
+                            type="button"
+                            onClick={() => {
+                              setBoardPattern(pat.id);
+                              setShowPatternMenu(false);
+                            }}
+                            className={`w-full flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg transition-colors ${
+                              boardPattern === pat.id
+                                ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 font-semibold'
+                                : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200'
+                            }`}
+                          >
+                            <span>{pat.label}</span>
+                            {boardPattern === pat.id && <Check className="w-3.5 h-3.5" />}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Sáng / Tối */}
                 <button

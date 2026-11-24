@@ -18,7 +18,12 @@ import {
 } from './exportUtils';
 import { MATH_UNIT_PX } from './mathUtils';
 import { latexToReadableMath } from './mathDisplay';
-import { computeTotalNotebookPages, getNotebookConfig } from './notebookEngine';
+import {
+  computeTotalNotebookPages,
+  getNotebookConfig,
+  getNotebookContentPageIndices,
+  normalizeNotebookPaperStyle,
+} from './notebookEngine';
 import { jsPDF } from 'jspdf';
 
 export const ADAPTIVE_INK = '#1e293b';
@@ -369,9 +374,11 @@ export function drawNotebookLayout(
   isDarkMode: boolean,
   elements: BoardElement[],
   paperSize: NotebookPaperSize = 'a4',
-  notebookTitle?: string
+  notebookTitle?: string,
+  paperPattern: BoardPattern = 'lined'
 ) {
   const config = getNotebookConfig(paperSize);
+  const paperStyle = normalizeNotebookPaperStyle(paperPattern);
   const totalPages = computeTotalNotebookPages(elements, camera, viewportHeight, config);
 
   const safeZoom = Math.max(0.1, camera.zoom);
@@ -416,19 +423,77 @@ export function drawNotebookLayout(
     ctx.fillStyle = spineGrad;
     ctx.fillRect(0, pageY, 10, config.height);
 
-    // 5. Ruled lines (dòng kẻ ngang)
+    // 5. Paper pattern inside writing area (kẻ ngang / ô ly / chấm bi / trắng trơn)
     const lineStartY = pageY + config.marginTop;
     const lineEndY = pageBottom - config.marginBottom;
-    ctx.strokeStyle = isDarkMode ? 'rgba(148, 163, 184, 0.22)' : 'rgba(59, 130, 246, 0.24)';
-    ctx.lineWidth = 1 / safeZoom;
-    ctx.beginPath();
-    for (let y = lineStartY; y <= lineEndY; y += config.lineSpacing) {
-      ctx.moveTo(0, y);
-      ctx.lineTo(config.width - config.marginRight, y);
-    }
-    ctx.stroke();
+    const rightMarginX = config.width - config.marginRight;
+    const step = config.lineSpacing;
 
-    // 6. Left vertical margin line (lề trái đỏ/hồng nhạt - đặc trưng vở kẻ ngang)
+    if (paperStyle === 'lined') {
+      ctx.strokeStyle = isDarkMode ? 'rgba(148, 163, 184, 0.22)' : 'rgba(59, 130, 246, 0.24)';
+      ctx.lineWidth = 1 / safeZoom;
+      ctx.beginPath();
+      for (let y = lineStartY; y <= lineEndY; y += step) {
+        ctx.moveTo(0, y);
+        ctx.lineTo(rightMarginX, y);
+      }
+      ctx.stroke();
+    } else if (paperStyle === 'grid') {
+      const rowCount = Math.floor((lineEndY - lineStartY) / step);
+      const lastGridY = lineStartY + rowCount * step;
+      const subStep = step / 2;
+
+      // Subtle inner half-cell sub-grid (authentic Vietnamese ô ly feel when zoomed normally)
+      if (subStep * safeZoom >= 7) {
+        ctx.strokeStyle = isDarkMode ? 'rgba(148, 163, 184, 0.10)' : 'rgba(59, 130, 246, 0.11)';
+        ctx.lineWidth = 0.75 / safeZoom;
+        ctx.beginPath();
+        for (let y = lineStartY + subStep; y < lastGridY; y += step) {
+          ctx.moveTo(0, y);
+          ctx.lineTo(rightMarginX, y);
+        }
+        for (let x = config.marginLeft + subStep; x < rightMarginX; x += step) {
+          ctx.moveTo(x, lineStartY);
+          ctx.lineTo(x, lastGridY);
+        }
+        for (let x = config.marginLeft - subStep; x > 0; x -= step) {
+          ctx.moveTo(x, lineStartY);
+          ctx.lineTo(x, lastGridY);
+        }
+        ctx.stroke();
+      }
+
+      // Main square ô ly grid aligned cleanly to marginLeft and lineStartY
+      ctx.strokeStyle = isDarkMode ? 'rgba(148, 163, 184, 0.24)' : 'rgba(59, 130, 246, 0.26)';
+      ctx.lineWidth = 1 / safeZoom;
+      ctx.beginPath();
+      for (let y = lineStartY; y <= lastGridY + 0.5; y += step) {
+        ctx.moveTo(0, y);
+        ctx.lineTo(rightMarginX, y);
+      }
+      for (let x = config.marginLeft; x <= rightMarginX + 0.5; x += step) {
+        ctx.moveTo(x, lineStartY);
+        ctx.lineTo(x, lastGridY);
+      }
+      for (let x = config.marginLeft - step; x > 0; x -= step) {
+        ctx.moveTo(x, lineStartY);
+        ctx.lineTo(x, lastGridY);
+      }
+      ctx.stroke();
+    } else if (paperStyle === 'dots') {
+      const dotStep = step;
+      const radius = Math.max(1.1 / safeZoom, 0.85);
+      ctx.fillStyle = isDarkMode ? 'rgba(148, 163, 184, 0.34)' : 'rgba(59, 130, 246, 0.32)';
+      for (let y = lineStartY; y <= lineEndY; y += dotStep) {
+        for (let x = config.marginLeft; x <= rightMarginX; x += dotStep) {
+          ctx.beginPath();
+          ctx.arc(x, y, radius, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+    }
+
+    // 6. Left vertical margin line (lề trái đỏ/hồng nhạt - đặc trưng vở ghi chú)
     ctx.strokeStyle = isDarkMode ? 'rgba(244, 63, 94, 0.65)' : 'rgba(239, 68, 68, 0.55)';
     ctx.lineWidth = 1.2 / safeZoom;
     ctx.beginPath();
@@ -437,7 +502,6 @@ export function drawNotebookLayout(
     ctx.stroke();
 
     // 7. Right vertical margin line (lề phải nét đứt mờ)
-    const rightMarginX = config.width - config.marginRight;
     ctx.strokeStyle = isDarkMode ? 'rgba(148, 163, 184, 0.35)' : 'rgba(148, 163, 184, 0.45)';
     ctx.lineWidth = 0.9 / safeZoom;
     ctx.setLineDash([4 / safeZoom, 4 / safeZoom]);
@@ -1264,10 +1328,20 @@ export async function renderBoardToOffscreenCanvas(options: RenderOffscreenOptio
   ctx.save();
   ctx.translate(exportCamera.x, exportCamera.y);
 
-  if (includeBackground && includePattern) {
+  if (includeBackground) {
     if (boardType === 'notebook') {
-      drawNotebookLayout(ctx, exportCamera, width, height, isDarkMode, elements, notebookPaperSize, title);
-    } else if (boardPattern !== 'plain') {
+      drawNotebookLayout(
+        ctx,
+        exportCamera,
+        width,
+        height,
+        isDarkMode,
+        elements,
+        notebookPaperSize,
+        title,
+        includePattern ? boardPattern : 'plain'
+      );
+    } else if (includePattern && boardPattern !== 'plain') {
       drawWorldBackgroundPattern(ctx, exportCamera, width, height, boardPattern, isDarkMode);
     }
   }
@@ -1340,14 +1414,11 @@ export async function exportBoardToPdf(options: ExportPdfOptions): Promise<Expor
     title,
   } = options;
 
-  // Trường hợp 1: Vở ghi chép nhiều trang (Xuất từng trang A4 dọc đúng chuẩn trang vở)
+  // Trường hợp 1: Vở ghi chép nhiều trang (Chỉ xuất những trang thực sự có nội dung)
   if (boardType === 'notebook' && layout !== 'fit') {
     const config = getNotebookConfig(notebookPaperSize);
-    const camera: Camera = { x: 0, y: 0, zoom: 1 };
-    const totalPages = Math.min(
-      50,
-      computeTotalNotebookPages(elements, camera, 800, config)
-    );
+    const contentPages = getNotebookContentPageIndices(elements, config, 50);
+    const pagesToExport = contentPages.length > 0 ? contentPages : [0];
 
     const a4WidthPt = 595.28;
     const a4HeightPt = 841.89;
@@ -1366,8 +1437,9 @@ export async function exportBoardToPdf(options: ExportPdfOptions): Promise<Expor
       });
     }
 
-    for (let p = 0; p < totalPages; p++) {
-      if (p > 0) {
+    for (let i = 0; i < pagesToExport.length; i++) {
+      const p = pagesToExport[i];
+      if (i > 0) {
         doc.addPage('a4', 'portrait');
       }
 
@@ -1391,7 +1463,7 @@ export async function exportBoardToPdf(options: ExportPdfOptions): Promise<Expor
     const blob = doc.output('blob');
     return {
       blob,
-      pageCount: totalPages,
+      pageCount: pagesToExport.length,
       widthPt: a4WidthPt,
       heightPt: a4HeightPt,
     };

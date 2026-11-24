@@ -209,7 +209,8 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
         state.isDarkMode,
         state.elements,
         state.notebookPaperSize,
-        state.title
+        state.title,
+        state.boardPattern
       );
     } else {
       drawWorldBackgroundPattern(

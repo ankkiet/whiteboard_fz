@@ -3,38 +3,60 @@ import {
   CASIO_CONSTANTS,
   CASIO_CONVERSIONS,
   CasioAngleUnit,
+  CasioBaseMode,
   CasioComplexValue,
+  CasioDistKind,
+  CasioEqFullResult,
+  CasioLinRegResult,
   CasioNormMode,
   CasioStats1VarResult,
+  CasioVerifyOp,
+  computeCasioDistribution,
   computeMatrixDet,
   computeMatrixInverse,
   computeVectorMetrics,
+  evaluateCasioBaseN,
   evaluateCasioComplex,
+  evaluateCasioVerify,
   formatCasioExact,
   formatComplexLatex,
   matrixToLatex,
   multiplyMatrices,
-  solveCubicEquation,
-  solveLinearSystem2x2,
-  solveLinearSystem3x3,
+  parseCasioCoeff,
+  solveCasioRatio,
+  solveCubicInequality,
   solveQuadraticInequality,
+  subtractMatrices,
+  transposeMatrix,
 } from '../../engine/casio580Engine';
-import { solveQuadratic } from '../../engine/mathEngine';
 import { compileMathExpression } from '../../engine/mathUtils';
 import { MathTex } from './MathTex';
 
 export type CasioMainMode =
   | 'calc'
   | 'complex'
+  | 'basen'
   | 'matrix'
   | 'vector'
+  | 'stats'
+  | 'dist'
   | 'table'
   | 'equation'
   | 'ineq'
-  | 'stats'
+  | 'verify'
+  | 'ratio'
   | 'menu';
 
-export type CasioEqSubMode = 'quad' | 'cubic' | 'sys2' | 'sys3';
+export type CasioEqSubMode = 'quad' | 'cubic' | 'quartic' | 'sys2' | 'sys3' | 'sys4';
+export type CasioEqScreen = 'selectType' | 'selectSimulDeg' | 'selectPolyDeg' | 'input' | 'result';
+export type CasioStatsSubMode = '1var' | 'linreg';
+export type CasioStatsScreen = 'selectType' | 'input' | 'result';
+export type CasioDistScreen = 'selectKind' | 'input' | 'result';
+export type CasioTableScreen = 'input' | 'result';
+export type CasioIneqScreen = 'selectDeg' | 'selectOp' | 'input' | 'result';
+export type CasioRatioScreen = 'selectForm' | 'input' | 'result';
+export type CasioVecOp = 'dot' | 'cross' | 'angle' | 'mag' | 'sumdiff' | 'unit';
+export type CasioMatOp = 'det' | 'inv' | 'add' | 'sub' | 'mul' | 'trn' | 'sq';
 
 export type CasioLcdOverlay =
   | null
@@ -66,33 +88,81 @@ export interface CasioLcdModesProps {
   onApplyConversion: (val: number, label: string) => void;
   onTriggerOptnAction: (action: 'fact' | 'divR' | 'pol' | 'rec' | 'gcd' | 'lcm' | 'dms' | 'eng') => void;
 
-  // Complex
+  // Mode 2: Complex
   complexExpr: string;
   setComplexExpr: (v: string) => void;
   complexPolar: boolean;
   setComplexPolar: (v: boolean) => void;
 
-  // Matrix (string[][] for frictionless keypad/keyboard entry)
-  matSize: 2 | 3;
-  setMatSize: (n: 2 | 3) => void;
+  // Mode 3: Base-N
+  baseMode: CasioBaseMode;
+  setBaseMode: (b: CasioBaseMode) => void;
+  baseExpr: string;
+  setBaseExpr: (v: string) => void;
+
+  // Mode 4: Matrix (2x2, 3x3, 4x4)
+  matSize: 2 | 3 | 4;
+  setMatSize: (n: 2 | 3 | 4) => void;
   matA: string[][];
   setMatA: (m: string[][]) => void;
   matB: string[][];
   setMatB: (m: string[][]) => void;
-  matOp: 'det' | 'inv' | 'add' | 'mul';
-  setMatOp: (op: 'det' | 'inv' | 'add' | 'mul') => void;
+  matOp: CasioMatOp;
+  setMatOp: (op: CasioMatOp) => void;
 
-  // Vector (string[] for frictionless keypad/keyboard entry)
+  // Mode 5: Vector
   vecDim: 2 | 3;
   setVecDim: (n: 2 | 3) => void;
   vecU: string[];
   setVecU: (v: string[]) => void;
   vecV: string[];
   setVecV: (v: string[]) => void;
+  vecOp: CasioVecOp;
+  setVecOp: (op: CasioVecOp) => void;
 
-  // Table
+  // Mode 6: Stats (1-Var & Linear Regression y = a + bx)
+  statsScreen: CasioStatsScreen;
+  setStatsScreen: (sc: CasioStatsScreen) => void;
+  statsSubMode: CasioStatsSubMode;
+  setStatsSubMode: (s: CasioStatsSubMode) => void;
+  statsRaw: string;
+  setStatsRaw: (v: string) => void;
+  statsPairs: { x: string; y: string }[];
+  setStatsPairs: (p: { x: string; y: string }[]) => void;
+  statsResult: CasioStats1VarResult | null;
+  linRegResult: CasioLinRegResult | null;
+
+  // Mode 7: Distribution
+  distScreen: CasioDistScreen;
+  setDistScreen: (sc: CasioDistScreen) => void;
+  distKind: CasioDistKind;
+  setDistKind: (k: CasioDistKind) => void;
+  distX: string;
+  setDistX: (v: string) => void;
+  distLower: string;
+  setDistLower: (v: string) => void;
+  distUpper: string;
+  setDistUpper: (v: string) => void;
+  distMu: string;
+  setDistMu: (v: string) => void;
+  distSigma: string;
+  setDistSigma: (v: string) => void;
+  distArea: string;
+  setDistArea: (v: string) => void;
+  distN: string;
+  setDistN: (v: string) => void;
+  distP: string;
+  setDistP: (v: string) => void;
+  distLambda: string;
+  setDistLambda: (v: string) => void;
+
+  // Mode 8: Table f(x), g(x)
+  tableScreen: CasioTableScreen;
+  setTableScreen: (sc: CasioTableScreen) => void;
   tableExpr: string;
   setTableExpr: (v: string) => void;
+  tableGExpr: string;
+  setTableGExpr: (v: string) => void;
   tableStart: string;
   setTableStart: (v: string) => void;
   tableEnd: string;
@@ -100,9 +170,16 @@ export interface CasioLcdModesProps {
   tableStep: string;
   setTableStep: (v: string) => void;
 
-  // Equation
+  // Mode 9: Equation
+  eqScreen: CasioEqScreen;
+  setEqScreen: (sc: CasioEqScreen) => void;
   eqSubMode: CasioEqSubMode;
   setEqSubMode: (s: CasioEqSubMode) => void;
+  eqResult: CasioEqFullResult | null;
+  eqResultIdx: number;
+  setEqResultIdx: (i: number) => void;
+  eqShowDecimal: boolean;
+  onSolveEquationMode: () => void;
   qa: string;
   setQa: (v: string) => void;
   qb: string;
@@ -111,19 +188,47 @@ export interface CasioLcdModesProps {
   setQc: (v: string) => void;
   qd: string;
   setQd: (v: string) => void;
+  qe: string;
+  setQe: (v: string) => void;
   sys2: string[];
   setSys2: (v: string[]) => void;
   sys3: string[][];
   setSys3: (v: string[][]) => void;
+  sys4: string[][];
+  setSys4: (v: string[][]) => void;
 
-  // Inequality
+  // Mode A: Inequality
+  ineqScreen: CasioIneqScreen;
+  setIneqScreen: (sc: CasioIneqScreen) => void;
+  ineqDegree: 2 | 3;
+  setIneqDegree: (d: 2 | 3) => void;
   ineqOp: '>' | '<' | '>=' | '<=';
   setIneqOp: (op: '>' | '<' | '>=' | '<=') => void;
 
-  // Stats
-  statsRaw: string;
-  setStatsRaw: (v: string) => void;
-  statsResult: CasioStats1VarResult | null;
+  // Mode B: Verify
+  verifyLhs: string;
+  setVerifyLhs: (v: string) => void;
+  verifyOp: CasioVerifyOp;
+  setVerifyOp: (op: CasioVerifyOp) => void;
+  verifyRhs: string;
+  setVerifyRhs: (v: string) => void;
+  verifyEvaluated: boolean;
+  setVerifyEvaluated: (v: boolean) => void;
+
+  // Mode C: Ratio
+  ratioScreen: CasioRatioScreen;
+  setRatioScreen: (sc: CasioRatioScreen) => void;
+  ratioUnknown: 'c' | 'd';
+  setRatioUnknown: (u: 'c' | 'd') => void;
+  ratioA: string;
+  setRatioA: (v: string) => void;
+  ratioB: string;
+  setRatioB: (v: string) => void;
+  ratioC: string;
+  setRatioC: (v: string) => void;
+  ratioD: string;
+  setRatioD: (v: string) => void;
+  ratioShowDecimal: boolean;
 
   // CALC prompt
   calcVarsList: string[];
@@ -132,20 +237,19 @@ export interface CasioLcdModesProps {
   onEvalCalcPrompt: () => void;
 }
 
-const toNum = (s: string): number => {
-  const cleaned = s.trim().replace(/−/g, '-');
-  if (!cleaned || cleaned === '-') return 0;
-  const n = Number(cleaned);
-  return Number.isFinite(n) ? n : 0;
-};
-
 export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
   const { mode, setMode, overlay, setOverlay } = props;
 
   // Overlays inside the LCD (SETUP, CONST, CONV, RECALL, OPTN, CALC prompt, HELP)
   if (overlay === 'setup') {
+    const angleOrder: CasioAngleUnit[] = ['D', 'R', 'G'];
+    const angleLabel: Record<CasioAngleUnit, string> = {
+      D: 'DEG (Độ)',
+      R: 'RAD',
+      G: 'GRAD',
+    };
     return (
-      <div className="p-2 min-h-[120px] space-y-1.5 text-slate-900">
+      <div className="p-2 min-h-[120px] space-y-1.5 text-[#1e345a]">
         <div className="flex items-center justify-between text-[10px] font-bold">
           <span>Cài đặt máy tính (SETUP)</span>
           <button type="button" onClick={() => setOverlay(null)} className="underline cursor-pointer">
@@ -155,10 +259,13 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
         <div className="grid grid-cols-2 gap-1 text-[10px]">
           <button
             type="button"
-            onClick={() => props.setAngleUnit(props.angleUnit === 'D' ? 'R' : 'D')}
+            onClick={() => {
+              const next = angleOrder[(angleOrder.indexOf(props.angleUnit) + 1) % angleOrder.length];
+              props.setAngleUnit(next);
+            }}
             className="px-2 py-1 rounded bg-[#e5eee0] border border-[#96a68f] font-semibold cursor-pointer text-left"
           >
-            Đơn vị góc: <b>{props.angleUnit === 'D' ? 'DEG (Độ)' : 'RAD'}</b>
+            Đơn vị góc: <b>{angleLabel[props.angleUnit]}</b>
           </button>
           <button
             type="button"
@@ -182,7 +289,7 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
                   type="button"
                   onClick={() => props.setFixDigits(d)}
                   className={`px-1.5 rounded font-mono font-bold cursor-pointer ${
-                    props.fixDigits === d ? 'bg-slate-800 text-[#e6f0e1]' : 'bg-white/70'
+                    props.fixDigits === d ? 'bg-[#1e345a] text-[#e6f0e1]' : 'bg-white/70'
                   }`}
                 >
                   {d}
@@ -206,7 +313,7 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
                 type="button"
                 onClick={() => props.setChassisTheme(t.id)}
                 className={`px-1.5 py-0.5 rounded font-semibold cursor-pointer ${
-                  props.chassisTheme === t.id ? 'bg-slate-800 text-[#e6f0e1]' : 'bg-white/70'
+                  props.chassisTheme === t.id ? 'bg-[#1e345a] text-[#e6f0e1]' : 'bg-white/70'
                 }`}
               >
                 {t.label}
@@ -220,7 +327,7 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
 
   if (overlay === 'const') {
     return (
-      <div className="p-2 min-h-[120px] space-y-1 text-slate-900">
+      <div className="p-2 min-h-[120px] space-y-1 text-[#1e345a]">
         <div className="flex items-center justify-between text-[10px] font-bold">
           <span>Hằng số vật lý & hóa học (CONST)</span>
           <button type="button" onClick={() => setOverlay(null)} className="underline cursor-pointer">
@@ -236,7 +343,7 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
                 props.onInsertToken(c.token);
                 setOverlay(null);
               }}
-              className="px-1.5 py-1 rounded bg-[#e5eee0] hover:bg-slate-800 hover:text-[#e6f0e1] border border-[#96a68f] text-left text-[9.5px] cursor-pointer"
+              className="px-1.5 py-1 rounded bg-[#e5eee0] hover:bg-[#1e345a] hover:text-[#e6f0e1] border border-[#96a68f] text-left text-[9.5px] cursor-pointer"
             >
               <div className="font-bold flex items-center justify-between">
                 <span>{c.symbol}</span>
@@ -252,7 +359,7 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
 
   if (overlay === 'conv') {
     return (
-      <div className="p-2 min-h-[120px] space-y-1 text-slate-900">
+      <div className="p-2 min-h-[120px] space-y-1 text-[#1e345a]">
         <div className="flex items-center justify-between text-[10px] font-bold">
           <span>Chuyển đổi đơn vị (CONV · Ans = {Number(props.ansVal.toFixed(4))})</span>
           <button type="button" onClick={() => setOverlay(null)} className="underline cursor-pointer">
@@ -270,7 +377,7 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
                   props.onApplyConversion(converted, `${props.ansVal} ${conv.fromUnit} → ${conv.toUnit}`);
                   setOverlay(null);
                 }}
-                className="px-1.5 py-1 rounded bg-[#e5eee0] hover:bg-slate-800 hover:text-[#e6f0e1] border border-[#96a68f] text-left text-[9.5px] cursor-pointer"
+                className="px-1.5 py-1 rounded bg-[#e5eee0] hover:bg-[#1e345a] hover:text-[#e6f0e1] border border-[#96a68f] text-left text-[9.5px] cursor-pointer"
               >
                 <div className="font-bold">{conv.label}</div>
                 <div className="font-mono text-[8.5px] opacity-80">
@@ -287,9 +394,9 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
   if (overlay === 'recall') {
     const varKeys = ['A', 'B', 'C', 'D', 'T', 'F', 'M', 'x', 'y', 'z'];
     return (
-      <div className="p-2 min-h-[120px] space-y-1 text-slate-900">
+      <div className="p-2 min-h-[120px] space-y-1 text-[#1e345a]">
         <div className="flex items-center justify-between text-[10px] font-bold">
-          <span>Biến nhớ (RECALL · Bấm để chèn)</span>
+          <span>Biến nhớ (RECALL · bấm để chèn)</span>
           <button type="button" onClick={() => setOverlay(null)} className="underline cursor-pointer">
             Đóng
           </button>
@@ -303,7 +410,7 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
                 props.onInsertToken(k);
                 setOverlay(null);
               }}
-              className="px-1 py-1 rounded bg-[#e5eee0] hover:bg-slate-800 hover:text-[#e6f0e1] border border-[#96a68f] text-center text-[9.5px] font-mono cursor-pointer"
+              className="px-1 py-1 rounded bg-[#e5eee0] hover:bg-[#1e345a] hover:text-[#e6f0e1] border border-[#96a68f] text-center text-[9.5px] font-mono cursor-pointer"
             >
               <div className="font-bold">{k}</div>
               <div className="truncate text-[8.5px]">{Number((props.vars[k] ?? 0).toFixed(3))}</div>
@@ -330,7 +437,7 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
       { id: 'eng', label: 'Đổi ENG (×10³ⁿ)' },
     ];
     return (
-      <div className="p-2 min-h-[120px] space-y-1 text-slate-900">
+      <div className="p-2 min-h-[120px] space-y-1 text-[#1e345a]">
         <div className="flex items-center justify-between text-[10px] font-bold">
           <span>Tùy chọn nhanh (OPTN)</span>
           <button type="button" onClick={() => setOverlay(null)} className="underline cursor-pointer">
@@ -346,7 +453,7 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
                 props.onTriggerOptnAction(act.id);
                 setOverlay(null);
               }}
-              className="px-1.5 py-1 rounded bg-[#e5eee0] hover:bg-slate-800 hover:text-[#e6f0e1] border border-[#96a68f] text-left text-[9.5px] font-semibold cursor-pointer"
+              className="px-1.5 py-1 rounded bg-[#e5eee0] hover:bg-[#1e345a] hover:text-[#e6f0e1] border border-[#96a68f] text-left text-[9.5px] font-semibold cursor-pointer"
             >
               {act.label}
             </button>
@@ -358,9 +465,9 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
 
   if (overlay === 'calcPrompt') {
     return (
-      <div className="p-2 min-h-[120px] space-y-1.5 text-slate-900">
+      <div className="p-2 min-h-[120px] space-y-1.5 text-[#1e345a]">
         <div className="flex items-center justify-between text-[10px] font-bold">
-          <span>CALC · Nhập giá trị biến (Bấm phím số Casio hoặc gõ)</span>
+          <span>CALC · nhập giá trị biến (bấm phím Casio hoặc gõ)</span>
           <button type="button" onClick={() => setOverlay(null)} className="underline cursor-pointer">
             Hủy
           </button>
@@ -390,7 +497,7 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
         <button
           type="button"
           onClick={props.onEvalCalcPrompt}
-          className="w-full h-6 rounded bg-slate-800 text-[#e6f0e1] text-[10.5px] font-bold cursor-pointer"
+          className="w-full h-6 rounded bg-[#1e345a] text-[#e6f0e1] text-[10.5px] font-bold cursor-pointer"
         >
           Tính giá trị biểu thức (=)
         </button>
@@ -400,42 +507,46 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
 
   if (overlay === 'help') {
     return (
-      <div className="p-2 min-h-[120px] space-y-1 text-slate-900 text-[9.5px] leading-snug">
+      <div className="p-2 min-h-[120px] space-y-1 text-[#1e345a] text-[9.5px] leading-snug">
         <div className="flex items-center justify-between font-bold text-[10px]">
           <span>Hướng dẫn Casio fx-580VN X</span>
           <button type="button" onClick={() => setOverlay(null)} className="underline cursor-pointer">
             Đóng
           </button>
         </div>
-        <p>• <b>Bấm phím trực tiếp</b>: Mọi ô nhập ở tất cả chế độ đều nhận phím cứng trên mặt máy tính Casio.</p>
-        <p>• <b>Phím ◀ / ▶</b>: Di chuyển con trỏ giữa các ô hoặc nhảy qua dấu <b>;</b> trong <code>∫, d/dx, Σ, logb</code>.</p>
-        <p>• <b>STO + A..F/x..z</b>: Lưu kết quả vào biến; <b>CALC</b>: Thế biến; <b>SHIFT+CALC (SOLVE)</b>: Dò nghiệm.</p>
+        <p>• <b>MENU + 1..9, (−), ° ' ", x⁻¹</b>: Mở nhanh đúng 12 chế độ chuẩn fx-580VN X.</p>
+        <p>• <b>Mode 9, 6, 7, A, C</b>: Bấm trực tiếp phím số theo menu từng bước giống máy thật; bấm <b>=</b> để sang ô / giải; <b>AC</b> quay lại sửa.</p>
+        <p>• <b>Mode 3 (Cơ số n)</b>: Phím <b>x²</b>(DEC), <b>x^□</b>(HEX), <b>log□</b>(BIN), <b>ln</b>(OCT); <b>SHIFT+OPTN</b> dán LaTeX lên bảng.</p>
       </div>
     );
   }
 
-  // MENU Grid (8 real Casio modes)
+  // MENU Grid — Authentic 12 Casio fx-580VN X modes (1..9, A, B, C)
   if (mode === 'menu') {
     const items: { id: CasioMainMode; num: string; title: string }[] = [
       { id: 'calc', num: '1', title: 'Tính toán' },
       { id: 'complex', num: '2', title: 'Số phức' },
-      { id: 'matrix', num: '3', title: 'Ma trận' },
-      { id: 'vector', num: '4', title: 'Vectơ' },
-      { id: 'table', num: '5', title: 'Bảng f(x)' },
-      { id: 'equation', num: '6', title: 'Phương trình' },
-      { id: 'ineq', num: '7', title: 'Bất phương trình' },
-      { id: 'stats', num: '8', title: 'Thống kê' },
+      { id: 'basen', num: '3', title: 'Cơ số n' },
+      { id: 'matrix', num: '4', title: 'Ma trận' },
+      { id: 'vector', num: '5', title: 'Vectơ' },
+      { id: 'stats', num: '6', title: 'Thống kê' },
+      { id: 'dist', num: '7', title: 'Phân phối' },
+      { id: 'table', num: '8', title: 'Bảng f(x)' },
+      { id: 'equation', num: '9', title: 'Phương trình' },
+      { id: 'ineq', num: 'A', title: 'Bất PT' },
+      { id: 'verify', num: 'B', title: 'Đúng / Sai' },
+      { id: 'ratio', num: 'C', title: 'Tỉ lệ thức' },
     ];
     return (
-      <div className="p-2 min-h-[120px] grid grid-cols-2 gap-1 text-slate-900">
+      <div className="p-1.5 min-h-[120px] grid grid-cols-3 gap-1 text-[#1e345a]">
         {items.map((item) => (
           <button
             key={item.id}
             type="button"
             onClick={() => setMode(item.id)}
-            className="px-2 py-1 rounded bg-[#c6d4bf] hover:bg-slate-900 hover:text-[#e6f0e1] border border-[#96a68f] text-left text-[10.5px] font-bold transition-colors cursor-pointer flex items-center gap-1.5"
+            className="px-1.5 py-1 rounded bg-[#c6d4bf] hover:bg-[#1e345a] hover:text-[#e6f0e1] border border-[#96a68f] text-left text-[9.5px] font-bold transition-colors cursor-pointer flex items-center gap-1"
           >
-            <span className="w-4 h-4 rounded-sm bg-slate-800 text-[#e6f0e1] text-[9.5px] font-mono flex items-center justify-center shrink-0">
+            <span className="w-3.5 h-3.5 rounded-sm bg-[#1e345a] text-[#e6f0e1] text-[8.5px] font-mono flex items-center justify-center shrink-0">
               {item.num}
             </span>
             <span className="truncate">{item.title}</span>
@@ -445,41 +556,42 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
     );
   }
 
-  // Mode 2: Complex Numbers
+  // Mode 2: Complex Numbers (authentic OPTN bar + LCD split display)
   if (mode === 'complex') {
     const cmpVal: CasioComplexValue | null = evaluateCasioComplex(props.complexExpr, props.angleUnit);
     const modVal = cmpVal ? Math.hypot(cmpVal.re, cmpVal.im) : NaN;
+    const quickTokens = [
+      { lbl: 'i', tok: 'i' },
+      { lbl: '∠', tok: '∠' },
+      { lbl: 'Arg', tok: 'Arg(' },
+      { lbl: 'Conjg', tok: 'Conjg(' },
+      { lbl: 'Abs', tok: 'Abs(' },
+    ];
     return (
-      <div className="p-2 min-h-[120px] flex flex-col justify-between gap-1 text-slate-900">
-        <div className="flex items-center justify-between text-[10px] font-bold">
-          <span>2: Số phức (a + bi)</span>
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={() => props.onInsertToken('i')}
-              className="px-1.5 py-0.5 rounded bg-[#c6d4bf] border border-[#96a68f] text-[9px] font-mono font-bold cursor-pointer"
-            >
-              +i
-            </button>
-            <button
-              type="button"
-              onClick={() => props.onInsertToken('∠')}
-              className="px-1.5 py-0.5 rounded bg-[#c6d4bf] border border-[#96a68f] text-[9px] font-mono font-bold cursor-pointer"
-            >
-              +∠
-            </button>
-            <button
-              type="button"
-              onClick={() => props.setComplexPolar(!props.complexPolar)}
-              className="px-1.5 py-0.5 rounded bg-slate-800 text-[#e6f0e1] text-[9px] cursor-pointer"
-            >
-              {props.complexPolar ? 'r∠θ' : 'a+bi'}
-            </button>
-            <button type="button" onClick={() => setMode('calc')} className="underline cursor-pointer text-[9.5px]">
-              Thoát
-            </button>
+      <div className="p-2 min-h-[120px] flex flex-col justify-between gap-1 text-[#1e345a]">
+        <div className="flex items-center justify-between gap-1">
+          <div className="flex items-center gap-0.5 flex-wrap">
+            {quickTokens.map((q) => (
+              <button
+                key={q.lbl}
+                type="button"
+                onClick={() => props.onInsertToken(q.tok)}
+                className="px-1.5 py-0.5 rounded bg-[#c6d4bf] hover:bg-[#1e345a] hover:text-[#e6f0e1] border border-[#96a68f] text-[8.5px] font-mono font-bold cursor-pointer"
+              >
+                {q.lbl}
+              </button>
+            ))}
           </div>
+          <button
+            type="button"
+            onClick={() => props.setComplexPolar(!props.complexPolar)}
+            title="Đổi dạng đại số a+bi ↔ lượng giác r∠θ"
+            className="px-1.5 py-0.5 rounded bg-[#1e345a] text-[#e6f0e1] text-[8.5px] font-mono font-bold cursor-pointer shrink-0"
+          >
+            {props.complexPolar ? 'r∠θ' : 'a+bi'}
+          </button>
         </div>
+
         <input
           type="text"
           data-casio-field="complex-expr"
@@ -487,38 +599,156 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
           autoFocus
           value={props.complexExpr}
           onChange={(e) => props.setComplexExpr(e.target.value)}
-          placeholder="Ví dụ: (2+3i)*(1-i) hoặc 2∠45"
-          className="w-full h-6 px-1.5 rounded bg-[#e5eee0] focus:ring-2 focus:ring-indigo-600 border border-[#96a68f] text-[11px] font-mono outline-none"
+          className="casio-math-font w-full h-7 px-1.5 bg-transparent text-[16px] text-[#1e345a] outline-none"
         />
+
         <div
           data-testid="calculator-display-result"
-          className="px-2 py-1 rounded bg-[#e5eee0] border border-[#a5b89d] flex items-center justify-between text-[12px] font-bold"
+          className="min-h-[28px] border-t border-[#b8c8b0]/80 pt-1 flex items-center justify-between gap-2 overflow-x-auto casio-lcd-no-scrollbar"
         >
           {cmpVal ? (
             <>
-              <span className="text-[9.5px] font-mono text-slate-600">
+              <span className="text-[9px] font-mono opacity-75 shrink-0">
                 |z| = {Number(modVal.toFixed(4))}
               </span>
-              <MathTex latex={formatComplexLatex(cmpVal, props.complexPolar, props.angleUnit)} />
+              <MathTex
+                latex={formatComplexLatex(cmpVal, props.complexPolar, props.angleUnit)}
+                className="text-[15.5px] font-bold text-[#1e345a]"
+              />
             </>
+          ) : props.complexExpr.trim() ? (
+            <span className="text-rose-700 text-[10.5px] font-mono font-bold ml-auto">Syntax ERROR</span>
           ) : (
-            <span className="text-rose-700 text-[10.5px]">Nhập biểu thức số phức...</span>
+            <span className="text-[11px] font-mono opacity-40 ml-auto">0</span>
           )}
         </div>
       </div>
     );
   }
 
-  // Mode 3: Matrix
+  // Mode 3: Base-N (DEC / HEX / BIN / OCT with authentic Casio big active-base readout & x²/x^□/log/ln shortcuts)
+  if (mode === 'basen') {
+    const res = evaluateCasioBaseN(props.baseExpr, props.baseMode);
+    const bases: CasioBaseMode[] = ['DEC', 'HEX', 'BIN', 'OCT'];
+    const activeVal = res
+      ? props.baseMode === 'DEC'
+        ? res.dec
+        : props.baseMode === 'HEX'
+          ? res.hex
+          : props.baseMode === 'BIN'
+            ? res.bin
+            : res.oct
+      : '0';
+    const baseTag: Record<CasioBaseMode, string> = {
+      DEC: 'Dec',
+      HEX: 'Hex',
+      BIN: 'Bin',
+      OCT: 'Oct',
+    };
+
+    return (
+      <div className="p-2 min-h-[120px] flex flex-col justify-between gap-1 text-[#1e345a]">
+        <div className="flex items-center justify-between gap-1">
+          <div className="flex items-center gap-0.5">
+            {bases.map((b) => (
+              <button
+                key={b}
+                type="button"
+                onClick={() => {
+                  props.setBaseMode(b);
+                  if (res) {
+                    const nextVal = b === 'DEC' ? res.dec : b === 'HEX' ? res.hex : b === 'BIN' ? res.bin : res.oct;
+                    props.setBaseExpr(nextVal);
+                  }
+                }}
+                className={`px-1.5 py-0.5 rounded text-[8.5px] font-mono font-bold cursor-pointer ${
+                  props.baseMode === b ? 'bg-[#1e345a] text-[#e6f0e1]' : 'bg-[#e5eee0] border border-[#96a68f]'
+                }`}
+              >
+                {b}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-0.5">
+            {(['AND', 'OR', 'XOR', 'NOT'] as const).map((op) => (
+              <button
+                key={op}
+                type="button"
+                onClick={() => props.onInsertToken(op === 'NOT' ? 'NOT ' : ` ${op} `)}
+                className="px-1 py-0.5 rounded bg-[#c6d4bf] hover:bg-[#1e345a] hover:text-[#e6f0e1] border border-[#96a68f] text-[7.5px] font-mono font-bold cursor-pointer"
+              >
+                {op}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <input
+          type="text"
+          data-casio-field="basen-expr"
+          aria-label="Biểu thức cơ số n"
+          value={props.baseExpr}
+          onChange={(e) => props.setBaseExpr(e.target.value)}
+          className="w-full h-6 px-1.5 rounded bg-[#e5eee0] focus:ring-1 focus:ring-indigo-600 border border-[#96a68f] text-[12px] font-mono font-bold outline-none"
+        />
+
+        <div
+          data-testid="calculator-display-result"
+          className="border-t border-[#b8c8b0]/80 pt-1 space-y-0.5"
+        >
+          {res || !props.baseExpr.trim() ? (
+            <>
+              <div className="flex items-baseline justify-between gap-2 overflow-x-auto casio-lcd-no-scrollbar">
+                <span className="text-[8.5px] font-mono px-1 rounded bg-[#1e345a] text-[#e6f0e1] shrink-0">
+                  {baseTag[props.baseMode]}
+                </span>
+                <span className="text-[15px] font-mono font-extrabold tracking-tight text-[#1e345a]">
+                  {activeVal}
+                </span>
+              </div>
+              <div className="grid grid-cols-3 gap-1 text-[8px] font-mono opacity-80">
+                {bases
+                  .filter((b) => b !== props.baseMode)
+                  .map((b) => {
+                    const v = res
+                      ? b === 'DEC'
+                        ? res.dec
+                        : b === 'HEX'
+                          ? res.hex
+                          : b === 'BIN'
+                            ? res.bin
+                            : res.oct
+                      : '0';
+                    return (
+                      <span key={b} className="truncate" title={`${b}: ${v}`}>
+                        {b}: <b>{v}</b>
+                      </span>
+                    );
+                  })}
+              </div>
+            </>
+          ) : (
+            <div className="text-right text-rose-700 text-[10px] font-mono font-bold">
+              Syntax ERROR ({props.baseMode})
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Mode 4: Matrix (2×2, 3×3, 4×4 with Casio row/col indices + MatA² + Trn + parseCasioCoeff)
   if (mode === 'matrix') {
     const { matSize, matA, matB, matOp } = props;
-    const numA = matA.map((r) => r.map(toNum));
-    const numB = matB.map((r) => r.map(toNum));
+    const numA = matA.map((r) => r.map(parseCasioCoeff));
+    const numB = matB.map((r) => r.map(parseCasioCoeff));
     const detA = computeMatrixDet(numA);
     const invA = matOp === 'inv' ? computeMatrixInverse(numA) : null;
-    const sumMat =
-      matOp === 'add' ? numA.map((r, ri) => r.map((v, ci) => v + numB[ri][ci])) : null;
+    const sumMat = matOp === 'add' ? numA.map((r, ri) => r.map((v, ci) => v + numB[ri][ci])) : null;
+    const subMat = matOp === 'sub' ? subtractMatrices(numA, numB) : null;
     const mulMat = matOp === 'mul' ? multiplyMatrices(numA, numB) : null;
+    const trnMat = matOp === 'trn' ? transposeMatrix(numA) : null;
+    const sqMat = matOp === 'sq' ? multiplyMatrices(numA, numA) : null;
 
     const updateCell = (which: 'A' | 'B', r: number, c: number, rawVal: string) => {
       const target = which === 'A' ? matA : matB;
@@ -527,79 +757,100 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
       else props.setMatB(next);
     };
 
-    const resizeMat = (n: 2 | 3) => {
+    const resizeMat = (n: 2 | 3 | 4) => {
       props.setMatSize(n);
       const make = (src: string[][]) =>
         Array.from({ length: n }, (_, r) =>
-          Array.from({ length: n }, (__, c) => src[r]?.[c] ?? (r === c ? '1' : '0'))
+          Array.from({ length: n }, (__, c) => src[r]?.[c] ?? '0')
         );
       props.setMatA(make(matA));
       props.setMatB(make(matB));
     };
 
+    const nextSize: 2 | 3 | 4 = matSize === 2 ? 3 : matSize === 3 ? 4 : 2;
+    const gridColsClass = matSize === 2 ? 'grid-cols-2' : matSize === 3 ? 'grid-cols-3' : 'grid-cols-4';
+    const cellHeightClass = matSize === 4 ? 'h-4 text-[8px]' : 'h-5 text-[9.5px]';
+    const showMatB = matOp === 'add' || matOp === 'sub' || matOp === 'mul';
+
     return (
-      <div className="p-2 min-h-[120px] space-y-1 text-slate-900">
-        <div className="flex items-center justify-between text-[9.5px] font-bold">
-          <div className="flex items-center gap-1">
-            <span>Ma trận</span>
+      <div className="p-2 min-h-[120px] space-y-1 text-[#1e345a]">
+        <div className="flex items-center justify-between text-[8.5px] font-bold gap-1">
+          <div className="flex items-center gap-1 shrink-0">
+            <span>4: Mat</span>
             <button
               type="button"
-              onClick={() => resizeMat(matSize === 2 ? 3 : 2)}
-              className="px-1 rounded bg-slate-800 text-[#e6f0e1] cursor-pointer"
+              onClick={() => resizeMat(nextSize)}
+              title="Đổi kích thước 2×2 / 3×3 / 4×4"
+              className="px-1 rounded bg-[#1e345a] text-[#e6f0e1] cursor-pointer"
             >
               {matSize}×{matSize}
             </button>
           </div>
-          <div className="flex items-center gap-0.5">
-            {(['det', 'inv', 'add', 'mul'] as const).map((op) => (
+          <div className="flex items-center gap-0.5 flex-wrap justify-end">
+            {(
+              [
+                { id: 'det', lbl: 'det' },
+                { id: 'inv', lbl: 'A⁻¹' },
+                { id: 'sq', lbl: 'A²' },
+                { id: 'trn', lbl: 'Trn' },
+                { id: 'add', lbl: 'A+B' },
+                { id: 'sub', lbl: 'A−B' },
+                { id: 'mul', lbl: 'A×B' },
+              ] as const
+            ).map((op) => (
               <button
-                key={op}
+                key={op.id}
                 type="button"
-                onClick={() => props.setMatOp(op)}
-                className={`px-1 rounded text-[9px] cursor-pointer ${
-                  matOp === op ? 'bg-slate-800 text-[#e6f0e1]' : 'bg-[#e5eee0] border border-[#96a68f]'
+                onClick={() => props.setMatOp(op.id)}
+                className={`px-1 rounded text-[8px] cursor-pointer ${
+                  matOp === op.id ? 'bg-[#1e345a] text-[#e6f0e1]' : 'bg-[#e5eee0] border border-[#96a68f]'
                 }`}
               >
-                {op === 'det' ? 'detA' : op === 'inv' ? 'A⁻¹' : op === 'add' ? 'A+B' : 'A×B'}
+                {op.lbl}
               </button>
             ))}
           </div>
         </div>
+
         <div className="flex items-start gap-1.5">
-          <div className="flex-1">
-            <div className="text-[8.5px] font-bold">MatA</div>
-            <div className={`grid gap-0.5 ${matSize === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between text-[8px] font-mono font-bold opacity-80">
+              <span>MatA</span>
+              <span>{Array.from({ length: matSize }, (_, i) => i + 1).join(' · ')}</span>
+            </div>
+            <div className={`grid gap-0.5 ${gridColsClass}`}>
               {matA.map((row, r) =>
                 row.map((val, c) => (
                   <input
                     key={`a-${r}-${c}`}
                     type="text"
-                    inputMode="decimal"
                     data-casio-field={`matA-${r}-${c}`}
                     aria-label={`MatA(${r + 1},${c + 1})`}
                     value={val}
                     onChange={(e) => updateCell('A', r, c, e.target.value)}
-                    className="h-5 px-0.5 rounded bg-[#e5eee0] focus:ring-2 focus:ring-indigo-600 border border-[#96a68f] text-[9.5px] font-mono text-center outline-none"
+                    className={`${cellHeightClass} px-0.5 rounded bg-[#e5eee0] focus:ring-2 focus:ring-indigo-600 border border-[#96a68f] font-mono text-center outline-none`}
                   />
                 ))
               )}
             </div>
           </div>
-          {(matOp === 'add' || matOp === 'mul') && (
-            <div className="flex-1">
-              <div className="text-[8.5px] font-bold">MatB</div>
-              <div className={`grid gap-0.5 ${matSize === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+          {showMatB && (
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between text-[8px] font-mono font-bold opacity-80">
+                <span>MatB</span>
+                <span>{Array.from({ length: matSize }, (_, i) => i + 1).join(' · ')}</span>
+              </div>
+              <div className={`grid gap-0.5 ${gridColsClass}`}>
                 {matB.map((row, r) =>
                   row.map((val, c) => (
                     <input
                       key={`b-${r}-${c}`}
                       type="text"
-                      inputMode="decimal"
                       data-casio-field={`matB-${r}-${c}`}
                       aria-label={`MatB(${r + 1},${c + 1})`}
                       value={val}
                       onChange={(e) => updateCell('B', r, c, e.target.value)}
-                      className="h-5 px-0.5 rounded bg-[#e5eee0] focus:ring-2 focus:ring-indigo-600 border border-[#96a68f] text-[9.5px] font-mono text-center outline-none"
+                      className={`${cellHeightClass} px-0.5 rounded bg-[#e5eee0] focus:ring-2 focus:ring-indigo-600 border border-[#96a68f] font-mono text-center outline-none`}
                     />
                   ))
                 )}
@@ -607,403 +858,1634 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
             </div>
           )}
         </div>
+
         <div
           data-testid="calculator-display-result"
-          className="px-2 py-0.5 rounded bg-[#e5eee0] border border-[#a5b89d] text-[10.5px] flex justify-end overflow-x-auto casio-lcd-no-scrollbar"
+          className="px-2 py-0.5 rounded bg-[#e5eee0] border border-[#a5b89d] text-[10px] flex justify-end overflow-x-auto casio-lcd-no-scrollbar"
         >
           {matOp === 'det' && <MathTex latex={`\\det(A) = ${formatCasioExact(detA).exactLatex}`} />}
           {matOp === 'inv' &&
-            (invA ? <MathTex latex={`A^{-1} = ${matrixToLatex(invA)}`} /> : <span className="text-rose-700 font-bold">Ma trận suy biến (det=0)</span>)}
+            (invA ? (
+              <MathTex latex={`A^{-1} = ${matrixToLatex(invA)}`} />
+            ) : (
+              <span className="text-rose-700 font-mono font-bold">Math ERROR (det = 0)</span>
+            ))}
+          {matOp === 'sq' && sqMat && <MathTex latex={`A^{2} = ${matrixToLatex(sqMat)}`} />}
           {matOp === 'add' && sumMat && <MathTex latex={matrixToLatex(sumMat)} />}
+          {matOp === 'sub' && subMat && <MathTex latex={matrixToLatex(subMat)} />}
           {matOp === 'mul' && mulMat && <MathTex latex={matrixToLatex(mulMat)} />}
+          {matOp === 'trn' && trnMat && <MathTex latex={`A^{T} = ${matrixToLatex(trnMat)}`} />}
         </div>
       </div>
     );
   }
 
-  // Mode 4: Vector
+  // Mode 5: Vector (2D / 3D with authentic OPTN vector selector: u·v, u×v, ∠, |u|, u±v, û)
   if (mode === 'vector') {
-    const { vecDim, vecU, vecV } = props;
-    const numU = vecU.slice(0, vecDim).map(toNum);
-    const numV = vecV.slice(0, vecDim).map(toNum);
+    const { vecDim, vecU, vecV, vecOp, setVecOp } = props;
+    const numU = vecU.slice(0, vecDim).map(parseCasioCoeff);
+    const numV = vecV.slice(0, vecDim).map(parseCasioCoeff);
     const res = computeVectorMetrics(numU, numV, props.angleUnit);
-    return (
-      <div className="p-2 min-h-[120px] space-y-1 text-slate-900">
-        <div className="flex items-center justify-between text-[9.5px] font-bold">
-          <span>4: Vectơ ({vecDim}D)</span>
-          <button
-            type="button"
-            onClick={() => props.setVecDim(vecDim === 2 ? 3 : 2)}
-            className="px-1.5 py-0.5 rounded bg-slate-800 text-[#e6f0e1] cursor-pointer"
-          >
-            Đổi {vecDim === 2 ? '3D' : '2D'}
-          </button>
-        </div>
-        <div className="grid grid-cols-2 gap-1.5">
-          <div>
-            <div className="text-[8.5px] font-bold">VctA (u)</div>
-            <div className={`grid gap-0.5 ${vecDim === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
-              {vecU.slice(0, vecDim).map((val, i) => (
-                <input
-                  key={`u-${i}`}
-                  type="text"
-                  inputMode="decimal"
-                  data-casio-field={`vecU-${i}`}
-                  aria-label={`u${i + 1}`}
-                  value={val}
-                  onChange={(e) => {
-                    const next = [...vecU];
-                    next[i] = e.target.value;
-                    props.setVecU(next);
-                  }}
-                  className="h-5 px-1 rounded bg-[#e5eee0] focus:ring-2 focus:ring-indigo-600 border border-[#96a68f] text-[10px] font-mono text-center outline-none"
-                />
-              ))}
-            </div>
-          </div>
-          <div>
-            <div className="text-[8.5px] font-bold">VctB (v)</div>
-            <div className={`grid gap-0.5 ${vecDim === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
-              {vecV.slice(0, vecDim).map((val, i) => (
-                <input
-                  key={`v-${i}`}
-                  type="text"
-                  inputMode="decimal"
-                  data-casio-field={`vecV-${i}`}
-                  aria-label={`v${i + 1}`}
-                  value={val}
-                  onChange={(e) => {
-                    const next = [...vecV];
-                    next[i] = e.target.value;
-                    props.setVecV(next);
-                  }}
-                  className="h-5 px-1 rounded bg-[#e5eee0] focus:ring-2 focus:ring-indigo-600 border border-[#96a68f] text-[10px] font-mono text-center outline-none"
-                />
-              ))}
-            </div>
-          </div>
-        </div>
-        <div
-          data-testid="calculator-display-result"
-          className="px-1.5 py-1 rounded bg-[#e5eee0] border border-[#a5b89d] text-[9.5px] font-mono space-y-0.5"
-        >
-          <div className="flex justify-between">
-            <span>u·v = <b>{Number(res.dot.toFixed(3))}</b></span>
-            <span>∠ = <b>{Number.isFinite(res.angle) ? `${Number(res.angle.toFixed(2))}${props.angleUnit === 'D' ? '°' : ' rad'}` : '—'}</b></span>
-          </div>
-          <div className="flex justify-between">
-            <span>|u| = {Number(res.magU.toFixed(3))}</span>
-            <span>{vecDim === 3 ? `[u,v]=(${res.cross.join('; ')})` : `u+v=(${res.sum.join('; ')})`}</span>
-          </div>
-        </div>
-      </div>
-    );
-  }
+    const unitTxt = props.angleUnit === 'D' ? '^\\circ' : props.angleUnit === 'G' ? '^g' : '\\text{ rad}';
+    const axisLabels = vecDim === 2 ? ['x', 'y'] : ['x', 'y', 'z'];
 
-  // Mode 5: Table f(x)
-  if (mode === 'table') {
-    const fn = compileMathExpression(props.tableExpr);
-    const s = toNum(props.tableStart);
-    const e = toNum(props.tableEnd);
-    const st = toNum(props.tableStep);
-    const rows: { x: number; y: string }[] = [];
-    if (fn && Number.isFinite(s) && Number.isFinite(e) && Number.isFinite(st) && st > 0) {
-      for (let x = s, guard = 0; x <= e + 1e-9 && guard < 25; x += st, guard += 1) {
-        const y = fn(x);
-        rows.push({
-          x: Number(x.toFixed(3)),
-          y: Number.isFinite(y) ? Number(y.toFixed(4)).toString() : 'KXĐ',
-        });
-      }
+    const fmtCoord = (arr: number[]) =>
+      `\\left(${arr.map((n) => {
+        const rep = formatCasioExact(n);
+        return rep.hasExactForm ? rep.exactLatex : Number(n.toFixed(3)).toString();
+      }).join(';\\;')}\\right)`;
+
+    let vecResultLatex = '';
+    if (vecOp === 'dot') {
+      const r = formatCasioExact(res.dot);
+      vecResultLatex = `\\vec{u}\\cdot\\vec{v} = ${r.hasExactForm ? r.exactLatex : r.decimalText}`;
+    } else if (vecOp === 'cross') {
+      vecResultLatex =
+        vecDim === 3
+          ? `[\\vec{u},\\vec{v}] = ${fmtCoord(res.cross)}`
+          : `\\det(\\vec{u},\\vec{v}) = ${formatCasioExact(res.cross[0]).exactLatex}`;
+    } else if (vecOp === 'angle') {
+      vecResultLatex = Number.isFinite(res.angle)
+        ? `\\angle(\\vec{u},\\vec{v}) = ${Number(res.angle.toFixed(3))}${unitTxt}`
+        : '\\text{Chưa xác định}';
+    } else if (vecOp === 'mag') {
+      const ru = formatCasioExact(res.magU);
+      const rv = formatCasioExact(res.magV);
+      vecResultLatex = `|\\vec{u}|=${ru.hasExactForm ? ru.exactLatex : Number(res.magU.toFixed(3))},\\; |\\vec{v}|=${rv.hasExactForm ? rv.exactLatex : Number(res.magV.toFixed(3))}`;
+    } else if (vecOp === 'sumdiff') {
+      vecResultLatex = `\\vec{u}+\\vec{v}=${fmtCoord(res.sum)}`;
+    } else {
+      vecResultLatex = res.unitU
+        ? `\\hat{u} = ${fmtCoord(res.unitU)}`
+        : '\\text{Math ERROR (}|\\vec{u}|=0\\text{)}';
     }
+
     return (
-      <div className="p-2 min-h-[120px] space-y-1 text-slate-900">
-        <div className="flex items-center gap-1 bg-[#e5eee0] rounded px-1.5 h-6 border border-[#9eb096]">
-          <span className="text-[10px] font-mono font-bold">f(x)=</span>
-          <input
-            type="text"
-            data-casio-field="table-expr"
-            aria-label="Hàm f(x)"
-            value={props.tableExpr}
-            onChange={(e) => props.setTableExpr(e.target.value)}
-            className="w-full min-w-0 bg-transparent text-[10.5px] font-mono outline-none"
-          />
-          <div className="flex items-center gap-0.5 text-[9.5px] font-mono">
-            <input
-              type="text"
-              inputMode="decimal"
-              data-casio-field="table-start"
-              aria-label="Start"
-              value={props.tableStart}
-              onChange={(e) => props.setTableStart(e.target.value)}
-              className="w-7 bg-white/60 focus:ring-1 focus:ring-indigo-600 rounded px-0.5 text-center outline-none"
-            />
-            <span>:</span>
-            <input
-              type="text"
-              inputMode="decimal"
-              data-casio-field="table-end"
-              aria-label="End"
-              value={props.tableEnd}
-              onChange={(e) => props.setTableEnd(e.target.value)}
-              className="w-7 bg-white/60 focus:ring-1 focus:ring-indigo-600 rounded px-0.5 text-center outline-none"
-            />
-            <span>/</span>
-            <input
-              type="text"
-              inputMode="decimal"
-              data-casio-field="table-step"
-              aria-label="Step"
-              value={props.tableStep}
-              onChange={(e) => props.setTableStep(e.target.value)}
-              className="w-7 bg-white/60 focus:ring-1 focus:ring-indigo-600 rounded px-0.5 text-center outline-none"
-            />
+      <div className="p-2 min-h-[120px] space-y-1 text-[#1e345a]">
+        <div className="flex items-center justify-between gap-1 text-[8.5px] font-bold">
+          <div className="flex items-center gap-1 shrink-0">
+            <span>5: Vct</span>
+            <button
+              type="button"
+              onClick={() => props.setVecDim(vecDim === 2 ? 3 : 2)}
+              className="px-1 rounded bg-[#1e345a] text-[#e6f0e1] cursor-pointer"
+            >
+              {vecDim}D
+            </button>
           </div>
-        </div>
-        <div
-          data-testid="calculator-display-result"
-          className="max-h-[76px] overflow-y-auto casio-lcd-no-scrollbar rounded border border-[#9eb096] bg-[#e5eee0]"
-        >
-          <table className="w-full text-[10px] font-mono tabular-nums">
-            <tbody>
-              {rows.map((row) => (
-                <tr key={row.x} className="border-b border-[#c2d1ba] last:border-b-0">
-                  <td className="px-2 py-0.5 font-semibold">x = {row.x}</td>
-                  <td className="px-2 py-0.5 text-right font-bold">{row.y}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    );
-  }
-
-  // Mode 6: Equation (PT Bậc 2, PT Bậc 3, Hệ 2 ẩn, Hệ 3 ẩn)
-  if (mode === 'equation') {
-    const { eqSubMode, setEqSubMode } = props;
-    const quadRes = eqSubMode === 'quad' ? solveQuadratic(toNum(props.qa), toNum(props.qb), toNum(props.qc)) : null;
-    const cubicRes =
-      eqSubMode === 'cubic'
-        ? solveCubicEquation(toNum(props.qa), toNum(props.qb), toNum(props.qc), toNum(props.qd))
-        : null;
-    const sys2Res =
-      eqSubMode === 'sys2'
-        ? solveLinearSystem2x2(...(props.sys2.map(toNum) as [number, number, number, number, number, number]))
-        : null;
-    const sys3Res = eqSubMode === 'sys3' ? solveLinearSystem3x3(props.sys3.map((r) => r.map(toNum))) : null;
-
-    return (
-      <div className="p-2 min-h-[120px] space-y-1 text-slate-900">
-        <div className="flex items-center justify-between gap-1 text-[9px] font-bold">
-          <div className="flex items-center gap-0.5">
+          <div className="flex items-center gap-0.5 flex-wrap justify-end">
             {(
               [
-                { id: 'quad', label: 'Bậc 2' },
-                { id: 'cubic', label: 'Bậc 3' },
-                { id: 'sys2', label: 'Hệ 2 ẩn' },
-                { id: 'sys3', label: 'Hệ 3 ẩn' },
+                { id: 'dot', lbl: 'u·v' },
+                { id: 'cross', lbl: 'u×v' },
+                { id: 'angle', lbl: '∠' },
+                { id: 'mag', lbl: '|u|' },
+                { id: 'sumdiff', lbl: 'u+v' },
+                { id: 'unit', lbl: 'û' },
               ] as const
-            ).map((s) => (
+            ).map((op) => (
               <button
-                key={s.id}
+                key={op.id}
                 type="button"
-                onClick={() => setEqSubMode(s.id)}
-                className={`px-1.5 py-0.5 rounded cursor-pointer ${
-                  eqSubMode === s.id ? 'bg-slate-800 text-[#e6f0e1]' : 'bg-[#e5eee0] border border-[#96a68f]'
+                onClick={() => setVecOp(op.id)}
+                className={`px-1 rounded text-[8px] cursor-pointer ${
+                  vecOp === op.id ? 'bg-[#1e345a] text-[#e6f0e1]' : 'bg-[#e5eee0] border border-[#96a68f]'
                 }`}
               >
-                {s.label}
+                {op.lbl}
               </button>
             ))}
           </div>
-          <button type="button" onClick={() => setMode('calc')} className="underline cursor-pointer">
-            Quay lại
-          </button>
         </div>
 
-        {(eqSubMode === 'quad' || eqSubMode === 'cubic') && (
-          <div className={`grid gap-1 ${eqSubMode === 'quad' ? 'grid-cols-3' : 'grid-cols-4'}`}>
-            {[
-              { lbl: 'a', val: props.qa, set: props.setQa },
-              { lbl: 'b', val: props.qb, set: props.setQb },
-              { lbl: 'c', val: props.qc, set: props.setQc },
-              ...(eqSubMode === 'cubic' ? [{ lbl: 'd', val: props.qd, set: props.setQd }] : []),
-            ].map((f) => (
-              <label
-                key={f.lbl}
-                className="flex items-center gap-0.5 bg-[#e5eee0] focus-within:ring-2 focus-within:ring-indigo-600 rounded px-1 h-6 border border-[#9eb096]"
-              >
-                <span className="text-[9.5px] font-mono font-bold">{f.lbl}=</span>
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  data-casio-field={`eq-${f.lbl}`}
-                  aria-label={`Hệ số ${f.lbl}`}
-                  value={f.val}
-                  onChange={(e) => f.set(e.target.value)}
-                  className="w-full min-w-0 bg-transparent text-[10.5px] font-mono outline-none"
-                />
-              </label>
-            ))}
+        <div className="grid grid-cols-2 gap-1.5">
+          <div>
+            <div className="text-[8px] font-mono font-bold opacity-80">VctA (u)</div>
+            <div className={`grid gap-0.5 ${vecDim === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+              {vecU.slice(0, vecDim).map((val, i) => (
+                <label
+                  key={`u-${i}`}
+                  className="flex flex-col bg-[#e5eee0] focus-within:ring-1 focus-within:ring-indigo-600 rounded border border-[#96a68f] px-0.5"
+                >
+                  <span className="text-[7px] casio-math-var text-center leading-none pt-0.5 opacity-75">
+                    {axisLabels[i]}
+                  </span>
+                  <input
+                    type="text"
+                    data-casio-field={`vecU-${i}`}
+                    aria-label={`u_${axisLabels[i]}`}
+                    value={val}
+                    onChange={(e) => {
+                      const next = [...vecU];
+                      next[i] = e.target.value;
+                      props.setVecU(next);
+                    }}
+                    className="h-4.5 w-full bg-transparent text-[9.5px] font-mono text-center outline-none"
+                  />
+                </label>
+              ))}
+            </div>
           </div>
-        )}
-
-        {eqSubMode === 'sys2' && (
-          <div className="grid grid-cols-3 gap-1">
-            {['a₁', 'b₁', 'c₁', 'a₂', 'b₂', 'c₂'].map((lbl, idx) => (
-              <input
-                key={lbl}
-                type="text"
-                inputMode="decimal"
-                data-casio-field={`sys2-${idx}`}
-                aria-label={lbl}
-                value={props.sys2[idx]}
-                onChange={(e) => {
-                  const next = [...props.sys2];
-                  next[idx] = e.target.value;
-                  props.setSys2(next);
-                }}
-                className="h-5 px-1 rounded bg-[#e5eee0] focus:ring-2 focus:ring-indigo-600 border border-[#9eb096] text-[10px] font-mono outline-none"
-              />
-            ))}
+          <div>
+            <div className="text-[8px] font-mono font-bold opacity-80">VctB (v)</div>
+            <div className={`grid gap-0.5 ${vecDim === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+              {vecV.slice(0, vecDim).map((val, i) => (
+                <label
+                  key={`v-${i}`}
+                  className="flex flex-col bg-[#e5eee0] focus-within:ring-1 focus-within:ring-indigo-600 rounded border border-[#96a68f] px-0.5"
+                >
+                  <span className="text-[7px] casio-math-var text-center leading-none pt-0.5 opacity-75">
+                    {axisLabels[i]}
+                  </span>
+                  <input
+                    type="text"
+                    data-casio-field={`vecV-${i}`}
+                    aria-label={`v_${axisLabels[i]}`}
+                    value={val}
+                    onChange={(e) => {
+                      const next = [...vecV];
+                      next[i] = e.target.value;
+                      props.setVecV(next);
+                    }}
+                    className="h-4.5 w-full bg-transparent text-[9.5px] font-mono text-center outline-none"
+                  />
+                </label>
+              ))}
+            </div>
           </div>
-        )}
-
-        {eqSubMode === 'sys3' && (
-          <div className="grid grid-cols-4 gap-0.5">
-            {props.sys3.map((row, ri) =>
-              row.map((val, ci) => (
-                <input
-                  key={`s3-${ri}-${ci}`}
-                  type="text"
-                  inputMode="decimal"
-                  data-casio-field={`sys3-${ri}-${ci}`}
-                  aria-label={`Hệ 3 ẩn (${ri + 1},${ci + 1})`}
-                  value={val}
-                  onChange={(e) => {
-                    const next = props.sys3.map((r, rIdx) =>
-                      r.map((cVal, cIdx) => (rIdx === ri && cIdx === ci ? e.target.value : cVal))
-                    );
-                    props.setSys3(next);
-                  }}
-                  className="h-[18px] px-0.5 rounded bg-[#e5eee0] focus:ring-2 focus:ring-indigo-600 border border-[#9eb096] text-[9.5px] font-mono text-center outline-none"
-                />
-              ))
-            )}
-          </div>
-        )}
+        </div>
 
         <div
           data-testid="calculator-display-result"
-          className="px-2 py-1 rounded bg-[#e5eee0] border border-[#a5b89d] text-[10.5px] text-slate-950 flex justify-end overflow-x-auto casio-lcd-no-scrollbar"
+          className="px-2 py-1 rounded bg-[#e5eee0] border border-[#a5b89d] text-[10.5px] flex justify-end overflow-x-auto casio-lcd-no-scrollbar"
         >
-          {eqSubMode === 'quad' && quadRes && <span className="font-mono font-bold">{quadRes.summary}</span>}
-          {eqSubMode === 'cubic' && cubicRes && <MathTex latex={cubicRes.summaryLatex} />}
-          {eqSubMode === 'sys2' && sys2Res && <MathTex latex={sys2Res.summaryLatex} />}
-          {eqSubMode === 'sys3' && sys3Res && <MathTex latex={sys3Res.summaryLatex} />}
+          <MathTex latex={vecResultLatex} />
         </div>
       </div>
     );
   }
 
-  // Mode 7: Inequality
-  if (mode === 'ineq') {
-    const res = solveQuadraticInequality(toNum(props.qa), toNum(props.qb), toNum(props.qc), props.ineqOp);
-    return (
-      <div className="p-2 min-h-[120px] space-y-1.5 text-slate-900">
-        <div className="flex items-center justify-between text-[9.5px] font-bold">
-          <span>7: Bất phương trình bậc 2</span>
-          <div className="flex items-center gap-0.5">
-            {(['>', '<', '>=', '<='] as const).map((op) => (
+  // Mode 6: Statistics (MENU 6 -> 1: 1-Variable | 2: y = a + bx Linear Regression -> Input -> Result)
+  if (mode === 'stats') {
+    const { statsScreen, setStatsScreen, statsSubMode, setStatsSubMode } = props;
+
+    if (statsScreen === 'selectType') {
+      return (
+        <div className="p-2 min-h-[120px] flex flex-col justify-between text-[#1e345a]">
+          <div className="flex items-center justify-between text-[9.5px] font-bold border-b border-[#adbd9f] pb-0.5">
+            <span>6: Thống kê (Statistics)</span>
+            <button type="button" onClick={() => setMode('calc')} className="underline cursor-pointer">
+              Thoát
+            </button>
+          </div>
+          <div className="space-y-1.5 my-1">
+            <button
+              type="button"
+              onClick={() => {
+                setStatsSubMode('1var');
+                setStatsScreen('input');
+              }}
+              className="w-full px-2 py-1.5 rounded bg-[#e5eee0] hover:bg-[#1e345a] hover:text-[#e6f0e1] border border-[#96a68f] text-left text-[10.5px] font-bold flex items-center gap-2 cursor-pointer transition-colors"
+            >
+              <span className="w-4 h-4 rounded-sm bg-[#1e345a] text-[#e6f0e1] text-[9.5px] font-mono flex items-center justify-center shrink-0">
+                1
+              </span>
+              <span>1-Variable (Thống kê 1 biến)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setStatsSubMode('linreg');
+                setStatsScreen('input');
+              }}
+              className="w-full px-2 py-1.5 rounded bg-[#e5eee0] hover:bg-[#1e345a] hover:text-[#e6f0e1] border border-[#96a68f] text-left text-[10.5px] font-bold flex items-center gap-2 cursor-pointer transition-colors"
+            >
+              <span className="w-4 h-4 rounded-sm bg-[#1e345a] text-[#e6f0e1] text-[9.5px] font-mono flex items-center justify-center shrink-0">
+                2
+              </span>
+              <span>y = a + bx (Hồi quy tuyến tính)</span>
+            </button>
+          </div>
+          <div className="text-[8.5px] font-mono opacity-75">Bấm phím 1 hoặc 2</div>
+        </div>
+      );
+    }
+
+    if (statsScreen === 'result') {
+      return (
+        <div className="p-2 min-h-[120px] flex flex-col justify-between gap-1 text-[#1e345a]">
+          <div className="flex items-center justify-between text-[9px] font-bold border-b border-[#adbd9f] pb-0.5">
+            <span>{statsSubMode === '1var' ? 'Kết quả 1-Variable' : 'Kết quả hồi quy y = a + bx'}</span>
+            <div className="flex items-center gap-1.5">
               <button
-                key={op}
                 type="button"
-                onClick={() => props.setIneqOp(op)}
-                className={`px-1.5 rounded cursor-pointer ${
-                  props.ineqOp === op ? 'bg-slate-800 text-[#e6f0e1]' : 'bg-[#e5eee0] border border-[#96a68f]'
-                }`}
+                onClick={() => setStatsScreen('input')}
+                className="px-1.5 py-0.5 rounded bg-[#e5eee0] border border-[#96a68f] text-[8.5px] cursor-pointer"
               >
-                {op === '>=' ? '≥' : op === '<=' ? '≤' : op}
+                Sửa (AC)
+              </button>
+              <button type="button" onClick={() => setStatsScreen('selectType')} className="underline cursor-pointer">
+                Đổi loại
+              </button>
+            </div>
+          </div>
+
+          {statsSubMode === '1var' ? (
+            props.statsResult ? (
+              <div
+                data-testid="calculator-display-result"
+                className="grid grid-cols-3 gap-x-2 gap-y-1 px-2 py-1.5 rounded bg-[#e5eee0] border border-[#a5b89d] text-[9.5px] font-mono"
+              >
+                <span>x̄ = <b>{Number(props.statsResult.mean.toFixed(4))}</b></span>
+                <span>Σx = <b>{Number(props.statsResult.sumX.toFixed(3))}</b></span>
+                <span>n = <b>{props.statsResult.n}</b></span>
+                <span>σx = <b>{Number(props.statsResult.popStd.toFixed(4))}</b></span>
+                <span>sx = <b>{Number(props.statsResult.sampleStd.toFixed(4))}</b></span>
+                <span>Med = <b>{Number(props.statsResult.median.toFixed(3))}</b></span>
+                <span>Min = {props.statsResult.min}</span>
+                <span>Q₁/Q₃ = {props.statsResult.q1}/{props.statsResult.q3}</span>
+                <span>Max = {props.statsResult.max}</span>
+              </div>
+            ) : (
+              <div className="text-center text-rose-700 text-[10.5px] font-bold py-4">
+                Chưa có dữ liệu hợp lệ
+              </div>
+            )
+          ) : props.linRegResult ? (
+            <div
+              data-testid="calculator-display-result"
+              className="grid grid-cols-2 gap-x-2 gap-y-1 px-2 py-1.5 rounded bg-[#e5eee0] border border-[#a5b89d] text-[10px] font-mono"
+            >
+              <span>a = <b>{Number(props.linRegResult.a.toFixed(5))}</b></span>
+              <span>b = <b>{Number(props.linRegResult.b.toFixed(5))}</b></span>
+              <span>r = <b>{Number(props.linRegResult.r.toFixed(5))}</b></span>
+              <span>r² = <b>{Number(props.linRegResult.r2.toFixed(5))}</b></span>
+              <span>x̄ = {Number(props.linRegResult.meanX.toFixed(3))}</span>
+              <span>ȳ = {Number(props.linRegResult.meanY.toFixed(3))}</span>
+            </div>
+          ) : (
+            <div className="text-center text-rose-700 text-[10.5px] font-bold py-4">
+              Cần tối thiểu 2 cặp (x, y) có x khác nhau
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // Input screen for Mode 6
+    if (statsSubMode === '1var') {
+      return (
+        <div className="p-2 min-h-[120px] flex flex-col justify-between gap-1 text-[#1e345a]">
+          <div className="flex items-center justify-between text-[9px] font-bold">
+            <div className="flex items-center gap-1">
+              <span>6: 1-Variable</span>
+              <button
+                type="button"
+                onClick={() => setStatsScreen('selectType')}
+                className="px-1 py-0.5 rounded bg-[#c6d4bf] border border-[#96a68f] text-[8px] cursor-pointer"
+              >
+                Đổi loại
+              </button>
+            </div>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => props.onInsertToken(', ')}
+                className="px-1.5 py-0.5 rounded bg-[#e5eee0] border border-[#96a68f] text-[8.5px] cursor-pointer"
+              >
+                + Số (,)
+              </button>
+              <button
+                type="button"
+                onClick={() => setStatsScreen('result')}
+                className="px-2 py-0.5 rounded bg-[#1e345a] text-[#e6f0e1] text-[8.5px] cursor-pointer"
+              >
+                Tính (=)
+              </button>
+            </div>
+          </div>
+          <input
+            type="text"
+            data-casio-field="stats-raw"
+            aria-label="Dãy số thống kê"
+            value={props.statsRaw}
+            onChange={(e) => props.setStatsRaw(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                setStatsScreen('result');
+              }
+            }}
+            placeholder="Nhập các số cách nhau bằng dấu phẩy..."
+            className="w-full h-7 px-1.5 rounded bg-[#e5eee0] focus:ring-2 focus:ring-indigo-600 border border-[#9eb096] text-[11px] font-mono outline-none"
+          />
+          <div className="text-[8.5px] font-mono opacity-75 flex justify-between">
+            <span>Đã nhập: <b>{props.statsResult?.n ?? 0}</b> giá trị</span>
+            <span>Bấm Tính (=) để xem x̄, σ, Q₁..Q₃</span>
+          </div>
+        </div>
+      );
+    }
+
+    // Input screen for Linear Regression (2-column Casio table x | y)
+    return (
+      <div className="p-2 min-h-[120px] flex flex-col justify-between gap-1 text-[#1e345a]">
+        <div className="flex items-center justify-between text-[9px] font-bold">
+          <div className="flex items-center gap-1">
+            <span>6: y = a + bx</span>
+            <button
+              type="button"
+              onClick={() => setStatsScreen('selectType')}
+              className="px-1 py-0.5 rounded bg-[#c6d4bf] border border-[#96a68f] text-[8px] cursor-pointer"
+            >
+              Đổi loại
+            </button>
+          </div>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => props.setStatsPairs([...props.statsPairs, { x: '', y: '' }])}
+              className="px-1.5 py-0.5 rounded bg-[#e5eee0] border border-[#96a68f] text-[8.5px] cursor-pointer"
+            >
+              + Dòng
+            </button>
+            <button
+              type="button"
+              onClick={() => setStatsScreen('result')}
+              className="px-2 py-0.5 rounded bg-[#1e345a] text-[#e6f0e1] text-[8.5px] cursor-pointer"
+            >
+              Tính (=)
+            </button>
+          </div>
+        </div>
+
+        <div className="max-h-[76px] overflow-y-auto casio-lcd-no-scrollbar rounded border border-[#9eb096] bg-[#e5eee0]">
+          <div className="grid grid-cols-[20px_1fr_1fr] text-[8px] font-mono font-bold bg-[#c6d4bf] text-center py-0.5 border-b border-[#9eb096]">
+            <span>#</span>
+            <span>x</span>
+            <span>y</span>
+          </div>
+          {props.statsPairs.map((pair, idx) => (
+            <div key={idx} className="grid grid-cols-[20px_1fr_1fr] border-b border-[#c2d1ba] last:border-b-0">
+              <span className="text-[8.5px] font-mono text-center bg-[#d6e2d0] py-0.5">{idx + 1}</span>
+              <input
+                type="text"
+                data-casio-field={`linreg-x-${idx}`}
+                aria-label={`x${idx + 1}`}
+                value={pair.x}
+                onChange={(e) => {
+                  const next = props.statsPairs.map((p, i) => (i === idx ? { ...p, x: e.target.value } : p));
+                  props.setStatsPairs(next);
+                }}
+                className="h-5 px-1 bg-transparent text-[9.5px] font-mono text-center border-r border-[#c2d1ba] outline-none focus:bg-white/60"
+              />
+              <input
+                type="text"
+                data-casio-field={`linreg-y-${idx}`}
+                aria-label={`y${idx + 1}`}
+                value={pair.y}
+                onChange={(e) => {
+                  const next = props.statsPairs.map((p, i) => (i === idx ? { ...p, y: e.target.value } : p));
+                  props.setStatsPairs(next);
+                }}
+                className="h-5 px-1 bg-transparent text-[9.5px] font-mono text-center outline-none focus:bg-white/60"
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Mode 7: Probability Distributions (MENU 7 -> 1..7 numbered menu -> Vertical Casio inputs -> Result)
+  if (mode === 'dist') {
+    const { distScreen, setDistScreen } = props;
+    const distMenu: { num: string; id: CasioDistKind; label: string }[] = [
+      { num: '1', id: 'normalPD', label: 'Normal PD' },
+      { num: '2', id: 'normalCD', label: 'Normal CD' },
+      { num: '3', id: 'invNormal', label: 'Inverse Normal' },
+      { num: '4', id: 'binomialPD', label: 'Binomial PD' },
+      { num: '5', id: 'binomialCD', label: 'Binomial CD' },
+      { num: '6', id: 'poissonPD', label: 'Poisson PD' },
+      { num: '7', id: 'poissonCD', label: 'Poisson CD' },
+    ];
+
+    if (distScreen === 'selectKind') {
+      return (
+        <div className="p-1.5 min-h-[120px] flex flex-col justify-between text-[#1e345a]">
+          <div className="flex items-center justify-between text-[9px] font-bold border-b border-[#adbd9f] pb-0.5">
+            <span>7: Phân phối xác suất</span>
+            <span className="font-mono text-[8px] opacity-75">Bấm 1–7</span>
+          </div>
+          <div className="grid grid-cols-2 gap-1 my-1">
+            {distMenu.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => {
+                  props.setDistKind(item.id);
+                  setDistScreen('input');
+                }}
+                className="px-1.5 py-0.5 rounded bg-[#e5eee0] hover:bg-[#1e345a] hover:text-[#e6f0e1] border border-[#96a68f] text-left text-[9px] font-bold flex items-center gap-1 cursor-pointer"
+              >
+                <span className="w-3.5 h-3.5 rounded-sm bg-[#1e345a] text-[#e6f0e1] text-[8px] font-mono flex items-center justify-center shrink-0">
+                  {item.num}
+                </span>
+                <span className="truncate">{item.label}</span>
               </button>
             ))}
           </div>
         </div>
-        <div className="grid grid-cols-3 gap-1">
-          {[
-            { lbl: 'a', val: props.qa, set: props.setQa },
-            { lbl: 'b', val: props.qb, set: props.setQb },
-            { lbl: 'c', val: props.qc, set: props.setQc },
-          ].map((f) => (
-            <label
-              key={f.lbl}
-              className="flex items-center gap-1 bg-[#e5eee0] focus-within:ring-2 focus-within:ring-indigo-600 rounded px-1.5 h-6 border border-[#9eb096]"
+      );
+    }
+
+    const distRes = computeCasioDistribution({
+      kind: props.distKind,
+      x: parseCasioCoeff(props.distX),
+      lower: parseCasioCoeff(props.distLower),
+      upper: parseCasioCoeff(props.distUpper),
+      mu: parseCasioCoeff(props.distMu),
+      sigma: parseCasioCoeff(props.distSigma),
+      area: parseCasioCoeff(props.distArea),
+      n: parseCasioCoeff(props.distN),
+      p: parseCasioCoeff(props.distP),
+      lambda: parseCasioCoeff(props.distLambda),
+    });
+    const curDistLabel = distMenu.find((d) => d.id === props.distKind)?.label ?? 'Phân phối';
+
+    if (distScreen === 'result') {
+      return (
+        <div className="p-2 min-h-[120px] flex flex-col justify-between gap-1 text-[#1e345a]">
+          <div className="flex items-center justify-between text-[9px] font-bold border-b border-[#adbd9f] pb-0.5">
+            <span>{curDistLabel}</span>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setDistScreen('input')}
+                className="px-1.5 py-0.5 rounded bg-[#e5eee0] border border-[#96a68f] text-[8.5px] cursor-pointer"
+              >
+                Sửa (AC)
+              </button>
+              <button type="button" onClick={() => setDistScreen('selectKind')} className="underline cursor-pointer">
+                Đổi loại
+              </button>
+            </div>
+          </div>
+          <div
+            data-testid="calculator-display-result"
+            className="flex-1 px-2 py-2 rounded bg-[#e5eee0] border border-[#a5b89d] flex items-center justify-end overflow-x-auto casio-lcd-no-scrollbar"
+          >
+            {distRes ? (
+              <MathTex latex={distRes.summaryLatex} className="text-[14.5px] font-bold" />
+            ) : (
+              <span className="text-rose-700 font-mono font-bold text-[11px]">Math ERROR (Tham số sai)</span>
+            )}
+          </div>
+          <div className="text-[8px] font-mono opacity-75 text-right">Bấm AC hoặc = để sửa tham số</div>
+        </div>
+      );
+    }
+
+    const fields: { id: string; lbl: string; val: string; set: (v: string) => void }[] =
+      props.distKind === 'normalCD'
+        ? [
+            { id: 'dist-lower', lbl: 'Lower', val: props.distLower, set: props.setDistLower },
+            { id: 'dist-upper', lbl: 'Upper', val: props.distUpper, set: props.setDistUpper },
+            { id: 'dist-sigma', lbl: 'σ', val: props.distSigma, set: props.setDistSigma },
+            { id: 'dist-mu', lbl: 'μ', val: props.distMu, set: props.setDistMu },
+          ]
+        : props.distKind === 'normalPD'
+          ? [
+              { id: 'dist-x', lbl: 'x', val: props.distX, set: props.setDistX },
+              { id: 'dist-sigma', lbl: 'σ', val: props.distSigma, set: props.setDistSigma },
+              { id: 'dist-mu', lbl: 'μ', val: props.distMu, set: props.setDistMu },
+            ]
+          : props.distKind === 'invNormal'
+            ? [
+                { id: 'dist-area', lbl: 'Area', val: props.distArea, set: props.setDistArea },
+                { id: 'dist-sigma', lbl: 'σ', val: props.distSigma, set: props.setDistSigma },
+                { id: 'dist-mu', lbl: 'μ', val: props.distMu, set: props.setDistMu },
+              ]
+            : props.distKind === 'binomialPD' || props.distKind === 'binomialCD'
+              ? [
+                  { id: 'dist-x', lbl: 'x', val: props.distX, set: props.setDistX },
+                  { id: 'dist-n', lbl: 'N', val: props.distN, set: props.setDistN },
+                  { id: 'dist-p', lbl: 'p', val: props.distP, set: props.setDistP },
+                ]
+              : [
+                  { id: 'dist-x', lbl: 'x', val: props.distX, set: props.setDistX },
+                  { id: 'dist-lambda', lbl: 'λ', val: props.distLambda, set: props.setDistLambda },
+                ];
+
+    return (
+      <div className="p-2 min-h-[120px] flex flex-col justify-between gap-1 text-[#1e345a]">
+        <div className="flex items-center justify-between text-[9px] font-bold">
+          <div className="flex items-center gap-1">
+            <span>{curDistLabel}</span>
+            <button
+              type="button"
+              onClick={() => setDistScreen('selectKind')}
+              className="px-1 py-0.5 rounded bg-[#c6d4bf] border border-[#96a68f] text-[8px] cursor-pointer"
             >
-              <span className="text-[10px] font-mono font-bold">{f.lbl}=</span>
+              Đổi loại
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={() => setDistScreen('result')}
+            className="px-2 py-0.5 rounded bg-[#1e345a] text-[#e6f0e1] text-[8.5px] cursor-pointer"
+          >
+            Tính (=)
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 gap-1">
+          {fields.map((f) => (
+            <label
+              key={f.id}
+              className="flex items-center justify-between gap-1 bg-[#e5eee0] focus-within:ring-2 focus-within:ring-indigo-600 rounded px-1.5 h-6 border border-[#9eb096]"
+            >
+              <span className="text-[9.5px] font-mono font-bold shrink-0">{f.lbl} :</span>
               <input
                 type="text"
-                inputMode="decimal"
-                data-casio-field={`ineq-${f.lbl}`}
-                aria-label={`Bất PT ${f.lbl}`}
+                data-casio-field={f.id}
+                aria-label={f.lbl}
                 value={f.val}
                 onChange={(e) => f.set(e.target.value)}
-                className="w-full min-w-0 bg-transparent text-[10.5px] font-mono outline-none"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    setDistScreen('result');
+                  }
+                }}
+                className="w-full min-w-0 bg-transparent text-[10.5px] font-mono text-right outline-none"
               />
             </label>
           ))}
         </div>
-        <div
-          data-testid="calculator-display-result"
-          className="px-2 py-1 rounded bg-[#e5eee0] border border-[#a5b89d] text-[11px] flex justify-end"
-        >
-          <MathTex latex={res.summaryLatex} />
+        <div className="text-[8px] font-mono opacity-75 text-right">Bấm = để chuyển ô / tính kết quả</div>
+      </div>
+    );
+  }
+
+  // Mode 8: Table f(x) & optional g(x) (2 authentic screens: input f(x)/g(x)/Start/End/Step -> full-height table)
+  if (mode === 'table') {
+    const { tableScreen, setTableScreen } = props;
+    const fnF = compileMathExpression(props.tableExpr);
+    const hasG = props.tableGExpr.trim().length > 0;
+    const fnG = hasG ? compileMathExpression(props.tableGExpr) : null;
+    const s = parseCasioCoeff(props.tableStart);
+    const e = parseCasioCoeff(props.tableEnd);
+    const st = parseCasioCoeff(props.tableStep);
+    const rows: { x: number; y: string; g?: string }[] = [];
+    if (fnF && Number.isFinite(s) && Number.isFinite(e) && Number.isFinite(st) && st > 0) {
+      for (let x = s, guard = 0; x <= e + 1e-9 && guard < 45; x += st, guard += 1) {
+        const y = fnF(x);
+        const gv = fnG ? fnG(x) : undefined;
+        rows.push({
+          x: Number(x.toFixed(4)),
+          y: Number.isFinite(y) ? Number(y.toFixed(4)).toString() : 'ERROR',
+          g: fnG ? (gv !== undefined && Number.isFinite(gv) ? Number(gv.toFixed(4)).toString() : 'ERROR') : undefined,
+        });
+      }
+    }
+
+    if (tableScreen === 'result') {
+      return (
+        <div className="p-2 min-h-[120px] flex flex-col justify-between gap-1 text-[#1e345a]">
+          <div className="flex items-center justify-between text-[9px] font-bold">
+            <span className="truncate">
+              f(x) = {props.tableExpr || '—'}
+              {hasG ? ` · g(x) = ${props.tableGExpr}` : ''}
+            </span>
+            <button
+              type="button"
+              onClick={() => setTableScreen('input')}
+              className="px-1.5 py-0.5 rounded bg-[#1e345a] text-[#e6f0e1] text-[8.5px] cursor-pointer shrink-0"
+            >
+              Sửa (AC)
+            </button>
+          </div>
+          <div
+            data-testid="calculator-display-result"
+            className="max-h-[92px] overflow-y-auto casio-lcd-no-scrollbar rounded border border-[#9eb096] bg-[#e5eee0]"
+          >
+            {rows.length > 0 ? (
+              <table className="w-full text-[10px] font-mono tabular-nums">
+                <thead className="sticky top-0 bg-[#c6d4bf] border-b border-[#9eb096] text-[9px]">
+                  <tr>
+                    <th className="px-1.5 py-0.5 text-left">x</th>
+                    <th className="px-1.5 py-0.5 text-right">f(x)</th>
+                    {hasG && <th className="px-1.5 py-0.5 text-right border-l border-[#9eb096]">g(x)</th>}
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((row) => (
+                    <tr key={row.x} className="border-b border-[#c2d1ba] last:border-b-0">
+                      <td className="px-1.5 py-0.5 font-semibold">{row.x}</td>
+                      <td className="px-1.5 py-0.5 text-right font-bold">{row.y}</td>
+                      {row.g !== undefined && (
+                        <td className="px-1.5 py-0.5 text-right font-bold border-l border-[#c2d1ba]">
+                          {row.g}
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <div className="p-3 text-center text-[10px] font-bold text-rose-700">
+                Nhập hàm f(x) và Step &gt; 0 hợp lệ
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="p-2 min-h-[120px] flex flex-col justify-between gap-1 text-[#1e345a]">
+        <div className="flex items-center justify-between text-[9px] font-bold">
+          <span>8: Bảng giá trị (Table)</span>
+          <button
+            type="button"
+            onClick={() => setTableScreen('result')}
+            className="px-2 py-0.5 rounded bg-[#1e345a] text-[#e6f0e1] text-[8.5px] cursor-pointer"
+          >
+            Lập bảng (=)
+          </button>
+        </div>
+
+        <div className="space-y-1">
+          <div className="flex items-center gap-1 bg-[#e5eee0] rounded px-1.5 h-6 border border-[#9eb096]">
+            <span className="text-[10px] casio-math-font font-bold shrink-0">f(x) =</span>
+            <input
+              type="text"
+              data-casio-field="table-expr"
+              aria-label="Hàm f(x)"
+              value={props.tableExpr}
+              onChange={(e) => props.setTableExpr(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  setTableScreen('result');
+                }
+              }}
+              className="w-full min-w-0 bg-transparent text-[11px] font-mono outline-none"
+            />
+          </div>
+          <div className="flex items-center gap-1 bg-[#e5eee0] rounded px-1.5 h-5.5 border border-[#9eb096]">
+            <span className="text-[10px] casio-math-font font-bold shrink-0">g(x) =</span>
+            <input
+              type="text"
+              data-casio-field="table-gexpr"
+              aria-label="Hàm g(x) tùy chọn"
+              value={props.tableGExpr}
+              onChange={(e) => props.setTableGExpr(e.target.value)}
+              placeholder="(Bỏ trống nếu không dùng)"
+              className="w-full min-w-0 bg-transparent text-[10px] font-mono outline-none placeholder:font-sans placeholder:text-[8.5px]"
+            />
+          </div>
+          <div className="grid grid-cols-3 gap-1">
+            {[
+              { id: 'table-start', lbl: 'Start', val: props.tableStart, set: props.setTableStart },
+              { id: 'table-end', lbl: 'End', val: props.tableEnd, set: props.setTableEnd },
+              { id: 'table-step', lbl: 'Step', val: props.tableStep, set: props.setTableStep },
+            ].map((f) => (
+              <label
+                key={f.id}
+                className="flex items-center gap-0.5 bg-[#e5eee0] focus-within:ring-1 focus-within:ring-indigo-600 rounded px-1 h-5.5 border border-[#9eb096]"
+              >
+                <span className="text-[8.5px] font-mono font-bold shrink-0">{f.lbl}:</span>
+                <input
+                  type="text"
+                  data-casio-field={f.id}
+                  aria-label={f.lbl}
+                  value={f.val}
+                  onChange={(e) => f.set(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      setTableScreen('result');
+                    }
+                  }}
+                  className="w-full min-w-0 bg-transparent text-[10px] font-mono text-right outline-none"
+                />
+              </label>
+            ))}
+          </div>
         </div>
       </div>
     );
   }
 
-  // Mode 8: Statistics 1-Var
-  return (
-    <div className="p-2 min-h-[120px] space-y-1 text-slate-900">
-      <div className="flex items-center justify-between text-[9.5px] font-bold">
-        <span>8: Thống kê 1 biến (nhập dãy số)</span>
-        <div className="flex items-center gap-1">
+  // Mode 9: Authentic Casio fx-580VN X Equation / Simultaneous Flow
+  if (mode === 'equation') {
+    const { eqScreen, setEqScreen, eqSubMode, setEqSubMode, eqResult, eqResultIdx, setEqResultIdx } = props;
+
+    if (eqScreen === 'selectType') {
+      return (
+        <div className="p-2 min-h-[120px] flex flex-col justify-between text-[#1e345a]">
+          <div className="flex items-center justify-between text-[9.5px] font-bold border-b border-[#adbd9f] pb-0.5">
+            <span>9: Phương trình / Hệ PT</span>
+            <button type="button" onClick={() => setMode('calc')} className="underline cursor-pointer">
+              Thoát
+            </button>
+          </div>
+          <div className="space-y-1.5 my-1">
+            <button
+              type="button"
+              onClick={() => setEqScreen('selectSimulDeg')}
+              className="w-full px-2 py-1.5 rounded bg-[#e5eee0] hover:bg-[#1e345a] hover:text-[#e6f0e1] border border-[#96a68f] text-left text-[11px] font-bold flex items-center gap-2 cursor-pointer transition-colors"
+            >
+              <span className="w-4 h-4 rounded-sm bg-[#1e345a] text-[#e6f0e1] text-[9.5px] font-mono flex items-center justify-center shrink-0">
+                1
+              </span>
+              <span>Hệ phương trình</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setEqScreen('selectPolyDeg')}
+              className="w-full px-2 py-1.5 rounded bg-[#e5eee0] hover:bg-[#1e345a] hover:text-[#e6f0e1] border border-[#96a68f] text-left text-[11px] font-bold flex items-center gap-2 cursor-pointer transition-colors"
+            >
+              <span className="w-4 h-4 rounded-sm bg-[#1e345a] text-[#e6f0e1] text-[9.5px] font-mono flex items-center justify-center shrink-0">
+                2
+              </span>
+              <span>Phương trình</span>
+            </button>
+          </div>
+          <div className="text-[8.5px] font-mono opacity-75">Bấm phím 1 hoặc 2 trên máy tính Casio</div>
+        </div>
+      );
+    }
+
+    if (eqScreen === 'selectSimulDeg') {
+      const options: { deg: '2' | '3' | '4'; sub: CasioEqSubMode; label: string }[] = [
+        { deg: '2', sub: 'sys2', label: '2 ẩn (x, y)' },
+        { deg: '3', sub: 'sys3', label: '3 ẩn (x, y, z)' },
+        { deg: '4', sub: 'sys4', label: '4 ẩn (x, y, z, t)' },
+      ];
+      return (
+        <div className="p-2 min-h-[120px] flex flex-col justify-between text-[#1e345a]">
+          <div className="flex items-center justify-between text-[9.5px] font-bold border-b border-[#adbd9f] pb-0.5">
+            <span>Hệ phương trình · Số ẩn?</span>
+            <button type="button" onClick={() => setEqScreen('selectType')} className="underline cursor-pointer">
+              Quay lại
+            </button>
+          </div>
+          <div className="text-[10.5px] font-semibold">Chọn số ẩn từ 2 đến 4:</div>
+          <div className="grid grid-cols-3 gap-1.5 my-1">
+            {options.map((opt) => (
+              <button
+                key={opt.deg}
+                type="button"
+                onClick={() => {
+                  setEqSubMode(opt.sub);
+                  setEqScreen('input');
+                }}
+                className="px-1.5 py-2 rounded bg-[#e5eee0] hover:bg-[#1e345a] hover:text-[#e6f0e1] border border-[#96a68f] text-center cursor-pointer transition-colors"
+              >
+                <div className="text-[14px] font-mono font-extrabold leading-none">{opt.deg}</div>
+                <div className="text-[8.5px] mt-1 font-semibold">{opt.label}</div>
+              </button>
+            ))}
+          </div>
+          <div className="text-[8.5px] font-mono opacity-75">Bấm phím 2, 3 hoặc 4</div>
+        </div>
+      );
+    }
+
+    if (eqScreen === 'selectPolyDeg') {
+      const options: { deg: '2' | '3' | '4'; sub: CasioEqSubMode; formula: string }[] = [
+        { deg: '2', sub: 'quad', formula: 'ax² + bx + c = 0' },
+        { deg: '3', sub: 'cubic', formula: 'ax³ + ... + d = 0' },
+        { deg: '4', sub: 'quartic', formula: 'ax⁴ + ... + e = 0' },
+      ];
+      return (
+        <div className="p-2 min-h-[120px] flex flex-col justify-between text-[#1e345a]">
+          <div className="flex items-center justify-between text-[9.5px] font-bold border-b border-[#adbd9f] pb-0.5">
+            <span>Phương trình · Bậc?</span>
+            <button type="button" onClick={() => setEqScreen('selectType')} className="underline cursor-pointer">
+              Quay lại
+            </button>
+          </div>
+          <div className="text-[10.5px] font-semibold">Chọn bậc phương trình từ 2 đến 4:</div>
+          <div className="grid grid-cols-3 gap-1.5 my-1">
+            {options.map((opt) => (
+              <button
+                key={opt.deg}
+                type="button"
+                onClick={() => {
+                  setEqSubMode(opt.sub);
+                  setEqScreen('input');
+                }}
+                className="px-1.5 py-2 rounded bg-[#e5eee0] hover:bg-[#1e345a] hover:text-[#e6f0e1] border border-[#96a68f] text-center cursor-pointer transition-colors"
+              >
+                <div className="text-[14px] font-mono font-extrabold leading-none">{opt.deg}</div>
+                <div className="text-[8px] mt-1 font-semibold truncate">{opt.formula}</div>
+              </button>
+            ))}
+          </div>
+          <div className="text-[8.5px] font-mono opacity-75">Bấm phím 2, 3 hoặc 4</div>
+        </div>
+      );
+    }
+
+    if (eqScreen === 'result' && eqResult) {
+      const steps = eqResult.steps;
+      const safeIdx = Math.max(0, Math.min(steps.length - 1, eqResultIdx));
+      const curStep = steps[safeIdx];
+
+      return (
+        <div className="p-2 min-h-[120px] flex flex-col justify-between gap-1 text-[#1e345a]">
+          <div className="flex items-center justify-between text-[9px] font-bold border-b border-[#adbd9f] pb-0.5">
+            <span>
+              {eqResult.kind === 'ok' && curStep
+                ? `${curStep.label} (${safeIdx + 1}/${steps.length})`
+                : 'Kết quả Mode 9'}
+            </span>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setEqScreen('input')}
+                className="px-1.5 py-0.5 rounded bg-[#e5eee0] border border-[#96a68f] text-[8.5px] cursor-pointer"
+              >
+                Sửa (AC)
+              </button>
+              <button
+                type="button"
+                onClick={() => setEqScreen('selectType')}
+                className="underline cursor-pointer"
+              >
+                Đổi loại
+              </button>
+            </div>
+          </div>
+
+          <div
+            data-testid="calculator-display-result"
+            className="flex-1 px-2 py-1.5 rounded bg-[#e5eee0] border border-[#a5b89d] flex items-center justify-between gap-2 overflow-x-auto casio-lcd-no-scrollbar"
+          >
+            {eqResult.kind === 'ok' && curStep ? (
+              <>
+                <span className="text-[10.5px] font-semibold shrink-0">{curStep.label}</span>
+                <MathTex
+                  latex={props.eqShowDecimal ? curStep.decimalLatex : curStep.exactLatex}
+                  className="text-[16px] font-bold text-[#1e345a]"
+                />
+              </>
+            ) : (
+              <div className="w-full text-center font-bold text-[13px] text-rose-700">
+                {eqResult.message ?? 'Vô nghiệm'}
+              </div>
+            )}
+          </div>
+
+          {eqResult.kind === 'ok' && steps.length > 0 ? (
+            <div className="flex items-center justify-between gap-1">
+              <div className="flex items-center gap-0.5 overflow-x-auto casio-lcd-no-scrollbar">
+                {steps.map((st, idx) => (
+                  <button
+                    key={`${st.label}-${idx}`}
+                    type="button"
+                    onClick={() => setEqResultIdx(idx)}
+                    className={`px-1.5 py-0.5 rounded text-[8px] font-mono font-bold whitespace-nowrap cursor-pointer ${
+                      idx === safeIdx
+                        ? 'bg-[#1e345a] text-[#e6f0e1]'
+                        : 'bg-[#c6d4bf] text-[#1e345a] hover:bg-[#b5c7ad]'
+                    }`}
+                  >
+                    {st.label.replace(' =', '').replace(' của y', '')}
+                  </button>
+                ))}
+              </div>
+              <span className="text-[8px] font-mono opacity-75 shrink-0">▲▼/= · S⇔D</span>
+            </div>
+          ) : (
+            <div className="text-[8.5px] font-mono opacity-75 text-right">
+              Bấm AC hoặc = để quay lại sửa hệ số
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    const polyFormulaMap: Record<'quad' | 'cubic' | 'quartic', string> = {
+      quad: 'a\\,x^{2} + b\\,x + c = 0',
+      cubic: 'a\\,x^{3} + b\\,x^{2} + c\\,x + d = 0',
+      quartic: 'a\\,x^{4} + b\\,x^{3} + c\\,x^{2} + d\\,x + e = 0',
+    };
+
+    const polyFields =
+      eqSubMode === 'quad'
+        ? [
+            { lbl: 'a', val: props.qa, set: props.setQa },
+            { lbl: 'b', val: props.qb, set: props.setQb },
+            { lbl: 'c', val: props.qc, set: props.setQc },
+          ]
+        : eqSubMode === 'cubic'
+          ? [
+              { lbl: 'a', val: props.qa, set: props.setQa },
+              { lbl: 'b', val: props.qb, set: props.setQb },
+              { lbl: 'c', val: props.qc, set: props.setQc },
+              { lbl: 'd', val: props.qd, set: props.setQd },
+            ]
+          : [
+              { lbl: 'a', val: props.qa, set: props.setQa },
+              { lbl: 'b', val: props.qb, set: props.setQb },
+              { lbl: 'c', val: props.qc, set: props.setQc },
+              { lbl: 'd', val: props.qd, set: props.setQd },
+              { lbl: 'e', val: props.qe, set: props.setQe },
+            ];
+
+    const modeTitleMap: Record<CasioEqSubMode, string> = {
+      quad: 'PT bậc 2',
+      cubic: 'PT bậc 3',
+      quartic: 'PT bậc 4',
+      sys2: 'Hệ 2 ẩn',
+      sys3: 'Hệ 3 ẩn',
+      sys4: 'Hệ 4 ẩn',
+    };
+
+    return (
+      <div className="p-2 min-h-[120px] flex flex-col justify-between gap-1 text-[#1e345a]">
+        <div className="flex items-center justify-between gap-1 text-[9px] font-bold">
+          <div className="flex items-center gap-1">
+            <span>9: {modeTitleMap[eqSubMode]}</span>
+            <button
+              type="button"
+              onClick={() => setEqScreen('selectType')}
+              className="px-1 py-0.5 rounded bg-[#c6d4bf] hover:bg-[#1e345a] hover:text-[#e6f0e1] border border-[#96a68f] text-[8px] cursor-pointer"
+            >
+              Đổi loại
+            </button>
+          </div>
           <button
             type="button"
-            onClick={() => props.onInsertToken(', ')}
-            className="px-1.5 py-0.5 rounded bg-slate-800 text-[#e6f0e1] text-[8.5px] cursor-pointer"
+            onClick={props.onSolveEquationMode}
+            className="px-2 py-0.5 rounded bg-[#1e345a] hover:bg-indigo-700 text-[#e6f0e1] text-[8.5px] font-bold cursor-pointer"
           >
-            + Thêm số (,)
+            Giải (=)
           </button>
+        </div>
+
+        {(eqSubMode === 'quad' || eqSubMode === 'cubic' || eqSubMode === 'quartic') && (
+          <div className="space-y-1">
+            <div className="text-center text-[11px] bg-[#c6d4bf]/60 rounded py-0.5">
+              <MathTex latex={polyFormulaMap[eqSubMode]} />
+            </div>
+            <div
+              className={`grid gap-1 ${
+                eqSubMode === 'quad' ? 'grid-cols-3' : eqSubMode === 'cubic' ? 'grid-cols-4' : 'grid-cols-5'
+              }`}
+            >
+              {polyFields.map((f) => (
+                <label
+                  key={f.lbl}
+                  className="flex flex-col bg-[#e5eee0] focus-within:ring-2 focus-within:ring-indigo-600 rounded px-1 py-0.5 border border-[#9eb096]"
+                >
+                  <span className="text-[8.5px] casio-math-var font-bold leading-none text-center">
+                    {f.lbl}
+                  </span>
+                  <input
+                    type="text"
+                    data-casio-field={`eq-${f.lbl}`}
+                    aria-label={`Hệ số ${f.lbl}`}
+                    value={f.val}
+                    onChange={(e) => f.set(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        props.onSolveEquationMode();
+                      }
+                    }}
+                    className="w-full min-w-0 bg-transparent text-[11.5px] font-mono text-center outline-none"
+                  />
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {eqSubMode === 'sys2' && (
+          <div className="space-y-0.5">
+            <div className="grid grid-cols-3 gap-1 text-center text-[8.5px] font-mono font-bold opacity-80">
+              <span>x</span>
+              <span>y</span>
+              <span>= c</span>
+            </div>
+            <div className="grid grid-cols-3 gap-1">
+              {['a₁', 'b₁', 'c₁', 'a₂', 'b₂', 'c₂'].map((lbl, idx) => (
+                <input
+                  key={lbl}
+                  type="text"
+                  data-casio-field={`sys2-${idx}`}
+                  aria-label={lbl}
+                  value={props.sys2[idx]}
+                  onChange={(e) => {
+                    const next = [...props.sys2];
+                    next[idx] = e.target.value;
+                    props.setSys2(next);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      props.onSolveEquationMode();
+                    }
+                  }}
+                  className="h-6 px-1 rounded bg-[#e5eee0] focus:ring-2 focus:ring-indigo-600 border border-[#9eb096] text-[10.5px] font-mono text-center outline-none"
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {eqSubMode === 'sys3' && (
+          <div className="space-y-0.5">
+            <div className="grid grid-cols-4 gap-0.5 text-center text-[8px] font-mono font-bold opacity-80">
+              <span>x</span>
+              <span>y</span>
+              <span>z</span>
+              <span>= d</span>
+            </div>
+            <div className="grid grid-cols-4 gap-0.5">
+              {props.sys3.map((row, ri) =>
+                row.map((val, ci) => (
+                  <input
+                    key={`s3-${ri}-${ci}`}
+                    type="text"
+                    data-casio-field={`sys3-${ri}-${ci}`}
+                    aria-label={`Hệ 3 ẩn (${ri + 1},${ci + 1})`}
+                    value={val}
+                    onChange={(e) => {
+                      const next = props.sys3.map((r, rIdx) =>
+                        r.map((cVal, cIdx) => (rIdx === ri && cIdx === ci ? e.target.value : cVal))
+                      );
+                      props.setSys3(next);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        props.onSolveEquationMode();
+                      }
+                    }}
+                    className="h-[19px] px-0.5 rounded bg-[#e5eee0] focus:ring-2 focus:ring-indigo-600 border border-[#9eb096] text-[9.5px] font-mono text-center outline-none"
+                  />
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
+        {eqSubMode === 'sys4' && (
+          <div className="space-y-0.5">
+            <div className="grid grid-cols-5 gap-0.5 text-center text-[7.5px] font-mono font-bold opacity-80">
+              <span>x</span>
+              <span>y</span>
+              <span>z</span>
+              <span>t</span>
+              <span>=</span>
+            </div>
+            <div className="grid grid-cols-5 gap-0.5">
+              {props.sys4.map((row, ri) =>
+                row.map((val, ci) => (
+                  <input
+                    key={`s4-${ri}-${ci}`}
+                    type="text"
+                    data-casio-field={`sys4-${ri}-${ci}`}
+                    aria-label={`Hệ 4 ẩn (${ri + 1},${ci + 1})`}
+                    value={val}
+                    onChange={(e) => {
+                      const next = props.sys4.map((r, rIdx) =>
+                        r.map((cVal, cIdx) => (rIdx === ri && cIdx === ci ? e.target.value : cVal))
+                      );
+                      props.setSys4(next);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        props.onSolveEquationMode();
+                      }
+                    }}
+                    className="h-[16px] px-0.5 rounded bg-[#e5eee0] focus:ring-1 focus:ring-indigo-600 border border-[#9eb096] text-[8.5px] font-mono text-center outline-none"
+                  />
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
+        <div className="text-[8px] font-mono opacity-75 flex items-center justify-between">
+          <span>Nhập hệ số (hỗ trợ 1/2, √2)</span>
+          <span>Bấm = để tiếp / giải</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Mode A: Inequality (MENU A -> Bậc 2/3 -> Chọn 1..4 chiều >, <, ≥, ≤ -> Nhập hệ số -> Kết quả)
+  if (mode === 'ineq') {
+    const { ineqScreen, setIneqScreen, ineqDegree, setIneqDegree, ineqOp, setIneqOp } = props;
+
+    if (ineqScreen === 'selectDeg') {
+      return (
+        <div className="p-2 min-h-[120px] flex flex-col justify-between text-[#1e345a]">
+          <div className="flex items-center justify-between text-[9.5px] font-bold border-b border-[#adbd9f] pb-0.5">
+            <span>A: Bất phương trình · Bậc?</span>
+            <button type="button" onClick={() => setMode('calc')} className="underline cursor-pointer">
+              Thoát
+            </button>
+          </div>
+          <div className="text-[10.5px] font-semibold">Chọn bậc bất phương trình (2 hoặc 3):</div>
+          <div className="grid grid-cols-2 gap-1.5 my-1">
+            {([2, 3] as const).map((deg) => (
+              <button
+                key={deg}
+                type="button"
+                onClick={() => {
+                  setIneqDegree(deg);
+                  setIneqScreen('selectOp');
+                }}
+                className="px-2 py-2 rounded bg-[#e5eee0] hover:bg-[#1e345a] hover:text-[#e6f0e1] border border-[#96a68f] text-center cursor-pointer transition-colors"
+              >
+                <div className="text-[14px] font-mono font-extrabold leading-none">{deg}</div>
+                <div className="text-[8.5px] mt-1 font-semibold">
+                  {deg === 2 ? 'ax² + bx + c' : 'ax³ + bx² + cx + d'}
+                </div>
+              </button>
+            ))}
+          </div>
+          <div className="text-[8.5px] font-mono opacity-75">Bấm phím 2 hoặc 3</div>
+        </div>
+      );
+    }
+
+    if (ineqScreen === 'selectOp') {
+      const polyTxt = ineqDegree === 2 ? 'ax² + bx + c' : 'ax³ + bx² + cx + d';
+      const opChoices: { num: string; op: '>' | '<' | '>=' | '<='; sym: string }[] = [
+        { num: '1', op: '>', sym: '>' },
+        { num: '2', op: '<', sym: '<' },
+        { num: '3', op: '>=', sym: '≥' },
+        { num: '4', op: '<=', sym: '≤' },
+      ];
+      return (
+        <div className="p-2 min-h-[120px] flex flex-col justify-between text-[#1e345a]">
+          <div className="flex items-center justify-between text-[9.5px] font-bold border-b border-[#adbd9f] pb-0.5">
+            <span>Chọn dạng bất phương trình</span>
+            <button type="button" onClick={() => setIneqScreen('selectDeg')} className="underline cursor-pointer">
+              Quay lại
+            </button>
+          </div>
+          <div className="grid grid-cols-2 gap-1 my-1">
+            {opChoices.map((c) => (
+              <button
+                key={c.num}
+                type="button"
+                onClick={() => {
+                  setIneqOp(c.op);
+                  setIneqScreen('input');
+                }}
+                className="px-1.5 py-1.5 rounded bg-[#e5eee0] hover:bg-[#1e345a] hover:text-[#e6f0e1] border border-[#96a68f] text-left text-[9.5px] font-bold flex items-center gap-1.5 cursor-pointer"
+              >
+                <span className="w-3.5 h-3.5 rounded-sm bg-[#1e345a] text-[#e6f0e1] text-[8.5px] font-mono flex items-center justify-center shrink-0">
+                  {c.num}
+                </span>
+                <span className="truncate font-mono">{polyTxt} {c.sym} 0</span>
+              </button>
+            ))}
+          </div>
+          <div className="text-[8.5px] font-mono opacity-75">Bấm phím 1, 2, 3 hoặc 4</div>
+        </div>
+      );
+    }
+
+    const opTex = ineqOp === '>=' ? '\\ge' : ineqOp === '<=' ? '\\le' : ineqOp;
+    const res =
+      ineqDegree === 3
+        ? solveCubicInequality(
+            parseCasioCoeff(props.qa),
+            parseCasioCoeff(props.qb),
+            parseCasioCoeff(props.qc),
+            parseCasioCoeff(props.qd),
+            ineqOp
+          )
+        : solveQuadraticInequality(
+            parseCasioCoeff(props.qa),
+            parseCasioCoeff(props.qb),
+            parseCasioCoeff(props.qc),
+            ineqOp
+          );
+
+    if (ineqScreen === 'result') {
+      return (
+        <div className="p-2 min-h-[120px] flex flex-col justify-between gap-1 text-[#1e345a]">
+          <div className="flex items-center justify-between text-[9px] font-bold border-b border-[#adbd9f] pb-0.5">
+            <span>Tập nghiệm BPT bậc {ineqDegree}</span>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setIneqScreen('input')}
+                className="px-1.5 py-0.5 rounded bg-[#e5eee0] border border-[#96a68f] text-[8.5px] cursor-pointer"
+              >
+                Sửa (AC)
+              </button>
+              <button type="button" onClick={() => setIneqScreen('selectDeg')} className="underline cursor-pointer">
+                Đổi loại
+              </button>
+            </div>
+          </div>
+          <div
+            data-testid="calculator-display-result"
+            className="flex-1 px-2 py-2 rounded bg-[#e5eee0] border border-[#a5b89d] flex items-center justify-end overflow-x-auto casio-lcd-no-scrollbar"
+          >
+            <MathTex latex={res.summaryLatex} className="text-[14px] font-bold" />
+          </div>
+          <div className="text-[8px] font-mono opacity-75 text-right">Bấm AC hoặc = để sửa hệ số</div>
+        </div>
+      );
+    }
+
+    const ineqFields = [
+      { lbl: 'a', val: props.qa, set: props.setQa },
+      { lbl: 'b', val: props.qb, set: props.setQb },
+      { lbl: 'c', val: props.qc, set: props.setQc },
+      ...(ineqDegree === 3 ? [{ lbl: 'd', val: props.qd, set: props.setQd }] : []),
+    ];
+    const formulaLatex =
+      ineqDegree === 2
+        ? `a\\,x^{2} + b\\,x + c ${opTex} 0`
+        : `a\\,x^{3} + b\\,x^{2} + c\\,x + d ${opTex} 0`;
+
+    return (
+      <div className="p-2 min-h-[120px] flex flex-col justify-between gap-1 text-[#1e345a]">
+        <div className="flex items-center justify-between text-[9px] font-bold">
+          <div className="flex items-center gap-1">
+            <span>A: Bất PT bậc {ineqDegree}</span>
+            <button
+              type="button"
+              onClick={() => setIneqScreen('selectDeg')}
+              className="px-1 py-0.5 rounded bg-[#c6d4bf] border border-[#96a68f] text-[8px] cursor-pointer"
+            >
+              Đổi loại
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={() => setIneqScreen('result')}
+            className="px-2 py-0.5 rounded bg-[#1e345a] text-[#e6f0e1] text-[8.5px] cursor-pointer"
+          >
+            Giải (=)
+          </button>
+        </div>
+
+        <div className="text-center text-[11px] bg-[#c6d4bf]/60 rounded py-0.5">
+          <MathTex latex={formulaLatex} />
+        </div>
+
+        <div className={`grid gap-1 ${ineqDegree === 3 ? 'grid-cols-4' : 'grid-cols-3'}`}>
+          {ineqFields.map((f) => (
+            <label
+              key={f.lbl}
+              className="flex flex-col bg-[#e5eee0] focus-within:ring-2 focus-within:ring-indigo-600 rounded px-1 py-0.5 border border-[#9eb096]"
+            >
+              <span className="text-[8.5px] casio-math-var font-bold leading-none text-center">{f.lbl}</span>
+              <input
+                type="text"
+                data-casio-field={`ineq-${f.lbl}`}
+                aria-label={`Bất PT ${f.lbl}`}
+                value={f.val}
+                onChange={(e) => f.set(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    setIneqScreen('result');
+                  }
+                }}
+                className="w-full min-w-0 bg-transparent text-[11px] font-mono text-center outline-none"
+              />
+            </label>
+          ))}
+        </div>
+        <div className="text-[8px] font-mono opacity-75 text-right">Bấm = để chuyển ô / giải</div>
+      </div>
+    );
+  }
+
+  // Mode B: Verify (Đúng / Sai — authentic TRUE / FALSE screen on `=`)
+  if (mode === 'verify') {
+    const res = props.verifyEvaluated
+      ? evaluateCasioVerify(props.verifyLhs, props.verifyOp, props.verifyRhs, {
+          angleUnit: props.angleUnit,
+          ans: props.ansVal,
+          preAns: props.preAnsVal,
+          vars: props.vars,
+          normMode: props.normMode,
+          fixDigits: props.fixDigits,
+        })
+      : null;
+    const ops: { id: CasioVerifyOp; label: string }[] = [
+      { id: '=', label: '=' },
+      { id: '!=', label: '≠' },
+      { id: '>', label: '>' },
+      { id: '<', label: '<' },
+      { id: '>=', label: '≥' },
+      { id: '<=', label: '≤' },
+    ];
+    return (
+      <div className="p-2 min-h-[120px] flex flex-col justify-between gap-1 text-[#1e345a]">
+        <div className="flex items-center justify-between text-[9px] font-bold">
+          <span>B: Kiểm tra đúng / sai</span>
+          <div className="flex items-center gap-0.5">
+            {ops.map((o) => (
+              <button
+                key={o.id}
+                type="button"
+                onClick={() => {
+                  props.setVerifyOp(o.id);
+                  props.setVerifyEvaluated(false);
+                }}
+                className={`px-1 rounded cursor-pointer ${
+                  props.verifyOp === o.id ? 'bg-[#1e345a] text-[#e6f0e1]' : 'bg-[#e5eee0] border border-[#96a68f]'
+                }`}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1">
+          <input
+            type="text"
+            data-casio-field="verify-lhs"
+            aria-label="Vế trái"
+            value={props.verifyLhs}
+            onChange={(e) => {
+              props.setVerifyLhs(e.target.value);
+              props.setVerifyEvaluated(false);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                props.setVerifyEvaluated(true);
+              }
+            }}
+            className="casio-math-font flex-1 min-w-0 h-6.5 px-1.5 rounded bg-[#e5eee0] focus:ring-2 focus:ring-indigo-600 border border-[#9eb096] text-[13px] outline-none"
+          />
+          <span className="font-mono font-extrabold text-[13px] shrink-0">
+            {ops.find((o) => o.id === props.verifyOp)?.label}
+          </span>
+          <input
+            type="text"
+            data-casio-field="verify-rhs"
+            aria-label="Vế phải"
+            value={props.verifyRhs}
+            onChange={(e) => {
+              props.setVerifyRhs(e.target.value);
+              props.setVerifyEvaluated(false);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                props.setVerifyEvaluated(true);
+              }
+            }}
+            className="casio-math-font flex-1 min-w-0 h-6.5 px-1.5 rounded bg-[#e5eee0] focus:ring-2 focus:ring-indigo-600 border border-[#9eb096] text-[13px] outline-none"
+          />
+        </div>
+
+        <div
+          data-testid="calculator-display-result"
+          className="min-h-[28px] border-t border-[#b8c8b0]/80 pt-1 flex items-center justify-between gap-2"
+        >
+          {props.verifyEvaluated ? (
+            res ? (
+              <>
+                <span className="font-mono text-[9px] opacity-75 truncate">
+                  {Number(res.lhsVal.toFixed(4))} vs {Number(res.rhsVal.toFixed(4))}
+                </span>
+                <span
+                  className={`font-extrabold font-mono text-[14px] ${
+                    res.isTrue ? 'text-emerald-800' : 'text-rose-700'
+                  }`}
+                >
+                  {res.isTrue ? 'TRUE' : 'FALSE'}
+                </span>
+              </>
+            ) : (
+              <span className="text-rose-700 font-mono font-bold text-[10.5px] ml-auto">Syntax ERROR</span>
+            )
+          ) : (
+            <button
+              type="button"
+              onClick={() => props.setVerifyEvaluated(true)}
+              className="ml-auto px-2 py-0.5 rounded bg-[#1e345a] text-[#e6f0e1] text-[8.5px] font-bold cursor-pointer"
+            >
+              Kiểm tra (=)
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Mode C: Ratio (MENU C -> 1: A:B=X:D | 2: A:B=C:X -> Nhập -> Kết quả X = ...)
+  const { ratioScreen, setRatioScreen } = props;
+
+  if (ratioScreen === 'selectForm') {
+    return (
+      <div className="p-2 min-h-[120px] flex flex-col justify-between text-[#1e345a]">
+        <div className="flex items-center justify-between text-[9.5px] font-bold border-b border-[#adbd9f] pb-0.5">
+          <span>C: Tỉ lệ thức (Ratio)</span>
           <button type="button" onClick={() => setMode('calc')} className="underline cursor-pointer">
             Thoát
           </button>
         </div>
+        <div className="space-y-1.5 my-1">
+          <button
+            type="button"
+            onClick={() => {
+              props.setRatioUnknown('c');
+              setRatioScreen('input');
+            }}
+            className="w-full px-2 py-1.5 rounded bg-[#e5eee0] hover:bg-[#1e345a] hover:text-[#e6f0e1] border border-[#96a68f] text-left text-[11px] font-bold flex items-center gap-2 cursor-pointer"
+          >
+            <span className="w-4 h-4 rounded-sm bg-[#1e345a] text-[#e6f0e1] text-[9.5px] font-mono flex items-center justify-center shrink-0">
+              1
+            </span>
+            <span className="font-mono">A : B = X : D</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              props.setRatioUnknown('d');
+              setRatioScreen('input');
+            }}
+            className="w-full px-2 py-1.5 rounded bg-[#e5eee0] hover:bg-[#1e345a] hover:text-[#e6f0e1] border border-[#96a68f] text-left text-[11px] font-bold flex items-center gap-2 cursor-pointer"
+          >
+            <span className="w-4 h-4 rounded-sm bg-[#1e345a] text-[#e6f0e1] text-[9.5px] font-mono flex items-center justify-center shrink-0">
+              2
+            </span>
+            <span className="font-mono">A : B = C : X</span>
+          </button>
+        </div>
+        <div className="text-[8.5px] font-mono opacity-75">Bấm phím 1 hoặc 2</div>
       </div>
-      <input
-        type="text"
-        data-casio-field="stats-raw"
-        aria-label="Dãy số thống kê"
-        value={props.statsRaw}
-        onChange={(e) => props.setStatsRaw(e.target.value)}
-        placeholder="VD: 5, 7, 8, 8, 9, 10"
-        className="w-full h-6 px-1.5 rounded bg-[#e5eee0] focus:ring-2 focus:ring-indigo-600 border border-[#9eb096] text-[10.5px] font-mono outline-none"
-      />
-      {props.statsResult ? (
+    );
+  }
+
+  const ratioRes = solveCasioRatio(
+    parseCasioCoeff(props.ratioA),
+    parseCasioCoeff(props.ratioB),
+    parseCasioCoeff(props.ratioC),
+    parseCasioCoeff(props.ratioD),
+    props.ratioUnknown
+  );
+
+  if (ratioScreen === 'result') {
+    const valLatex =
+      ratioRes.kind === 'ok'
+        ? `X = ${props.ratioShowDecimal ? ratioRes.decimalText : ratioRes.exactLatex}`
+        : ratioRes.summaryLatex;
+    return (
+      <div className="p-2 min-h-[120px] flex flex-col justify-between gap-1 text-[#1e345a]">
+        <div className="flex items-center justify-between text-[9px] font-bold border-b border-[#adbd9f] pb-0.5">
+          <span>
+            {props.ratioUnknown === 'c'
+              ? `${props.ratioA} : ${props.ratioB} = X : ${props.ratioD}`
+              : `${props.ratioA} : ${props.ratioB} = ${props.ratioC} : X`}
+          </span>
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setRatioScreen('input')}
+              className="px-1.5 py-0.5 rounded bg-[#e5eee0] border border-[#96a68f] text-[8.5px] cursor-pointer"
+            >
+              Sửa (AC)
+            </button>
+            <button type="button" onClick={() => setRatioScreen('selectForm')} className="underline cursor-pointer">
+              Đổi dạng
+            </button>
+          </div>
+        </div>
         <div
           data-testid="calculator-display-result"
-          className="grid grid-cols-3 gap-x-2 gap-y-0.5 px-2 py-1 rounded bg-[#e5eee0] border border-[#a5b89d] text-[9.5px] font-mono"
+          className="flex-1 px-2 py-2 rounded bg-[#e5eee0] border border-[#a5b89d] flex items-center justify-end overflow-x-auto casio-lcd-no-scrollbar"
         >
-          <span>n = <b>{props.statsResult.n}</b></span>
-          <span>x̄ = <b>{Number(props.statsResult.mean.toFixed(3))}</b></span>
-          <span>Med = <b>{Number(props.statsResult.median.toFixed(3))}</b></span>
-          <span>σ = <b>{Number(props.statsResult.popStd.toFixed(3))}</b></span>
-          <span>s = <b>{Number(props.statsResult.sampleStd.toFixed(3))}</b></span>
-          <span>Q₁/Q₃ = {props.statsResult.q1}/{props.statsResult.q3}</span>
+          <MathTex latex={valLatex} className="text-[16px] font-bold" />
         </div>
-      ) : (
-        <div className="text-[10px] text-rose-700 font-semibold">Nhập các số cách nhau bằng dấu phẩy hoặc bấm nút + Thêm số</div>
-      )}
+        <div className="text-[8px] font-mono opacity-75 text-right">Bấm S⇔D đổi thập phân · AC sửa hệ số</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-2 min-h-[120px] flex flex-col justify-between gap-1 text-[#1e345a]">
+      <div className="flex items-center justify-between text-[9px] font-bold">
+        <div className="flex items-center gap-1">
+          <span>C: {props.ratioUnknown === 'c' ? 'A:B = X:D' : 'A:B = C:X'}</span>
+          <button
+            type="button"
+            onClick={() => setRatioScreen('selectForm')}
+            className="px-1 py-0.5 rounded bg-[#c6d4bf] border border-[#96a68f] text-[8px] cursor-pointer"
+          >
+            Đổi dạng
+          </button>
+        </div>
+        <button
+          type="button"
+          onClick={() => setRatioScreen('result')}
+          className="px-2 py-0.5 rounded bg-[#1e345a] text-[#e6f0e1] text-[8.5px] cursor-pointer"
+        >
+          Giải (=)
+        </button>
+      </div>
+      <div className="grid grid-cols-[1fr_auto_1fr_auto_1fr_auto_1fr] items-center gap-1 font-mono text-[10px]">
+        <label className="flex flex-col bg-[#e5eee0] focus-within:ring-1 focus-within:ring-indigo-600 rounded border border-[#9eb096]">
+          <span className="text-[7.5px] text-center opacity-75">A</span>
+          <input
+            type="text"
+            data-casio-field="ratio-a"
+            aria-label="A"
+            value={props.ratioA}
+            onChange={(e) => props.setRatioA(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                setRatioScreen('result');
+              }
+            }}
+            className="h-5.5 px-1 bg-transparent text-center outline-none"
+          />
+        </label>
+        <span className="font-bold">:</span>
+        <label className="flex flex-col bg-[#e5eee0] focus-within:ring-1 focus-within:ring-indigo-600 rounded border border-[#9eb096]">
+          <span className="text-[7.5px] text-center opacity-75">B</span>
+          <input
+            type="text"
+            data-casio-field="ratio-b"
+            aria-label="B"
+            value={props.ratioB}
+            onChange={(e) => props.setRatioB(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                setRatioScreen('result');
+              }
+            }}
+            className="h-5.5 px-1 bg-transparent text-center outline-none"
+          />
+        </label>
+        <span className="font-bold">=</span>
+        {props.ratioUnknown === 'c' ? (
+          <div className="h-8 rounded bg-[#1e345a] text-[#e6f0e1] font-bold flex items-center justify-center">
+            X
+          </div>
+        ) : (
+          <label className="flex flex-col bg-[#e5eee0] focus-within:ring-1 focus-within:ring-indigo-600 rounded border border-[#9eb096]">
+            <span className="text-[7.5px] text-center opacity-75">C</span>
+            <input
+              type="text"
+              data-casio-field="ratio-c"
+              aria-label="C"
+              value={props.ratioC}
+              onChange={(e) => props.setRatioC(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  setRatioScreen('result');
+                }
+              }}
+              className="h-5.5 px-1 bg-transparent text-center outline-none"
+            />
+          </label>
+        )}
+        <span className="font-bold">:</span>
+        {props.ratioUnknown === 'd' ? (
+          <div className="h-8 rounded bg-[#1e345a] text-[#e6f0e1] font-bold flex items-center justify-center">
+            X
+          </div>
+        ) : (
+          <label className="flex flex-col bg-[#e5eee0] focus-within:ring-1 focus-within:ring-indigo-600 rounded border border-[#9eb096]">
+            <span className="text-[7.5px] text-center opacity-75">D</span>
+            <input
+              type="text"
+              data-casio-field="ratio-d"
+              aria-label="D"
+              value={props.ratioD}
+              onChange={(e) => props.setRatioD(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  setRatioScreen('result');
+                }
+              }}
+              className="h-5.5 px-1 bg-transparent text-center outline-none"
+            />
+          </label>
+        )}
+      </div>
+      <div className="text-[8px] font-mono opacity-75 text-right">Bấm = để chuyển ô / giải X</div>
     </div>
   );
 };

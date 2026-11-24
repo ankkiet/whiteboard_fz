@@ -1,6 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { BoardType, NotebookPaperSize } from '../../types/board';
+import { BoardPattern, BoardType, NotebookPaperSize } from '../../types/board';
 import { BOARD_TEMPLATES, getBoardTemplate } from '../../engine/boardTemplates';
+import {
+  DEFAULT_NOTEBOOK_PAPER_STYLE,
+  NOTEBOOK_PAPER_STYLES,
+  NotebookPaperStyle,
+} from '../../engine/notebookEngine';
 import { BoardTemplatePreview } from '../home/BoardTemplatePreview';
 import { AlertTriangle, Check, Plus, X } from 'lucide-react';
 
@@ -14,6 +19,7 @@ interface CreateBoardModalProps {
   onCreate: (options: {
     title: string;
     boardType: BoardType;
+    boardPattern?: BoardPattern;
     notebookPaperSize?: NotebookPaperSize;
   }) => void;
 }
@@ -29,6 +35,9 @@ export const CreateBoardModal: React.FC<CreateBoardModalProps> = ({
 }) => {
   const [selectedType, setSelectedType] = useState<BoardType>(initialType);
   const [selectedPaperSize, setSelectedPaperSize] = useState<NotebookPaperSize>('a4');
+  const [selectedPaperStyle, setSelectedPaperStyle] = useState<NotebookPaperStyle>(
+    DEFAULT_NOTEBOOK_PAPER_STYLE
+  );
   const [boardTitle, setBoardTitle] = useState<string>(getBoardTemplate(initialType).defaultTitle);
   const [didEditTitle, setDidEditTitle] = useState(false);
 
@@ -36,6 +45,7 @@ export const CreateBoardModal: React.FC<CreateBoardModalProps> = ({
     if (!isOpen) return;
     setSelectedType(initialType);
     setSelectedPaperSize('a4');
+    setSelectedPaperStyle(DEFAULT_NOTEBOOK_PAPER_STYLE);
     setBoardTitle(getBoardTemplate(initialType).defaultTitle);
     setDidEditTitle(false);
   }, [isOpen, initialType]);
@@ -66,6 +76,7 @@ export const CreateBoardModal: React.FC<CreateBoardModalProps> = ({
     onCreate({
       title: boardTitle.trim() || fallbackTitle,
       boardType: selectedType,
+      boardPattern: selectedType === 'notebook' ? selectedPaperStyle : undefined,
       notebookPaperSize: selectedType === 'notebook' ? selectedPaperSize : undefined,
     });
   };
@@ -152,48 +163,89 @@ export const CreateBoardModal: React.FC<CreateBoardModalProps> = ({
             })}
           </div>
 
-          {/* Notebook Paper Size Selection */}
+          {/* Notebook Paper Size & Style Selection */}
           {selectedType === 'notebook' && (
-            <div className="p-3.5 rounded-xl border border-indigo-200 dark:border-indigo-900/50 bg-indigo-50/30 dark:bg-indigo-950/20 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
-                  Khổ giấy vở ghi chú
-                </span>
-                <span className="text-[11px] text-slate-500 dark:text-slate-400">
-                  Mặc định khổ A4, không gian trang liên tục
-                </span>
+            <div className="p-3.5 rounded-xl border border-indigo-200 dark:border-indigo-900/50 bg-indigo-50/30 dark:bg-indigo-950/20 space-y-3">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                    Loại giấy viết
+                  </span>
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Có thể đổi lại bất cứ lúc nào trên thanh công cụ
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2" role="radiogroup" aria-label="Loại giấy viết">
+                  {NOTEBOOK_PAPER_STYLES.map((style) => {
+                    const isStyleSelected = selectedPaperStyle === style.id;
+                    return (
+                      <button
+                        key={style.id}
+                        type="button"
+                        role="radio"
+                        aria-checked={isStyleSelected}
+                        data-testid={`notebook-style-${style.id}`}
+                        onClick={() => setSelectedPaperStyle(style.id)}
+                        className={`p-2 rounded-lg border text-left transition-colors cursor-pointer ${
+                          isStyleSelected
+                            ? 'border-indigo-600 dark:border-indigo-500 bg-white dark:bg-slate-900 shadow-xs'
+                            : 'border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/50 hover:border-slate-300 dark:hover:border-slate-700'
+                        }`}
+                      >
+                        <div className="text-xs font-semibold text-slate-900 dark:text-slate-100 flex items-center justify-between gap-1">
+                          <span>{style.label}</span>
+                          {isStyleSelected && <Check className="w-3 h-3 text-indigo-600 dark:text-indigo-400 shrink-0" />}
+                        </div>
+                        <div className="text-[10.5px] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">
+                          {style.description}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2" role="radiogroup" aria-label="Khổ giấy">
-                {[
-                  { id: 'a4' as const, label: 'Khổ A4', desc: '210 × 297 mm (mặc định)' },
-                  { id: 'a3' as const, label: 'Khổ A3', desc: '297 × 420 mm (khổ lớn)' },
-                  { id: 'b5' as const, label: 'Khổ B5', desc: '176 × 250 mm (vở học sinh)' },
-                  { id: 'letter' as const, label: 'Khổ Letter', desc: '216 × 279 mm (tiêu chuẩn)' },
-                ].map((paper) => {
-                  const isPaperSelected = selectedPaperSize === paper.id;
-                  return (
-                    <button
-                      key={paper.id}
-                      type="button"
-                      role="radio"
-                      aria-checked={isPaperSelected}
-                      onClick={() => setSelectedPaperSize(paper.id)}
-                      className={`p-2 rounded-lg border text-left transition-colors cursor-pointer ${
-                        isPaperSelected
-                          ? 'border-indigo-600 dark:border-indigo-500 bg-white dark:bg-slate-900 shadow-xs'
-                          : 'border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/50 hover:border-slate-300 dark:hover:border-slate-700'
-                      }`}
-                    >
-                      <div className="text-xs font-semibold text-slate-900 dark:text-slate-100 flex items-center justify-between">
-                        <span>{paper.label}</span>
-                        {isPaperSelected && <Check className="w-3 h-3 text-indigo-600 dark:text-indigo-400" />}
-                      </div>
-                      <div className="text-[10.5px] text-slate-500 dark:text-slate-400 mt-0.5">
-                        {paper.desc}
-                      </div>
-                    </button>
-                  );
-                })}
+
+              <div className="border-t border-indigo-200/70 dark:border-indigo-900/50 pt-2.5 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                    Khổ giấy vở ghi chú
+                  </span>
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Mặc định khổ A4, không gian trang liên tục
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2" role="radiogroup" aria-label="Khổ giấy">
+                  {[
+                    { id: 'a4' as const, label: 'Khổ A4', desc: '210 × 297 mm (mặc định)' },
+                    { id: 'a3' as const, label: 'Khổ A3', desc: '297 × 420 mm (khổ lớn)' },
+                    { id: 'b5' as const, label: 'Khổ B5', desc: '176 × 250 mm (vở học sinh)' },
+                    { id: 'letter' as const, label: 'Khổ Letter', desc: '216 × 279 mm (tiêu chuẩn)' },
+                  ].map((paper) => {
+                    const isPaperSelected = selectedPaperSize === paper.id;
+                    return (
+                      <button
+                        key={paper.id}
+                        type="button"
+                        role="radio"
+                        aria-checked={isPaperSelected}
+                        onClick={() => setSelectedPaperSize(paper.id)}
+                        className={`p-2 rounded-lg border text-left transition-colors cursor-pointer ${
+                          isPaperSelected
+                            ? 'border-indigo-600 dark:border-indigo-500 bg-white dark:bg-slate-900 shadow-xs'
+                            : 'border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/50 hover:border-slate-300 dark:hover:border-slate-700'
+                        }`}
+                      >
+                        <div className="text-xs font-semibold text-slate-900 dark:text-slate-100 flex items-center justify-between">
+                          <span>{paper.label}</span>
+                          {isPaperSelected && <Check className="w-3 h-3 text-indigo-600 dark:text-indigo-400" />}
+                        </div>
+                        <div className="text-[10.5px] text-slate-500 dark:text-slate-400 mt-0.5">
+                          {paper.desc}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           )}

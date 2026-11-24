@@ -75,6 +75,20 @@ function tokenize(expr: string): Token[] | null {
         i += 1;
       }
       if (dotCount > 1) return null;
+      // Support scientific notation like `1.5e-7` or `2.3E+10` (only when `e`/`E` is followed by `[+-]\d`)
+      if (
+        i < len &&
+        (expr[i] === 'e' || expr[i] === 'E') &&
+        i + 2 < len &&
+        (expr[i + 1] === '+' || expr[i + 1] === '-') &&
+        expr[i + 2] >= '0' &&
+        expr[i + 2] <= '9'
+      ) {
+        i += 2;
+        while (i < len && expr[i] >= '0' && expr[i] <= '9') {
+          i += 1;
+        }
+      }
       const numStr = expr.slice(start, i);
       if (numStr === '.') return null;
       tokens.push({ type: 'number', value: Number(numStr) });

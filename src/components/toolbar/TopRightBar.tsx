@@ -19,6 +19,8 @@ import {
   computeTotalNotebookPages,
   getNotebookConfig,
   getNotebookFitCamera,
+  NOTEBOOK_PAPER_STYLES,
+  normalizeNotebookPaperStyle,
 } from '../../engine/notebookEngine';
 
 interface TopRightBarProps {
@@ -231,56 +233,60 @@ export const TopRightBar: React.FC<TopRightBarProps> = ({
         </div>
       )}
 
-      {/* Background Pattern Selector */}
-      {boardType !== 'notebook' && (
-        <div className="relative" ref={patternMenuRef}>
-          <button
-            type="button"
-            onClick={() => setShowPatternMenu((v) => !v)}
-            title="Chọn nền bảng"
-            aria-label="Chọn nền bảng"
-            aria-expanded={showPatternMenu}
-            className={`p-1.5 sm:p-2 rounded-xl transition-colors flex items-center gap-1.5 ${
-              showPatternMenu
-                ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400'
-                : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200'
-            }`}
-          >
-            <Grid className="w-4 h-4" />
-          </button>
+      {/* Background Pattern / Notebook Paper Style Selector */}
+      <div className="relative" ref={patternMenuRef}>
+        <button
+          type="button"
+          onClick={() => setShowPatternMenu((v) => !v)}
+          title={boardType === 'notebook' ? 'Chọn loại giấy viết' : 'Chọn nền bảng'}
+          aria-label={boardType === 'notebook' ? 'Chọn loại giấy viết' : 'Chọn nền bảng'}
+          aria-expanded={showPatternMenu}
+          className={`p-1.5 sm:p-2 rounded-xl transition-colors flex items-center gap-1.5 ${
+            showPatternMenu
+              ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400'
+              : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200'
+          }`}
+        >
+          <Grid className="w-4 h-4" />
+        </button>
 
-          {showPatternMenu && (
-            <div
-              role="menu"
-              className="absolute right-0 mt-2 w-44 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 p-1.5 z-30"
-            >
-              <div className="text-xs font-medium px-2.5 py-1.5 text-slate-500 dark:text-slate-400">
-                Nền bảng
-              </div>
-              {patterns.map((pat) => (
+        {showPatternMenu && (
+          <div
+            role="menu"
+            className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 p-1.5 z-30"
+          >
+            <div className="text-xs font-medium px-2.5 py-1.5 text-slate-500 dark:text-slate-400">
+              {boardType === 'notebook' ? 'Loại giấy viết' : 'Nền bảng'}
+            </div>
+            {(boardType === 'notebook' ? NOTEBOOK_PAPER_STYLES : patterns).map((pat) => {
+              const isSelected =
+                boardType === 'notebook'
+                  ? normalizeNotebookPaperStyle(boardPattern) === pat.id
+                  : boardPattern === pat.id;
+              return (
                 <button
                   type="button"
                   role="menuitemradio"
-                  aria-checked={boardPattern === pat.id}
+                  aria-checked={isSelected}
                   key={pat.id}
                   onClick={() => {
                     setBoardPattern(pat.id);
                     setShowPatternMenu(false);
                   }}
                   className={`w-full flex items-center justify-between px-2.5 py-2 text-xs rounded-xl transition-colors whitespace-nowrap ${
-                    boardPattern === pat.id
+                    isSelected
                       ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 font-semibold'
                       : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-medium'
                   }`}
                 >
                   <span>{pat.label}</span>
-                  {boardPattern === pat.id && <Check className="w-3.5 h-3.5" />}
+                  {isSelected && <Check className="w-3.5 h-3.5" />}
                 </button>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       {/* Theme Toggle */}
       <button

@@ -1,5 +1,50 @@
-import { BoardElement, Camera, NotebookPageConfig, NotebookPaperSize, Point, Rect } from '../types/board';
-import { getElementBounds } from './geometry';
+import { BoardElement, BoardPattern, Camera, NotebookPageConfig, NotebookPaperSize, Point, Rect } from '../types/board';
+import { getArrowEndpoints, getElementBounds } from './geometry';
+
+export type NotebookPaperStyle = 'lined' | 'grid' | 'dots' | 'plain';
+
+export interface NotebookPaperStyleOption {
+  id: NotebookPaperStyle;
+  label: string;
+  shortLabel: string;
+  description: string;
+}
+
+export const DEFAULT_NOTEBOOK_PAPER_STYLE: NotebookPaperStyle = 'lined';
+
+export const NOTEBOOK_PAPER_STYLES: NotebookPaperStyleOption[] = [
+  {
+    id: 'lined',
+    label: 'Giấy kẻ ngang',
+    shortLabel: 'Kẻ ngang',
+    description: 'Dòng kẻ ngang truyền thống',
+  },
+  {
+    id: 'grid',
+    label: 'Giấy ô ly',
+    shortLabel: 'Ô ly',
+    description: 'Ô vuông đều, dễ căn hàng & vẽ hình',
+  },
+  {
+    id: 'dots',
+    label: 'Giấy chấm bi',
+    shortLabel: 'Chấm bi',
+    description: 'Chấm lưới tinh gọn, ghi chú tự do',
+  },
+  {
+    id: 'plain',
+    label: 'Giấy trắng trơn',
+    shortLabel: 'Trắng trơn',
+    description: 'Không dòng kẻ, chỉ giữ lề trang',
+  },
+];
+
+export function normalizeNotebookPaperStyle(raw?: BoardPattern | unknown): NotebookPaperStyle {
+  if (raw === 'lined' || raw === 'grid' || raw === 'dots' || raw === 'plain') {
+    return raw;
+  }
+  return DEFAULT_NOTEBOOK_PAPER_STYLE;
+}
 
 export const NOTEBOOK_PAPER_CONFIGS: Record<NotebookPaperSize, NotebookPageConfig> = {
   a4: {
@@ -8,7 +53,7 @@ export const NOTEBOOK_PAPER_CONFIGS: Record<NotebookPaperSize, NotebookPageConfi
     label: 'Khổ A4',
     width: 800,
     height: 1132,
-    marginLeft: 72,
+    marginLeft: 36,
     marginRight: 36,
     marginTop: 56,
     marginBottom: 48,
@@ -20,7 +65,7 @@ export const NOTEBOOK_PAPER_CONFIGS: Record<NotebookPaperSize, NotebookPageConfi
     label: 'Khổ A3',
     width: 1132,
     height: 1600,
-    marginLeft: 96,
+    marginLeft: 48,
     marginRight: 48,
     marginTop: 72,
     marginBottom: 64,
@@ -32,7 +77,7 @@ export const NOTEBOOK_PAPER_CONFIGS: Record<NotebookPaperSize, NotebookPageConfi
     label: 'Khổ B5',
     width: 700,
     height: 994,
-    marginLeft: 64,
+    marginLeft: 32,
     marginRight: 32,
     marginTop: 50,
     marginBottom: 44,
@@ -44,7 +89,7 @@ export const NOTEBOOK_PAPER_CONFIGS: Record<NotebookPaperSize, NotebookPageConfi
     label: 'Khổ Letter',
     width: 800,
     height: 1035,
-    marginLeft: 72,
+    marginLeft: 36,
     marginRight: 36,
     marginTop: 56,
     marginBottom: 48,
@@ -144,6 +189,74 @@ export function computeTotalNotebookPages(
   const neededExtent = Math.max(maxElementY + 120, worldBottom + config.height * 0.4);
   const pages = Math.ceil(neededExtent / config.height);
   return Math.max(2, pages);
+}
+
+function getTightElementVerticalRange(el: BoardElement): { minY: number; maxY: number } | null {
+  if (el.type === 'stroke' || el.type === 'highlighter') {
+    if (!el.points || el.points.length === 0) return null;
+    let minY = Infinity;
+    let maxY = -Infinity;
+    for (const p of el.points) {
+      if (p[1] < minY) minY = p[1];
+      if (p[1] > maxY) maxY = p[1];
+    }
+    if (!Number.isFinite(minY) || !Number.isFinite(maxY)) return null;
+    return { minY, maxY };
+  }
+
+  if (el.type === 'text') {
+    if (!el.text || el.text.trim().length === 0) return null;
+  }
+
+  if (el.type === 'arrow' || el.type === 'line') {
+    const { start, end } = getArrowEndpoints(el);
+    return {
+      minY: Math.min(start.y, end.y),
+      maxY: Math.max(start.y, end.y),
+    };
+  }
+
+  const bounds = getElementBounds(el);
+  return { minY: bounds.minY, maxY: bounds.maxY };
+}
+
+/**
+ * Returns the sorted, 0-based indices of notebook pages that actually contain
+ * written/drawn content (ignoring empty strokes and blank text boxes).
+ * Used by PDF export so empty trailing or intermediate pages are never exported.
+ */
+export function getNotebookContentPageIndices(
+  elements: BoardElement[],
+  config: NotebookPageConfig,
+  maxPages = 50
+): number[] {
+  if (!elements || elements.length === 0 || config.height <= 0) {
+    return [];
+  }
+
+  const pageIndices = new Set<number>();
+
+  for (const el of elements) {
+    const range = getTightElementVerticalRange(el);
+    if (!range) continue;
+
+    if (range.maxY < 0) continue;
+    const clampedMinY = Math.max(0, range.minY);
+    const startPage = Math.floor(clampedMinY / config.height);
+    const endPage =
+      range.maxY > clampedMinY
+        ? Math.floor((range.maxY - 0.001) / config.height)
+        : startPage;
+
+    const safeEndPage = Math.min(maxPages - 1, Math.max(startPage, endPage));
+    for (let p = startPage; p <= safeEndPage; p++) {
+      if (p >= 0 && p < maxPages) {
+        pageIndices.add(p);
+      }
+    }
+  }
+
+  return Array.from(pageIndices).sort((a, b) => a - b);
 }
 
 /**
