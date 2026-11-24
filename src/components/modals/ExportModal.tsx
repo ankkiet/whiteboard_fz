@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useBoardStore } from '../../store/useBoardStore';
-import { exportBoardToPng, exportBoardToPdf, PdfPageLayout } from '../../engine/renderer';
+import { exportBoardToPng, exportBoardToPdf, PdfPageLayout } from '../../engine/boardExporter';
 import {
   computeBoardExportBounds,
   computeOptimalExportDimensions,

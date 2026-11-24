@@ -9,10 +9,10 @@ import {
 } from '../../services/localBoardLibrary';
 import { parseWhiteboardPayload } from '../../services/googleDriveUtils';
 import { BOARD_TEMPLATES, getBoardTypeLabel } from '../../engine/boardTemplates';
-import { isDesktopApp } from '../modals/DesktopAppModal';
+import { isDesktopApp } from '../../services/appUpdater';
 import { BoardTemplatePreview } from './BoardTemplatePreview';
+import { DeleteBoardConfirmModal, RenameBoardModal } from './BoardActionModals';
 import {
-  AlertTriangle,
   Copy,
   FileUp,
   FolderOpen,
@@ -21,7 +21,6 @@ import {
   Pencil,
   Search,
   Trash2,
-  X,
 } from 'lucide-react';
 
 interface LocalBoardsSectionProps {
@@ -52,8 +51,6 @@ export const LocalBoardsSection: React.FC<LocalBoardsSectionProps> = ({
 
   const [busyId, setBusyId] = useState<string | null>(null);
   const [renameTarget, setRenameTarget] = useState<LocalBoardMeta | null>(null);
-  const [renameValue, setRenameValue] = useState('');
-  const [renameError, setRenameError] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<LocalBoardMeta | null>(null);
 
   const jsonInputRef = useRef<HTMLInputElement>(null);
@@ -130,28 +127,15 @@ export const LocalBoardsSection: React.FC<LocalBoardsSectionProps> = ({
     }
   };
 
-  const handleOpenRename = (board: LocalBoardMeta) => {
-    setRenameTarget(board);
-    setRenameValue(board.title);
-    setRenameError(null);
-  };
-
-  const handleSubmitRename = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!renameTarget) return;
-    const trimmed = renameValue.trim();
-    if (!trimmed) {
-      setRenameError('Vui lòng nhập tên bảng hợp lệ.');
-      return;
-    }
+  const handleSubmitRename = async (trimmedName: string) => {
+    if (!renameTarget) return false;
     setBusyId(`rename:${renameTarget.id}`);
     try {
-      const ok = await renameLocalBoardById(renameTarget.id, trimmed);
+      const ok = await renameLocalBoardById(renameTarget.id, trimmedName);
       if (ok) {
         setRenameTarget(null);
-        setRenameValue('');
-        setRenameError(null);
       }
+      return ok;
     } finally {
       setBusyId(null);
     }
@@ -453,7 +437,7 @@ export const LocalBoardsSection: React.FC<LocalBoardsSectionProps> = ({
                       <button
                         type="button"
                         disabled={isBusy}
-                        onClick={() => handleOpenRename(board)}
+                        onClick={() => setRenameTarget(board)}
                         aria-label={`Đổi tên ${board.title}`}
                         title="Đổi tên"
                         className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer disabled:opacity-50"
@@ -537,7 +521,7 @@ export const LocalBoardsSection: React.FC<LocalBoardsSectionProps> = ({
                   <button
                     type="button"
                     disabled={isBusy}
-                    onClick={() => handleOpenRename(board)}
+                    onClick={() => setRenameTarget(board)}
                     aria-label={`Đổi tên ${board.title}`}
                     title="Đổi tên"
                     className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
@@ -561,121 +545,32 @@ export const LocalBoardsSection: React.FC<LocalBoardsSectionProps> = ({
         </div>
       )}
 
-      {/* Rename Local Board Modal */}
-      {renameTarget && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="rename-local-board-title"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget && !busyId) setRenameTarget(null);
-          }}
-        >
-          <form
-            onSubmit={(e) => void handleSubmitRename(e)}
-            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl max-w-md w-full p-5 space-y-4"
-          >
-            <div className="flex items-center justify-between gap-2">
-              <h3 id="rename-local-board-title" className="text-base font-bold">
-                {copy.renameTitle}
-              </h3>
-              <button
-                type="button"
-                onClick={() => setRenameTarget(null)}
-                aria-label="Đóng hộp thoại đổi tên"
-                className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
+      <RenameBoardModal
+        isOpen={Boolean(renameTarget)}
+        title={copy.renameTitle}
+        initialValue={renameTarget?.title ?? ''}
+        isSubmitting={Boolean(busyId)}
+        titleId="rename-local-board-title"
+        inputId="rename-local-board-input"
+        onClose={() => setRenameTarget(null)}
+        onSubmit={handleSubmitRename}
+      />
 
-            <div className="space-y-1.5">
-              <label
-                htmlFor="rename-local-board-input"
-                className="block text-xs font-medium text-slate-600 dark:text-slate-400"
-              >
-                Tên mới
-              </label>
-              <input
-                id="rename-local-board-input"
-                type="text"
-                value={renameValue}
-                onChange={(e) => {
-                  setRenameValue(e.target.value);
-                  if (renameError) setRenameError(null);
-                }}
-                autoFocus
-                className="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 text-sm text-slate-900 dark:text-slate-100"
-              />
-              {renameError && <p className="text-xs text-red-600 dark:text-red-400">{renameError}</p>}
-            </div>
-
-            <div className="flex items-center justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setRenameTarget(null)}
-                className="h-9 px-3.5 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
-              >
-                Hủy
-              </button>
-              <button
-                type="submit"
-                disabled={Boolean(busyId)}
-                className="h-9 px-4 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold transition-colors disabled:opacity-60 cursor-pointer"
-              >
-                Lưu tên mới
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {/* Delete Local Board Confirmation Modal */}
-      {deleteTarget && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="delete-local-board-title"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget && !busyId) setDeleteTarget(null);
-          }}
-        >
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl max-w-sm w-full p-5 space-y-4">
-            <div className="flex items-start gap-3">
-              <div className="w-9 h-9 rounded-xl bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0">
-                <AlertTriangle className="w-5 h-5" />
-              </div>
-              <div className="min-w-0">
-                <h3 id="delete-local-board-title" className="text-sm font-bold">
-                  {copy.deleteTitle}
-                </h3>
-                <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 leading-relaxed break-words">
-                  Bạn có chắc muốn xóa vĩnh viễn &ldquo;{deleteTarget.title}&rdquo; {copy.deleteDescSuffix}? Thao tác này không thể hoàn tác.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setDeleteTarget(null)}
-                className="h-9 px-3.5 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
-              >
-                Hủy
-              </button>
-              <button
-                type="button"
-                onClick={() => void handleConfirmDelete()}
-                className="h-9 px-3.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-semibold cursor-pointer"
-              >
-                Xác nhận xóa
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <DeleteBoardConfirmModal
+        isOpen={Boolean(deleteTarget)}
+        title={copy.deleteTitle}
+        description={
+          deleteTarget ? (
+            <>
+              Bạn có chắc muốn xóa vĩnh viễn &ldquo;{deleteTarget.title}&rdquo; {copy.deleteDescSuffix}? Thao tác này không thể hoàn tác.
+            </>
+          ) : null
+        }
+        isSubmitting={Boolean(busyId)}
+        titleId="delete-local-board-title"
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleConfirmDelete}
+      />
     </section>
   );
 };

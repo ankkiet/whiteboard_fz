@@ -3,6 +3,8 @@ import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import mammoth from 'mammoth';
 import { paginatePlainText } from './documentUtils';
 
+export { dataUrlToUint8Array, readFileAsDataUrl } from './documentUtils';
+
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
 export interface RenderedPageAsset {
@@ -10,25 +12,6 @@ export interface RenderedPageAsset {
   width: number;
   height: number;
   pageNumber: number;
-}
-
-export function readFileAsDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result || ''));
-    reader.onerror = () => reject(new Error('Không thể đọc tệp từ máy tính.'));
-    reader.readAsDataURL(file);
-  });
-}
-
-export function dataUrlToUint8Array(dataUrl: string): Uint8Array {
-  const base64 = dataUrl.split(',')[1] || '';
-  const binary = atob(base64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-  return bytes;
 }
 
 export async function inspectPdfBytes(bytes: Uint8Array): Promise<{ pageCount: number }> {

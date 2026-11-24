@@ -81,13 +81,28 @@ export default defineConfig(() => {
                 }
               }
 
+              const jsChunkNames = assetFiles.filter((f) => f.endsWith('.js') && f !== jsFile);
+              let bundleJs = rawJs;
+              for (const chunkName of jsChunkNames) {
+                const absUrl = `${versionManifest.updateOrigin}/assets/${chunkName}`;
+                bundleJs = bundleJs
+                  .split(`"./${chunkName}"`)
+                  .join(`"${absUrl}"`)
+                  .split(`'./${chunkName}'`)
+                  .join(`'${absUrl}'`);
+              }
+
+              html = html.replace(
+                /<link[^>]+rel="modulepreload"[^>]*>\s*/gi,
+                ''
+              );
               html = html.replace(
                 /<link[^>]+rel="stylesheet"[^>]+href="(?:\.\/|\/)?assets\/index-[^"]+\.css"[^>]*>/i,
                 () => `${versionMetaScript}\n<style>\n${rawCss}\n</style>`
               );
               html = html.replace(
                 /<script[^>]+src="(?:\.\/|\/)?assets\/index-[^"]+\.js"[^>]*><\/script>/i,
-                () => `<script type="module">\n${rawJs}\n</script>`
+                () => `<script type="module">\n${bundleJs}\n</script>`
               );
 
               const publicBundlePath = path.resolve(__dirname, 'public/desktop-app-bundle.html');

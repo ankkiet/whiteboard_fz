@@ -9,12 +9,9 @@ import {
   screenToWorld,
   translateElement,
   worldToScreen,
-  zoomCameraAtPoint,
 } from '../../engine/geometry';
 import {
   drawBoardElement,
-  drawBrushCursor,
-  drawEraserCursor,
   drawEraserTrail,
   drawFreehandPoints,
   drawLaserTrail,
@@ -28,14 +25,10 @@ import {
   clampPointToNotebookMargins,
   computeTotalNotebookPages,
   getNotebookConfig,
-  getNotebookFitCamera,
 } from '../../engine/notebookEngine';
 import {
   buildStraightStrokePoints,
-  computeBrushRadiusWorld,
   magneticSnapLineEnd,
-  stepEraserSize,
-  stepStrokeWidth,
 } from '../../engine/drawingUtils';
 import {
   createDynamicEraserState,
@@ -47,14 +40,15 @@ import {
   cleanupOrphanGroups,
   expandSelectionWithGroups,
   getEffectiveGroupId,
-  getGroupMembers,
   isElementInGroup,
 } from '../../engine/groupUtils';
 import { subscribeImageCache } from '../../engine/imageCache';
 import { snapPointToVirtualToolEdge } from '../../engine/mathCurriculum';
-import { getSafeMathViewport } from '../../engine/mathViewport';
 import { BoardElement, LaserPoint, Point, Rect, ShapeElement } from '../../types/board';
-import { ImagePlus } from 'lucide-react';
+import { useCanvasKeyboard } from './useCanvasKeyboard';
+import { useCanvasWheel } from './useCanvasWheel';
+import { useCanvasCursor } from './useCanvasCursor';
+import { CanvasEmptyOverlay } from './CanvasEmptyOverlay';
 
 interface WhiteboardCanvasProps {
   onTriggerImageUpload: () => void;
@@ -76,8 +70,6 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
   const highlighterColor = useBoardStore((s) => s.highlighterColor);
   const fillColor = useBoardStore((s) => s.fillColor);
   const strokeWidth = useBoardStore((s) => s.strokeWidth);
-  const fontSize = useBoardStore((s) => s.fontSize);
-  const stickyColor = useBoardStore((s) => s.stickyColor);
   const eraserMode = useBoardStore((s) => s.eraserMode);
   const eraserSize = useBoardStore((s) => s.eraserSize);
   const camera = useBoardStore((s) => s.camera);
@@ -88,15 +80,8 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
   const selectedIds = useBoardStore((s) => s.selectedIds);
   const editingElementId = useBoardStore((s) => s.editingElementId);
   const assets = useBoardStore((s) => s.assets);
-  const hasLoaded = useBoardStore((s) => s.hasLoaded);
-  const virtualTools = useBoardStore((s) => s.virtualTools);
-  const pinnedProblem = useBoardStore((s) => s.pinnedProblem);
-  const isCalculatorOpen = useBoardStore((s) => s.isCalculatorOpen);
-  const isCalculatorMinimized = useBoardStore((s) => s.isCalculatorMinimized);
-  const isMathPanelCollapsed = useBoardStore((s) => s.isMathPanelCollapsed);
 
   const [viewportSize, setViewportSize] = useState({ width: 1280, height: 800 });
-  const [spacePressed, setSpacePressed] = useState(false);
   const [isPanning, setIsPanning] = useState(false);
   const [isDraggingFile, setIsDraggingFile] = useState(false);
   const [renderTick, setRenderTick] = useState(0);
@@ -127,16 +112,31 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
   const laserPointsRef = useRef<LaserPoint[]>([]);
   const laserStrokeIdRef = useRef(0);
   const laserRafRef = useRef<number | null>(null);
-
-  // Hardware-accelerated cursor refs (zero canvas repaint on mouse move)
-  const cursorOverlayRef = useRef<HTMLDivElement>(null);
-  const cursorCircleRef = useRef<HTMLDivElement>(null);
-  const cursorDotRef = useRef<HTMLDivElement>(null);
   const rafIdRef = useRef<number | null>(null);
 
   // Palm rejection & pointer lock refs (prevents jumping or zooming while writing)
   const activePointerIdRef = useRef<number | null>(null);
   const lastPenActiveTimeRef = useRef<number>(0);
+
+  const isInteractionIdle = useCallback(() => modeRef.current === 'idle', []);
+  const isPanningMode = useCallback(() => modeRef.current === 'pan', []);
+
+  // Modular hooks: keyboard shortcuts, smooth wheel zoom/scroll, hardware cursor ring
+  const { spacePressed } = useCanvasKeyboard({
+    viewportSize,
+    onTriggerImageUpload,
+    onToggleFocusMode,
+  });
+
+  useCanvasWheel({ canvasRef, isInteractionIdle });
+
+  const {
+    cursorOverlayRef,
+    cursorCircleRef,
+    cursorDotRef,
+    updateCursorOverlayPos,
+    hideCursorOverlay,
+  } = useCanvasCursor({ canvasRef, isPanningMode, spacePressed });
 
   // Trigger redraw when cached images finish decoding
   useEffect(() => {
@@ -311,84 +311,6 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
     };
   }, []);
 
-  // Synchronize cursor ring size, color and contrast styling whenever tool settings change
-  useEffect(() => {
-    if (!cursorCircleRef.current || !cursorDotRef.current) return;
-    const circle = cursorCircleRef.current;
-    const dot = cursorDotRef.current;
-    const zoom = camera.zoom;
-
-    if (currentTool === 'pen') {
-      const worldRadius = computeBrushRadiusWorld(strokeWidth, false);
-      const screenRadius = Math.max(worldRadius * zoom, 3);
-      const size = Math.round(screenRadius * 2);
-      circle.style.width = `${size}px`;
-      circle.style.height = `${size}px`;
-      circle.style.border = `1.5px solid ${color}`;
-      circle.style.backgroundColor = `${color}30`;
-      circle.style.boxShadow = isDarkMode
-        ? '0 0 0 1px rgba(255, 255, 255, 0.4)'
-        : '0 0 0 1px rgba(0, 0, 0, 0.25)';
-      dot.style.display = 'block';
-      dot.style.backgroundColor = color;
-    } else if (currentTool === 'highlighter') {
-      const worldRadius = computeBrushRadiusWorld(strokeWidth, true);
-      const screenRadius = Math.max(worldRadius * zoom, 6);
-      const size = Math.round(screenRadius * 2);
-      circle.style.width = `${size}px`;
-      circle.style.height = `${size}px`;
-      circle.style.border = `1.5px solid ${highlighterColor}`;
-      circle.style.backgroundColor = `${highlighterColor}45`;
-      circle.style.boxShadow = isDarkMode
-        ? '0 0 0 1px rgba(255, 255, 255, 0.4)'
-        : '0 0 0 1px rgba(0, 0, 0, 0.25)';
-      dot.style.display = 'none';
-    } else if (currentTool === 'eraser' && eraserMode === 'area') {
-      const size = Math.max(14, Math.round(eraserSize * zoom));
-      circle.style.width = `${size}px`;
-      circle.style.height = `${size}px`;
-      circle.style.border = '2px dashed rgba(239, 68, 68, 0.9)';
-      circle.style.backgroundColor = 'rgba(239, 68, 68, 0.15)';
-      circle.style.boxShadow = isDarkMode
-        ? '0 0 0 1px rgba(255, 255, 255, 0.25)'
-        : '0 0 0 1px rgba(0, 0, 0, 0.25)';
-      dot.style.display = 'block';
-      dot.style.backgroundColor = '#ef4444';
-    }
-  }, [
-    currentTool,
-    strokeWidth,
-    eraserSize,
-    color,
-    highlighterColor,
-    camera.zoom,
-    isDarkMode,
-    eraserMode,
-  ]);
-
-  const updateCursorOverlayPos = useCallback(
-    (clientX: number, clientY: number, customScreenPos?: Point) => {
-      if (!cursorOverlayRef.current || !canvasRef.current) return;
-      const isRingTool =
-        currentTool === 'pen' ||
-        currentTool === 'highlighter' ||
-        (currentTool === 'eraser' && eraserMode === 'area');
-
-      if (!isRingTool || modeRef.current === 'pan' || spacePressed) {
-        cursorOverlayRef.current.style.display = 'none';
-        return;
-      }
-
-      const rect = canvasRef.current.getBoundingClientRect();
-      const sx = customScreenPos ? customScreenPos.x : clientX - rect.left;
-      const sy = customScreenPos ? customScreenPos.y : clientY - rect.top;
-
-      cursorOverlayRef.current.style.display = 'block';
-      cursorOverlayRef.current.style.transform = `translate3d(${sx}px, ${sy}px, 0) translate(-50%, -50%)`;
-    },
-    [currentTool, eraserMode, spacePressed]
-  );
-
   const ensureLaserLoop = useCallback(() => {
     if (laserRafRef.current !== null) return;
     const step = () => {
@@ -449,311 +371,15 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
     };
   }, []);
 
-  // Global keyboard shortcuts & clipboard paste (Ctrl+V)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement | null;
-      const isEditingInput =
-        target &&
-        (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable);
-
-      if (e.code === 'Space' && !isEditingInput) {
-        e.preventDefault();
-        setSpacePressed(true);
-        return;
-      }
-
-      if (isEditingInput) return;
-
-      const store = useBoardStore.getState();
-      const key = e.key.toLowerCase();
-
-      if (e.ctrlKey || e.metaKey) {
-        if (key === 'z') {
-          e.preventDefault();
-          if (e.shiftKey) store.redo();
-          else store.undo();
-          return;
-        }
-        if (key === 'y') {
-          e.preventDefault();
-          store.redo();
-          return;
-        }
-        if (key === 'd') {
-          e.preventDefault();
-          store.duplicateSelected();
-          return;
-        }
-        if (key === 'g') {
-          e.preventDefault();
-          if (e.shiftKey) store.ungroupSelected();
-          else store.groupSelected();
-          return;
-        }
-        if (key === 'a') {
-          e.preventDefault();
-          store.setCurrentTool('select');
-          store.setEditingGroupId(null);
-          store.setSelectedIds(store.elements.map((el) => el.id));
-          return;
-        }
-        if (key === '0') {
-          e.preventDefault();
-          if (store.boardType === 'notebook') {
-            const config = getNotebookConfig(store.notebookPaperSize);
-            store.setCamera(getNotebookFitCamera(viewportSize, config));
-          } else {
-            const cx = viewportSize.width / 2;
-            const cy = viewportSize.height / 2;
-            store.setCamera((prev) => zoomCameraAtPoint(prev, 1, cx, cy));
-          }
-          return;
-        }
-        if (key === '=' || key === '+') {
-          e.preventDefault();
-          const cx = viewportSize.width / 2;
-          const cy = viewportSize.height / 2;
-          store.setCamera((prev) => {
-            const next = zoomCameraAtPoint(prev, prev.zoom * 1.2, cx, cy);
-            if (store.boardType === 'notebook') {
-              const config = getNotebookConfig(store.notebookPaperSize);
-              const totalPages = computeTotalNotebookPages(store.elements, next, viewportSize.height, config);
-              return clampNotebookCamera(next, viewportSize, config, totalPages);
-            }
-            return next;
-          });
-          return;
-        }
-        if (key === '-') {
-          e.preventDefault();
-          const cx = viewportSize.width / 2;
-          const cy = viewportSize.height / 2;
-          store.setCamera((prev) => {
-            const next = zoomCameraAtPoint(prev, prev.zoom / 1.2, cx, cy);
-            if (store.boardType === 'notebook') {
-              const config = getNotebookConfig(store.notebookPaperSize);
-              const totalPages = computeTotalNotebookPages(store.elements, next, viewportSize.height, config);
-              return clampNotebookCamera(next, viewportSize, config, totalPages);
-            }
-            return next;
-          });
-          return;
-        }
-        return;
-      }
-
-      if (key === 'escape') {
-        if (store.editingElementId) {
-          store.setEditingElementId(null);
-          return;
-        }
-        if (store.editingGroupId) {
-          const parentIds = getGroupMembers(store.elements, store.editingGroupId).map((el) => el.id);
-          store.setEditingGroupId(null);
-          store.setSelectedIds(parentIds);
-          return;
-        }
-        store.setSelectedIds([]);
-        return;
-      }
-
-      if (key === 'delete' || key === 'backspace') {
-        if (store.selectedIds.length > 0) {
-          e.preventDefault();
-          store.deleteSelected();
-        }
-        return;
-      }
-
-      if (
-        store.selectedIds.length > 0 &&
-        (key === 'arrowup' || key === 'arrowdown' || key === 'arrowleft' || key === 'arrowright')
-      ) {
-        e.preventDefault();
-        const step = e.shiftKey ? 10 : 1;
-        const dx = key === 'arrowleft' ? -step : key === 'arrowright' ? step : 0;
-        const dy = key === 'arrowup' ? -step : key === 'arrowdown' ? step : 0;
-        store.nudgeSelected(dx, dy);
-        return;
-      }
-
-      if (key === '[') {
-        e.preventDefault();
-        if (store.currentTool === 'eraser' && store.eraserMode === 'area') {
-          store.setEraserSize(stepEraserSize(store.eraserSize, -1));
-        } else {
-          store.setStrokeWidth(stepStrokeWidth(store.strokeWidth, -1));
-        }
-        return;
-      }
-
-      if (key === ']') {
-        e.preventDefault();
-        if (store.currentTool === 'eraser' && store.eraserMode === 'area') {
-          store.setEraserSize(stepEraserSize(store.eraserSize, 1));
-        } else {
-          store.setStrokeWidth(stepStrokeWidth(store.strokeWidth, 1));
-        }
-        return;
-      }
-
-      if (key === 'f' && onToggleFocusMode) {
-        e.preventDefault();
-        onToggleFocusMode();
-        return;
-      }
-
-      const shortcutMap: Record<string, () => void> = {
-        v: () => store.setCurrentTool('select'),
-        h: () => store.setCurrentTool('hand'),
-        p: () => store.setCurrentTool('pen'),
-        m: () => store.setCurrentTool('highlighter'),
-        e: () => store.setCurrentTool('eraser'),
-        r: () => store.setCurrentTool('rectangle'),
-        o: () => store.setCurrentTool('ellipse'),
-        a: () => store.setCurrentTool('arrow'),
-        t: () => store.setCurrentTool('text'),
-        s: () => store.setCurrentTool('sticky'),
-        i: () => onTriggerImageUpload(),
-        l: () => store.setCurrentTool('laser'),
-      };
-      if (shortcutMap[key]) {
-        shortcutMap[key]();
-      }
-    };
-
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.code === 'Space') {
-        setSpacePressed(false);
-      }
-    };
-
-    const handlePaste = (e: ClipboardEvent) => {
-      const target = e.target as HTMLElement | null;
-      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) return;
-
-      const items = e.clipboardData?.items;
-      if (!items) return;
-
-      for (const item of Array.from(items)) {
-        if (item.type.startsWith('image/')) {
-          e.preventDefault();
-          const file = item.getAsFile();
-          if (!file) continue;
-          const reader = new FileReader();
-          reader.onload = (ev) => {
-            const dataUrl = ev.target?.result as string;
-            if (dataUrl) {
-              void useBoardStore.getState().insertImageFromDataUrl(dataUrl, file.name || 'clipboard.png');
-            }
-          };
-          reader.readAsDataURL(file);
-          return;
-        }
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
-    window.addEventListener('paste', handlePaste);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
-      window.removeEventListener('paste', handlePaste);
-    };
-  }, [onToggleFocusMode, onTriggerImageUpload, viewportSize.height, viewportSize.width]);
-
-  // Smooth Wheel: scroll wheel zooms in/out anchored directly at the mouse cursor
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const handleWheel = (e: WheelEvent) => {
-      e.preventDefault();
-      // Block accidental wheel zoom or pan while actively writing, erasing, or dragging!
-      if (modeRef.current !== 'idle') {
-        return;
-      }
-      if (e.deltaY === 0) return;
-
-      const rect = canvas.getBoundingClientRect();
-      const anchorX = e.clientX - rect.left;
-      const anchorY = e.clientY - rect.top;
-
-      // Normalize deltaY across pixel, line (Firefox), and page wheel modes
-      let normalizedDelta = e.deltaY;
-      if (e.deltaMode === 1) {
-        normalizedDelta *= 32;
-      } else if (e.deltaMode === 2) {
-        normalizedDelta *= 400;
-      }
-      normalizedDelta = Math.max(-300, Math.min(300, normalizedDelta));
-
-      const store = useBoardStore.getState();
-      if (store.boardType === 'notebook') {
-        const config = getNotebookConfig(store.notebookPaperSize);
-        const vp = {
-          width: canvas.clientWidth || window.innerWidth,
-          height: canvas.clientHeight || window.innerHeight,
-        };
-        const totalPages = computeTotalNotebookPages(
-          store.elements,
-          store.camera,
-          vp.height,
-          config
-        );
-
-        if (e.ctrlKey || e.metaKey) {
-          // Pinch or Ctrl+Wheel => Zoom anchored at cursor
-          const sensitivity = 0.005;
-          const factor = Math.exp(-normalizedDelta * sensitivity);
-          const nextCam = zoomCameraAtPoint(store.camera, store.camera.zoom * factor, anchorX, anchorY);
-          store.setCamera(clampNotebookCamera(nextCam, vp, config, totalPages));
-        } else {
-          // Normal Wheel => Vertical scroll through continuous notebook pages smoothly
-          const nextCam = {
-            ...store.camera,
-            y: store.camera.y - normalizedDelta,
-          };
-          store.setCamera(clampNotebookCamera(nextCam, vp, config, totalPages));
-        }
-        return;
-      }
-
-      // Pinch-to-zoom on trackpads fires ctrlKey with small deltas; regular mouse notches are ~100px
-      const sensitivity = e.ctrlKey || e.metaKey ? 0.006 : 0.0014;
-      const factor = Math.exp(-normalizedDelta * sensitivity);
-
-      store.setCamera((prev) =>
-        zoomCameraAtPoint(prev, prev.zoom * factor, anchorX, anchorY)
-      );
-    };
-
-    // Prevent Safari / macOS gesture-zoom from unexpectedly zooming the page
-    const preventGesture = (e: Event) => e.preventDefault();
-    canvas.addEventListener('gesturestart', preventGesture, { passive: false });
-    canvas.addEventListener('gesturechange', preventGesture, { passive: false });
-
-    canvas.addEventListener('wheel', handleWheel, { passive: false });
-    return () => {
-      canvas.removeEventListener('gesturestart', preventGesture);
-      canvas.removeEventListener('gesturechange', preventGesture);
-      canvas.removeEventListener('wheel', handleWheel);
-    };
-  }, []);
-
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    // Palm rejection & multi-touch isolation:
-    // If a stroke is already in progress, reject any secondary touch or palm contact!
+    // Palm rejection & multi-touch isolation
     if (activePointerIdRef.current !== null && activePointerIdRef.current !== e.pointerId) {
       return;
     }
 
-    // Stylus priority palm rejection: if a pen was actively used recently, reject touch down
     if (e.pointerType === 'pen') {
       lastPenActiveTimeRef.current = Date.now();
     } else if (e.pointerType === 'touch' && Date.now() - lastPenActiveTimeRef.current < 600) {
@@ -1009,7 +635,6 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    // Ignore movements from any secondary pointer/touch when an active gesture is in progress
     if (activePointerIdRef.current !== null && e.pointerId !== activePointerIdRef.current) {
       return;
     }
@@ -1255,7 +880,6 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
   };
 
   const handlePointerUp = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    // Only release when the active drawing/interacting pointer lifts
     if (activePointerIdRef.current !== null && e.pointerId !== activePointerIdRef.current) {
       return;
     }
@@ -1404,7 +1028,6 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
       store.setSelectedIds([hit.id]);
       store.updateElement(hit.id, { revealed: !hit.revealed }, true);
     } else if (effectiveGroupId) {
-      // Enter group isolation mode to edit an individual member without ungrouping
       store.setCurrentTool('select');
       store.setEditingGroupId(effectiveGroupId);
       const innerSelection = expandSelectionWithGroups(store.elements, [hit.id], effectiveGroupId);
@@ -1416,7 +1039,6 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
     }
   };
 
-  // Drag & Drop image, PDF, Word, or document files directly onto the canvas
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     if (!isDraggingFile) setIsDraggingFile(true);
@@ -1444,12 +1066,6 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
     const files = Array.from(e.dataTransfer.files);
     if (files.length === 0) return;
     onFilesDropped(files, dropWorld);
-  };
-
-  const handlePointerLeave = () => {
-    if (cursorOverlayRef.current) {
-      cursorOverlayRef.current.style.display = 'none';
-    }
   };
 
   const cursorClass = isPanning
@@ -1498,13 +1114,13 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
-        onPointerLeave={handlePointerLeave}
+        onPointerLeave={hideCursorOverlay}
         onDoubleClick={handleDoubleClick}
         onContextMenu={(e) => e.preventDefault()}
         className={`block w-full h-full touch-none ${cursorClass}`}
       />
 
-      {/* Hardware-accelerated cursor ring overlay (zero canvas redraw, 0ms lag) */}
+      {/* Hardware-accelerated cursor ring overlay */}
       <div
         ref={cursorOverlayRef}
         data-testid="cursor-ring-overlay"
@@ -1533,91 +1149,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
         </div>
       </div>
 
-      {/* Subtle empty-board onboarding cue (auto-hidden when virtual instruments or pinned problem are active) */}
-      {hasLoaded &&
-        elements.length === 0 &&
-        !pinnedProblem &&
-        !virtualTools.ruler.active &&
-        !virtualTools.setSquare.active &&
-        !virtualTools.protractor.active &&
-        !virtualTools.compass.active &&
-        (() => {
-          const safe =
-            boardType === 'math'
-              ? getSafeMathViewport({
-                  viewW: viewportSize.width,
-                  viewH: viewportSize.height,
-                  isCalculatorOpen,
-                  isCalculatorMinimized,
-                  isMathPanelOpen: true,
-                  isMathPanelCollapsed,
-                  hasPinnedProblem: false,
-                  hasContextualToolbar: false,
-                })
-              : null;
-
-          return (
-            <div
-              style={
-                safe
-                  ? {
-                      left: safe.left,
-                      top: safe.top,
-                      width: safe.width,
-                      height: safe.height,
-                    }
-                  : undefined
-              }
-              className={`pointer-events-none absolute ${
-                safe ? '' : 'inset-0'
-              } flex justify-center p-4 ${
-                boardPattern === 'coordinate' ? 'items-end pb-8' : 'items-center'
-              }`}
-            >
-              <div className="max-w-md text-center space-y-2 select-none opacity-70 dark:opacity-60">
-                <p className="text-sm font-medium text-slate-700 dark:text-slate-200">
-                  {boardType === 'math'
-                    ? boardPattern === 'coordinate'
-                      ? 'Bảng toán học — Hệ trục tọa độ Oxy'
-                      : 'Bảng toán học — Sẵn sàng viết vẽ & tính toán'
-                    : 'Bắt đầu viết vẽ trên không gian vô tận'}
-                </p>
-                {boardType === 'math' ? (
-                  <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                    Viết tay tự do, chèn công thức, dựng hình học hoặc vẽ đồ thị ở bảng bên phải
-                  </p>
-                ) : (
-                  <>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed flex flex-wrap items-center justify-center gap-x-1.5 gap-y-1">
-                      <span>Giữ <kbd className="kbd-keycap">Shift</kbd> kẻ thẳng</span>
-                      <span aria-hidden="true">·</span>
-                      <span><kbd className="kbd-keycap">[</kbd> <kbd className="kbd-keycap">]</kbd> chỉnh cỡ nét</span>
-                      <span aria-hidden="true">·</span>
-                      <span><kbd className="kbd-keycap">F</kbd> tập trung</span>
-                    </p>
-                    <p className="text-xs text-slate-400 dark:text-slate-500 flex flex-wrap items-center justify-center gap-x-1.5 gap-y-1">
-                      <span>Lăn chuột thu phóng</span>
-                      <span aria-hidden="true">·</span>
-                      <span>Giữ <kbd className="kbd-keycap">Space</kbd> kéo bảng</span>
-                      <span aria-hidden="true">·</span>
-                      <span>Kéo-thả ảnh, PDF, Word</span>
-                    </p>
-                  </>
-                )}
-              </div>
-            </div>
-          );
-        })()}
-
-      {/* Drag & drop overlay */}
-      {isDraggingFile && (
-        <div className="pointer-events-none absolute inset-4 z-40 rounded-3xl border-2 border-dashed border-indigo-500 bg-indigo-500/10 backdrop-blur-[2px] flex items-center justify-center">
-          <div className="flex items-center gap-3 px-6 py-4 rounded-2xl bg-white/95 dark:bg-slate-900/95 shadow-xl border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 font-semibold text-sm">
-            <ImagePlus className="w-5 h-5" />
-            <span>Thả ảnh, PDF hoặc Word (.docx) vào bảng</span>
-          </div>
-        </div>
-      )}
+      <CanvasEmptyOverlay viewportSize={viewportSize} isDraggingFile={isDraggingFile} />
     </div>
   );
 };

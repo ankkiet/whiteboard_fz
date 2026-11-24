@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { User } from 'firebase/auth';
 import { useBoardStore } from '../store/useBoardStore';
-import { exportBoardToPng } from '../engine/renderer';
 import {
   googleLogout,
   googleSignIn,
@@ -519,6 +518,7 @@ export function useGoogleDriveWorkspace(): GoogleDriveWorkspaceState {
     setError(null);
     try {
       const state = useBoardStore.getState();
+      const { exportBoardToPng } = await import('../engine/boardExporter');
       const rendered = await exportBoardToPng({
         elements: state.elements,
         assets: state.assets,
