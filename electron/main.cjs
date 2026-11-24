@@ -3,12 +3,14 @@
  * Cho phép đóng gói dự án fzInK thành ứng dụng desktop độc lập
  * mà vẫn dùng chung 100% mã nguồn với phiên bản website.
  */
-const { app, BrowserWindow, shell, Menu, ipcMain, safeStorage } = require('electron');
+const { app, BrowserWindow, shell, Menu, ipcMain, safeStorage, net } = require('electron');
 const fs = require('fs');
 const path = require('path');
 
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
+const GITHUB_LATEST_DOWNLOAD = 'https://github.com/ankkiet/whiteboard_fz/releases/latest/download';
 let mainWindow = null;
+let isDownloadingUpdate = false;
 
 function getAuthSessionFilePath() {
   return path.join(app.getPath('userData'), 'auth-session.bin');
@@ -71,6 +73,89 @@ ipcMain.handle('fzink:auth:save', (_event, serialized) => {
 });
 
 ipcMain.handle('fzink:auth:clear', () => clearPersistedAuthSession());
+
+function getPlatformInstallerFileName() {
+  if (process.platform === 'darwin') {
+    return process.arch === 'arm64' ? 'fzInK-macOS-arm64.dmg' : 'fzInK-macOS-x64.dmg';
+  }
+  return 'fzInK-Setup.exe';
+}
+
+function sendUpdaterProgress(payload) {
+  if (mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents) {
+    mainWindow.webContents.send('fzink:updater:progress', payload);
+  }
+}
+
+ipcMain.handle('fzink:updater:download-and-install', async () => {
+  if (isDownloadingUpdate) {
+    return { ok: false, error: 'Đang tải bản cập nhật, vui lòng chờ hoàn tất.' };
+  }
+  isDownloadingUpdate = true;
+  const fileName = getPlatformInstallerFileName();
+  const downloadUrl = `${GITHUB_LATEST_DOWNLOAD}/${fileName}`;
+  const targetDir = (() => {
+    try {
+      return app.getPath('downloads');
+    } catch {
+      return app.getPath('temp');
+    }
+  })();
+  const destPath = path.join(targetDir, fileName);
+  const tempPath = `${destPath}.downloading`;
+
+  try {
+    sendUpdaterProgress({ phase: 'downloading', percent: 0, fileName });
+    const response = await net.fetch(downloadUrl, { redirect: 'follow' });
+    if (!response.ok || !response.body) {
+      throw new Error(`Máy chủ tải về trả về mã lỗi ${response.status}.`);
+    }
+
+    const totalBytes = Number(response.headers.get('content-length') || 0);
+    let receivedBytes = 0;
+    const writeStream = fs.createWriteStream(tempPath);
+    const reader = response.body.getReader();
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        if (value && value.byteLength > 0) {
+          writeStream.write(Buffer.from(value));
+          receivedBytes += value.byteLength;
+          const percent = totalBytes > 0 ? Math.min(99, Math.round((receivedBytes / totalBytes) * 100)) : -1;
+          sendUpdaterProgress({ phase: 'downloading', percent, receivedBytes, totalBytes, fileName });
+        }
+      }
+    } finally {
+      await new Promise((resolve, reject) => {
+        writeStream.end((err) => (err ? reject(err) : resolve()));
+      });
+    }
+
+    fs.renameSync(tempPath, destPath);
+    sendUpdaterProgress({ phase: 'launching', percent: 100, fileName });
+
+    const openErr = await shell.openPath(destPath);
+    if (openErr) {
+      shell.showItemInFolder(destPath);
+      return { ok: true, fileName, destPath, launched: false };
+    }
+
+    return { ok: true, fileName, destPath, launched: true };
+  } catch (err) {
+    try {
+      if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
+    } catch {}
+    sendUpdaterProgress({ phase: 'error', percent: 0, fileName });
+    return {
+      ok: false,
+      error: err && err.message ? err.message : 'Không thể tải tệp cập nhật.',
+    };
+  } finally {
+    isDownloadingUpdate = false;
+  }
+});
 
 // Đăng ký custom protocol fzink:// (và bttm:// để tương thích ngược) để Web có thể mở lại Desktop App
 for (const scheme of ['fzink', 'bttm']) {

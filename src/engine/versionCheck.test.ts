@@ -3,9 +3,11 @@ import assert from 'node:assert/strict';
 import {
   buildUpdateOriginCandidates,
   classifyUpdateCheckFailure,
+  compareVersionStrings,
   formatVersionJsonpScript,
   isAiStudioPreviewOrigin,
   isLocalhostOrigin,
+  shouldPromptDesktopUpdate,
 } from './versionCheck';
 
 describe('versionCheck — update origin resolution and honest failure classification', () => {
@@ -113,5 +115,43 @@ describe('versionCheck — update origin resolution and honest failure classific
     });
     assert.ok(script.includes('window.__BTTM_VERSION_CALLBACK__'));
     assert.ok(script.includes('"buildId":"abcdef123456"'));
+  });
+
+  it('compares fzInK version strings numerically (including multi-digit segments)', () => {
+    assert.equal(compareVersionStrings('v_fz.1.1.1.1.8', 'v_fz.1.1.1.1.8'), 0);
+    assert.ok(compareVersionStrings('v_fz.1.1.1.1.9', 'v_fz.1.1.1.1.8') > 0);
+    assert.ok(compareVersionStrings('v_fz.1.1.1.1.10', 'v_fz.1.1.1.1.9') > 0);
+    assert.ok(compareVersionStrings('v_fz.1.1.1.1.7', 'v_fz.1.1.1.1.8') < 0);
+  });
+
+  it('never reports false update when installed version equals latest even if buildId differs across CI OSes', () => {
+    assert.equal(
+      shouldPromptDesktopUpdate({
+        installedVersion: 'v_fz.1.1.1.1.8',
+        installedBuildId: 'win-gh-actions-hash',
+        latest: { version: 'v_fz.1.1.1.1.8', buildId: 'linux-cloudflare-hash' },
+      }),
+      false
+    );
+
+    // Installed newer than stale CDN cache -> also false
+    assert.equal(
+      shouldPromptDesktopUpdate({
+        installedVersion: 'v_fz.1.1.1.1.9',
+        installedBuildId: 'new-hash',
+        latest: { version: 'v_fz.1.1.1.1.8', buildId: 'old-hash' },
+      }),
+      false
+    );
+
+    // Genuine newer version available -> true
+    assert.equal(
+      shouldPromptDesktopUpdate({
+        installedVersion: 'v_fz.1.1.1.1.8',
+        installedBuildId: 'old-hash',
+        latest: { version: 'v_fz.1.1.1.1.9', buildId: 'new-hash' },
+      }),
+      true
+    );
   });
 });

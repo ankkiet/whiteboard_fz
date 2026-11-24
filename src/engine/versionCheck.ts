@@ -147,3 +147,62 @@ export function classifyUpdateCheckFailure(params: {
 export function formatVersionJsonpScript(manifest: AppVersionManifest): string {
   return `window.__BTTM_VERSION_CALLBACK__&&window.__BTTM_VERSION_CALLBACK__(${JSON.stringify(manifest)});\n`;
 }
+
+/**
+ * Extracts numeric segments from version strings like "v_fz.1.1.1.1.8" or "1.2.7".
+ */
+export function parseVersionSegments(version?: string | null): number[] {
+  if (!version) return [];
+  const matches = version.match(/\d+/g);
+  if (!matches) return [];
+  return matches.map((n) => Number.parseInt(n, 10));
+}
+
+/**
+ * Compares two version strings numerically.
+ * Returns > 0 if `a > b`, < 0 if `a < b`, or 0 if equal (or unparseable).
+ */
+export function compareVersionStrings(a?: string | null, b?: string | null): number {
+  const segA = parseVersionSegments(a);
+  const segB = parseVersionSegments(b);
+  if (segA.length === 0 || segB.length === 0) return 0;
+  const maxLen = Math.max(segA.length, segB.length);
+  for (let i = 0; i < maxLen; i += 1) {
+    const va = segA[i] ?? 0;
+    const vb = segB[i] ?? 0;
+    if (va !== vb) return va - vb;
+  }
+  return 0;
+}
+
+/**
+ * Determines whether a desktop app needs an update.
+ * Uses semantic/numeric version comparison first so cross-OS buildId hash differences
+ * (Cloudflare Linux vs GitHub Actions Windows/macOS) never trigger false-positive loops
+ * when the installed version already matches or exceeds the latest release.
+ */
+export function shouldPromptDesktopUpdate(params: {
+  installedVersion?: string | null;
+  installedBuildId?: string | null;
+  latest?: AppVersionManifest | null;
+}): boolean {
+  const { installedVersion, installedBuildId, latest } = params;
+  if (!latest) return false;
+
+  const installedSegs = parseVersionSegments(installedVersion);
+  const latestSegs = parseVersionSegments(latest.version);
+
+  if (installedSegs.length > 0 && latestSegs.length > 0) {
+    return compareVersionStrings(latest.version, installedVersion) > 0;
+  }
+
+  if (installedVersion && latest.version && installedVersion !== latest.version) {
+    return true;
+  }
+
+  if (!installedVersion && installedBuildId && latest.buildId) {
+    return installedBuildId !== latest.buildId;
+  }
+
+  return false;
+}

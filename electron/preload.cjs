@@ -1,7 +1,8 @@
 /**
  * Preload script for fzInK Electron Desktop App.
- * Exposes a minimal, context-isolated bridge so the Google Drive auth session
- * persists in userData across app updates and Portable runs.
+ * Exposes minimal, context-isolated bridges for:
+ * 1. Persistent Google Drive auth session across updates & Portable runs
+ * 2. 1-click desktop app update download & installer launch
  */
 const { contextBridge, ipcRenderer } = require('electron');
 
@@ -26,5 +27,23 @@ contextBridge.exposeInMainWorld('fzinkDesktopAuth', {
     } catch {
       return Promise.resolve(false);
     }
+  },
+});
+
+contextBridge.exposeInMainWorld('fzinkDesktopUpdater', {
+  downloadAndInstall: () => {
+    try {
+      return ipcRenderer.invoke('fzink:updater:download-and-install');
+    } catch (err) {
+      return Promise.resolve({ ok: false, error: err && err.message ? err.message : 'Update failed' });
+    }
+  },
+  onProgress: (callback) => {
+    if (typeof callback !== 'function') return () => {};
+    const listener = (_event, payload) => callback(payload);
+    ipcRenderer.on('fzink:updater:progress', listener);
+    return () => {
+      ipcRenderer.removeListener('fzink:updater:progress', listener);
+    };
   },
 });

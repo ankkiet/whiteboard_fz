@@ -23,6 +23,7 @@ import {
   buildUpdateOriginCandidates,
   classifyUpdateCheckFailure,
   normalizeOriginUrl,
+  shouldPromptDesktopUpdate,
 } from '../../engine/versionCheck';
 
 export type { AppVersionManifest };
@@ -88,10 +89,30 @@ const DESKTOP_APP_DOWNLOADED_BUILD_ID_KEY = 'bttm_desktop_app_build_id_v1';
 const DESKTOP_APP_DOWNLOADED_VERSION_KEY = 'bttm_desktop_app_version_v1';
 const DESKTOP_APP_DOWNLOADED_EVENT = 'bttm:desktop-app-downloaded';
 
+interface DesktopUpdaterProgress {
+  phase: 'downloading' | 'launching' | 'error';
+  percent: number;
+  receivedBytes?: number;
+  totalBytes?: number;
+  fileName?: string;
+}
+
+interface DesktopUpdaterBridgeApi {
+  downloadAndInstall: () => Promise<{
+    ok: boolean;
+    fileName?: string;
+    destPath?: string;
+    launched?: boolean;
+    error?: string;
+  }>;
+  onProgress: (cb: (payload: DesktopUpdaterProgress) => void) => () => void;
+}
+
 declare global {
   interface Window {
     __BTTM_EMBEDDED_BUILD__?: AppVersionManifest;
     __BTTM_VERSION_CALLBACK__?: (manifest: AppVersionManifest) => void;
+    fzinkDesktopUpdater?: DesktopUpdaterBridgeApi;
   }
 }
 
@@ -388,7 +409,7 @@ export const HomeSettingsMenu: React.FC<{
   const addToast = useBoardStore((s) => s.addToast);
   const [isOpen, setIsOpen] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
-  const [latestDesktopVersion, setLatestDesktopVersion] = useState<string>('v_fz.1.1.1.1.8');
+  const [latestDesktopVersion, setLatestDesktopVersion] = useState<string>('v_fz.1.1.1.1.9');
   const [checkResult, setCheckResult] = useState<
     | { status: 'idle' }
     | { status: 'up-to-date'; version: string; buildId: string }
@@ -403,6 +424,7 @@ export const HomeSettingsMenu: React.FC<{
   >({ status: 'idle' });
   const [hasUpdateBadge, setHasUpdateBadge] = useState(false);
   const [isApplyingUpdate, setIsApplyingUpdate] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState<DesktopUpdaterProgress | null>(null);
   const menuRef = React.useRef<HTMLDivElement>(null);
 
   const isDesktop = isDesktopApp();
@@ -415,18 +437,24 @@ export const HomeSettingsMenu: React.FC<{
     if (latest?.version) {
       setLatestDesktopVersion(latest.version);
     }
-    const isUpdateAvailable = Boolean(
-      latest &&
-        ((installedId && latest.buildId && installedId !== latest.buildId) ||
-          (installedVer && latest.version && installedVer !== latest.version) ||
-          (!installedId && installedVer && latest.version && installedVer !== latest.version))
-    );
+    const isUpdateAvailable = shouldPromptDesktopUpdate({
+      installedVersion: installedVer,
+      installedBuildId: installedId,
+      latest,
+    });
     if (isUpdateAvailable && latest) {
       setHasUpdateBadge(true);
       setCheckResult({
         status: 'update-available',
         currentVersion: installedVer || installedId || 'v_fz.1.1.1.1.0',
         latestManifest: latest,
+      });
+    } else if (latest) {
+      setHasUpdateBadge(false);
+      setCheckResult({
+        status: 'up-to-date',
+        version: installedVer || latest.version,
+        buildId: installedId || latest.buildId,
       });
     } else {
       setHasUpdateBadge(false);
@@ -438,7 +466,7 @@ export const HomeSettingsMenu: React.FC<{
       void syncInitialBadge();
       const onDownloaded = () => {
         setHasUpdateBadge(false);
-        const ver = getDownloadedVersion() || 'v_fz.1.1.1.1.8';
+        const ver = getDownloadedVersion() || 'v_fz.1.1.1.1.9';
         const id = getDownloadedBuildId() || '';
         setCheckResult({ status: 'up-to-date', version: ver, buildId: id });
       };
@@ -492,11 +520,11 @@ export const HomeSettingsMenu: React.FC<{
 
       const latest = result.manifest;
 
-      const isUpdateAvailable = Boolean(
-        (installedId && latest.buildId && installedId !== latest.buildId) ||
-        (installedVer && latest.version && installedVer !== latest.version) ||
-        (!installedId && installedVer && latest.version && installedVer !== latest.version)
-      );
+      const isUpdateAvailable = shouldPromptDesktopUpdate({
+        installedVersion: installedVer,
+        installedBuildId: installedId,
+        latest,
+      });
 
       if (isUpdateAvailable) {
         setHasUpdateBadge(true);
@@ -506,7 +534,7 @@ export const HomeSettingsMenu: React.FC<{
           latestManifest: latest,
           sourceOrigin: result.sourceOrigin,
         });
-        addToast(`Phát hiện bản cập nhật mới ${latest.version}`, 'success');
+        addToast(`Phát hiện phiên bản mới ${latest.version}`, 'success');
       } else {
         setHasUpdateBadge(false);
         setCheckResult({
@@ -521,26 +549,49 @@ export const HomeSettingsMenu: React.FC<{
     }
   };
 
-  const handleInPlaceUpdate = async () => {
-    if (checkResult.status !== 'update-available') return;
-    setIsApplyingUpdate(true);
-    addToast('Đang cập nhật trực tiếp phiên bản mới...', 'info');
-    try {
-      await applyInPlaceAppUpdate(
-        checkResult.sourceOrigin || PRODUCTION_UPDATE_ORIGIN,
-        checkResult.latestManifest
-      );
-    } catch (err) {
-      console.error('Failed to apply in-place update:', err);
-      addToast('Không thể cập nhật trực tiếp tại chỗ. Bạn có thể tải bộ cài mới.', 'error');
-      setIsApplyingUpdate(false);
+  const handleOneClickDesktopUpdate = async () => {
+    if (typeof window !== 'undefined' && window.fzinkDesktopUpdater) {
+      setIsApplyingUpdate(true);
+      setDownloadProgress({ phase: 'downloading', percent: 0 });
+      const unsubscribe = window.fzinkDesktopUpdater.onProgress((payload) => {
+        setDownloadProgress(payload);
+      });
+      try {
+        const res = await window.fzinkDesktopUpdater.downloadAndInstall();
+        if (res.ok) {
+          addToast(
+            res.launched
+              ? `Đã tải xong ${res.fileName} và đang mở trình cài đặt`
+              : `Đã tải xong ${res.fileName} vào thư mục Downloads`,
+            'success'
+          );
+          setIsOpen(false);
+        } else {
+          addToast(res.error || 'Không thể tải tự động. Hãy chọn bộ cài thủ công.', 'error');
+        }
+      } finally {
+        unsubscribe();
+        setIsApplyingUpdate(false);
+        setDownloadProgress(null);
+      }
+      return;
+    }
+
+    // Fallback for standalone HTML / older preload without native updater IPC
+    const userOs = detectUserOS();
+    if (userOs === 'macos') {
+      setIsOpen(false);
+      onOpenDesktopModal();
+    } else {
+      addToast('Đang tải bộ cài đặt fzInK-Setup.exe', 'info');
+      triggerDirectDownload(DOWNLOAD_LINKS.windowsSetup, 'fzInK-Setup.exe');
     }
   };
 
   const currentVersionLabel =
     getDownloadedVersion() ||
     (typeof window !== 'undefined' && window.__BTTM_EMBEDDED_BUILD__?.version) ||
-    'v_fz.1.1.1.1.8';
+    'v_fz.1.1.1.1.9';
 
   return (
     <div className="relative" ref={menuRef}>
@@ -599,23 +650,23 @@ export const HomeSettingsMenu: React.FC<{
                   <button
                     type="button"
                     data-testid="check-update-button"
-                    disabled={isChecking}
+                    disabled={isChecking || isApplyingUpdate}
                     onClick={() => void handleCheckUpdateNow()}
-                    className="h-7 px-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-xs font-medium inline-flex items-center gap-1.5 transition-colors duration-150 cursor-pointer"
+                    className="h-7 px-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-xs font-medium inline-flex items-center gap-1.5 transition-colors duration-150 cursor-pointer whitespace-nowrap shrink-0"
                   >
                     {isChecking ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
                     ) : (
-                      <Download className="w-3.5 h-3.5" strokeWidth={1.75} />
+                      <RefreshCw className="w-3.5 h-3.5" strokeWidth={1.75} />
                     )}
-                    <span>{isChecking ? 'Đang kiểm tra' : 'Kiểm tra'}</span>
+                    <span>{isChecking ? 'Đang kiểm tra' : 'Kiểm tra cập nhật'}</span>
                   </button>
                 </div>
 
                 {checkResult.status === 'up-to-date' && (
                   <div
                     data-testid="update-status-up-to-date"
-                    className="p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-800/60 flex items-center gap-2 text-xs text-emerald-800 dark:text-emerald-300"
+                    className="p-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-800/60 flex items-center gap-2 text-xs text-emerald-800 dark:text-emerald-300"
                   >
                     <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" strokeWidth={1.75} />
                     <span>
@@ -627,82 +678,66 @@ export const HomeSettingsMenu: React.FC<{
                 {checkResult.status === 'update-available' && (
                   <div
                     data-testid="update-status-available"
-                    className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/70 space-y-2 text-xs"
+                    className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/70 space-y-2.5 text-xs"
                   >
                     <div className="flex items-center gap-1.5 text-amber-900 dark:text-amber-200 font-medium">
                       <CheckCircle2 className="w-4 h-4 text-amber-600 shrink-0" strokeWidth={1.75} />
-                      <span>
-                        {checkResult.currentVersion !== checkResult.latestManifest.version
-                          ? `Đã có phiên bản mới ${checkResult.latestManifest.version}`
-                          : `Đã có bản vá mới cho ${checkResult.latestManifest.version}`}
-                      </span>
+                      <span>Đã có phiên bản mới {checkResult.latestManifest.version}</span>
                     </div>
                     <div className="text-amber-800/90 dark:text-amber-300/90">
-                      {checkResult.currentVersion !== checkResult.latestManifest.version ? (
-                        <>
-                          Hiện tại: <span className="font-mono font-medium">{checkResult.currentVersion}</span> → Mới nhất: <span className="font-mono font-medium">{checkResult.latestManifest.version}</span>
-                        </>
-                      ) : (
-                        <>
-                          Phiên bản <span className="font-mono font-medium">{checkResult.latestManifest.version}</span> đã có bản dựng mới
-                        </>
-                      )}
+                      Hiện tại: <span className="font-mono font-medium">{checkResult.currentVersion}</span> → Mới nhất:{' '}
+                      <span className="font-mono font-medium">{checkResult.latestManifest.version}</span>
                     </div>
 
-                    <div className="space-y-1.5 pt-1">
-                      {isDesktop ? (
-                        <>
-                          <button
-                            type="button"
-                            data-testid="update-now-open-modal-button"
-                            onClick={() => {
-                              setIsOpen(false);
-                              onOpenDesktopModal();
-                            }}
-                            className="w-full h-8 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs flex items-center justify-center gap-1.5 transition-colors duration-150 cursor-pointer"
-                          >
-                            <Download className="w-3.5 h-3.5" strokeWidth={1.75} />
-                            <span>Tải bộ cài cập nhật (.exe / .dmg)</span>
-                          </button>
-                          <p className="text-xs text-amber-800/80 dark:text-amber-300/80 leading-snug">
-                            Chạy tệp cài đặt mới để cập nhật ứng dụng trên máy tính.
-                          </p>
-                        </>
-                      ) : (
-                        <>
-                          <button
-                            type="button"
-                            data-testid="in-place-update-button"
-                            disabled={isApplyingUpdate}
-                            onClick={() => void handleInPlaceUpdate()}
-                            className="w-full h-8 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white font-medium text-xs flex items-center justify-center gap-1.5 transition-colors duration-150 cursor-pointer"
-                          >
-                            {isApplyingUpdate ? (
-                              <>
-                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                <span>Đang cập nhật trực tiếp</span>
-                              </>
-                            ) : (
-                              <>
-                                <RefreshCw className="w-3.5 h-3.5" strokeWidth={1.75} />
-                                <span>Cập nhật trực tiếp ngay</span>
-                              </>
-                            )}
-                          </button>
-                          <button
-                            type="button"
-                            data-testid="update-now-open-modal-button"
-                            onClick={() => {
-                              setIsOpen(false);
-                              onOpenDesktopModal();
-                            }}
-                            className="w-full h-8 rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-slate-800 hover:bg-amber-100/50 dark:hover:bg-slate-700 text-amber-900 dark:text-amber-200 font-medium text-xs flex items-center justify-center gap-1.5 transition-colors duration-150 cursor-pointer"
-                          >
-                            <Download className="w-3.5 h-3.5" strokeWidth={1.75} />
-                            <span>Hoặc tải bộ cài (.exe / Mac)</span>
-                          </button>
-                        </>
+                    <div className="space-y-1.5 pt-0.5">
+                      <button
+                        type="button"
+                        data-testid="in-place-update-button"
+                        disabled={isApplyingUpdate}
+                        onClick={() => void handleOneClickDesktopUpdate()}
+                        className="w-full h-9 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-70 text-white font-medium text-xs flex items-center justify-center gap-1.5 transition-colors duration-150 cursor-pointer"
+                      >
+                        {isApplyingUpdate ? (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            <span>
+                              {downloadProgress?.phase === 'launching'
+                                ? 'Đang mở trình cài đặt'
+                                : downloadProgress && downloadProgress.percent > 0
+                                ? `Đang tải cập nhật (${downloadProgress.percent}%)`
+                                : 'Đang tải bản cập nhật'}
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <RefreshCw className="w-3.5 h-3.5" strokeWidth={1.75} />
+                            <span>Cập nhật ngay</span>
+                          </>
+                        )}
+                      </button>
+
+                      {isApplyingUpdate && downloadProgress && downloadProgress.percent > 0 && (
+                        <div className="w-full h-1.5 rounded-full bg-amber-200/80 dark:bg-amber-900/60 overflow-hidden">
+                          <div
+                            className="h-full bg-emerald-600 transition-[width] duration-150"
+                            style={{ width: `${downloadProgress.percent}%` }}
+                          />
+                        </div>
                       )}
+
+                      <button
+                        type="button"
+                        data-testid="update-now-open-modal-button"
+                        disabled={isApplyingUpdate}
+                        onClick={() => {
+                          setIsOpen(false);
+                          onOpenDesktopModal();
+                        }}
+                        className="w-full h-8 rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-slate-900 hover:bg-amber-100/50 dark:hover:bg-slate-800 text-amber-900 dark:text-amber-200 font-medium text-xs flex items-center justify-center gap-1.5 transition-colors duration-150 cursor-pointer"
+                      >
+                        <Download className="w-3.5 h-3.5" strokeWidth={1.75} />
+                        <span>Chọn bộ cài khác (.exe / .dmg)</span>
+                      </button>
                     </div>
                   </div>
                 )}
@@ -710,7 +745,7 @@ export const HomeSettingsMenu: React.FC<{
                 {checkResult.status === 'not-installed' && (
                   <div className="p-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 space-y-2 text-xs">
                     <div className="text-slate-700 dark:text-slate-200">
-                      Phiên bản mới nhất: <strong className="font-mono font-medium">{checkResult.latestManifest?.version || 'v_fz.1.1.1.1.8'}</strong>
+                      Phiên bản mới nhất: <strong className="font-mono font-medium">{checkResult.latestManifest?.version || 'v_fz.1.1.1.1.9'}</strong>
                     </div>
                     <button
                       type="button"
