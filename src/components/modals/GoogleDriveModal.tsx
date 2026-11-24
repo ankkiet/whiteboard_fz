@@ -126,11 +126,11 @@ export const GoogleDriveModal: React.FC<GoogleDriveModalProps> = ({
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3 shrink-0">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
-              <Cloud className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center shrink-0">
+              <Cloud className="w-4 h-4" strokeWidth={1.75} />
             </div>
             <div className="min-w-0">
-              <h2 id="drive-modal-title" className="text-base font-bold truncate">
+              <h2 id="drive-modal-title" className="text-base font-medium truncate">
                 Lưu trữ Google Drive
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
@@ -179,7 +179,7 @@ export const GoogleDriveModal: React.FC<GoogleDriveModalProps> = ({
                   <AlertTriangle className="w-7 h-7" />
                 </div>
                 <div className="max-w-md space-y-1.5">
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                  <h3 className="text-sm font-medium text-slate-900 dark:text-slate-100">
                     Bản cài đặt tệp cục bộ hoạt động ngoại tuyến
                   </h3>
                   <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
@@ -203,20 +203,20 @@ export const GoogleDriveModal: React.FC<GoogleDriveModalProps> = ({
                         'width=540,height=700,menubar=no,toolbar=no,location=no,status=no'
                       );
                     }}
-                    className="inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs transition-colors cursor-pointer shadow-xs"
+                    className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs transition-colors duration-150 cursor-pointer"
                   >
-                    <KeyRound className="w-4 h-4" />
-                    <span>Đăng nhập tự động qua trình duyệt</span>
+                    <KeyRound className="w-4 h-4" strokeWidth={1.75} />
+                    <span>Đăng nhập qua trình duyệt</span>
                   </button>
                 </div>
               </div>
             ) : (
               <div className="py-6 flex flex-col items-center text-center space-y-4">
-                <div className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
-                  <CloudUpload className="w-7 h-7" />
+                <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300">
+                  <CloudUpload className="w-6 h-6" strokeWidth={1.75} />
                 </div>
                 <div className="max-w-sm space-y-1.5">
-                  <h3 className="text-sm font-bold">Kết nối tài khoản Google của bạn</h3>
+                  <h3 className="text-sm font-medium">Kết nối tài khoản Google của bạn</h3>
                   <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
                     Ứng dụng chỉ truy cập các tệp bảng trắng do chính bạn tạo và lưu qua ứng dụng này trên Google Drive.
                   </p>

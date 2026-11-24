@@ -170,40 +170,41 @@ export const PresentMode: React.FC<PresentModeProps> = ({ isOpen, onClose }) => 
       {/* Minimalist floating HUD */}
       <div
         data-present-hud
-        className="cursor-default absolute bottom-5 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 bg-white/92 dark:bg-slate-900/92 backdrop-blur-md px-3.5 py-2 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl text-slate-800 dark:text-slate-100"
+        className="cursor-default absolute bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-3 py-2 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-lg dark:shadow-none text-slate-800 dark:text-slate-100"
       >
-        <span className="text-xs font-semibold max-w-[160px] truncate px-1">{title}</span>
+        <span className="text-xs font-medium max-w-[160px] truncate px-1">{title}</span>
         <div className="h-4 w-px bg-slate-200 dark:bg-slate-800" />
         <button
           type="button"
           onClick={() => setLaserEnabled((v) => !v)}
           aria-pressed={laserEnabled}
-          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium transition-colors whitespace-nowrap ${
+          className={`h-8 flex items-center gap-1.5 px-2.5 rounded-lg text-xs font-medium transition-colors duration-150 whitespace-nowrap cursor-pointer ${
             laserEnabled
               ? 'bg-red-600 text-white'
               : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200'
           }`}
         >
-          <Wand2 className="w-3.5 h-3.5" />
-          <span>Tia Laser (L)</span>
+          <Wand2 className="w-4 h-4" strokeWidth={1.75} />
+          <span>Tia laser</span>
+          <kbd className={`kbd-keycap ${laserEnabled ? '!bg-red-700 !border-red-400/40 !text-white' : ''}`}>L</kbd>
         </button>
         <button
           type="button"
           onClick={fitContent}
           title="Căn vừa màn hình"
           aria-label="Căn vừa màn hình"
-          className="p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+          className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors duration-150 cursor-pointer"
         >
-          <Maximize2 className="w-4 h-4" />
+          <Maximize2 className="w-4 h-4" strokeWidth={1.75} />
         </button>
         <button
           type="button"
           onClick={onClose}
           title="Thoát trình bày (Esc)"
           aria-label="Thoát trình bày"
-          className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-white text-xs font-medium transition-colors whitespace-nowrap"
+          className="h-8 flex items-center gap-1.5 px-3 rounded-lg bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-white text-xs font-medium transition-colors duration-150 whitespace-nowrap cursor-pointer"
         >
-          <X className="w-3.5 h-3.5" />
+          <X className="w-4 h-4" strokeWidth={1.75} />
           <span>Thoát</span>
         </button>
       </div>

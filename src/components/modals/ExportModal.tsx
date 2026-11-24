@@ -254,17 +254,17 @@ export const ExportModal: React.FC<ExportModalProps> = ({
         if (e.target === e.currentTarget && !isBusy) onClose();
       }}
     >
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl w-full max-w-[440px] overflow-hidden flex flex-col max-h-[90vh] text-slate-900 dark:text-slate-100">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl dark:shadow-none w-full max-w-md overflow-hidden flex flex-col max-h-[90vh] text-slate-900 dark:text-slate-100">
         {/* Header */}
         <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3 shrink-0">
           <div className="min-w-0">
             <h2
               id="export-modal-title"
-              className="text-base font-bold text-slate-900 dark:text-white text-balance"
+              className="text-base font-medium text-slate-900 dark:text-slate-100 text-balance"
             >
               Xuất & sao lưu bảng
             </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 tabular-nums">
+            <p className="text-xs font-mono text-slate-500 dark:text-slate-400 mt-0.5 tabular-nums">
               {elements.length} đối tượng trên bảng
             </p>
           </div>

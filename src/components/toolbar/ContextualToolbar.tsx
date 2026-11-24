@@ -274,7 +274,7 @@ export const ContextualToolbar: React.FC = () => {
       role="toolbar"
       aria-label="Thanh công cụ đối tượng được chọn"
       data-testid="contextual-toolbar"
-      className="absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-25 max-w-[calc(100vw-20px)] flex items-center gap-2 sm:gap-2.5 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl px-3 sm:px-4 py-2 rounded-full shadow-xl shadow-slate-900/15 dark:shadow-black/50 border border-slate-200/90 dark:border-slate-800 text-slate-800 dark:text-slate-100 overflow-x-auto scrollbar-none animate-in fade-in slide-in-from-bottom-2 duration-150"
+      className="absolute bottom-4 left-1/2 -translate-x-1/2 z-25 max-w-[calc(100vw-24px)] flex items-center gap-2 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-3 py-2 rounded-2xl shadow-lg dark:shadow-none border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 overflow-x-auto scrollbar-none"
     >
       {showEraserControls && (
         <div className="flex items-center gap-2.5 shrink-0">
@@ -372,10 +372,10 @@ export const ContextualToolbar: React.FC = () => {
                 aria-label={`Màu ${item.label}`}
                 aria-pressed={isSelected}
                 style={{ backgroundColor: swatchBg }}
-                className={`w-6 h-6 rounded-full border border-slate-300/90 dark:border-slate-600 transition-transform shrink-0 ${
+                className={`w-6 h-6 rounded-full border border-black/15 dark:border-white/15 transition-shadow duration-150 shrink-0 cursor-pointer ${
                   isSelected
-                    ? 'scale-115 ring-2 ring-indigo-600 ring-offset-2 dark:ring-offset-slate-900'
-                    : 'hover:scale-110'
+                    ? 'ring-2 ring-slate-900 dark:ring-slate-100 ring-offset-2 dark:ring-offset-slate-900'
+                    : 'hover:ring-2 hover:ring-slate-300 dark:hover:ring-slate-600'
                 }`}
               />
             );
@@ -384,10 +384,10 @@ export const ContextualToolbar: React.FC = () => {
           {/* Custom Color Picker */}
           <label
             title="Chọn màu tùy chỉnh"
-            className={`relative w-6 h-6 rounded-full flex items-center justify-center cursor-pointer border border-slate-300 dark:border-slate-600 transition-transform shrink-0 ${
+            className={`relative w-6 h-6 rounded-full flex items-center justify-center cursor-pointer border border-slate-300 dark:border-slate-600 transition-shadow duration-150 shrink-0 ${
               !isPresetColor
-                ? 'scale-115 ring-2 ring-indigo-600 ring-offset-2 dark:ring-offset-slate-900'
-                : 'hover:scale-110 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
+                ? 'ring-2 ring-slate-900 dark:ring-slate-100 ring-offset-2 dark:ring-offset-slate-900'
+                : 'hover:ring-2 hover:ring-slate-300 dark:hover:ring-slate-600 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
             }`}
             style={!isPresetColor ? { backgroundColor: resolvedActiveInk } : undefined}
           >
@@ -439,7 +439,7 @@ export const ContextualToolbar: React.FC = () => {
               title={`Xem trước đầu bút ${activeStrokeWidth}px`}
             >
               <span
-                className="rounded-full block transition-all duration-150"
+                className="rounded-full block transition-opacity duration-150"
                 style={{
                   width: liveNibPreviewSize,
                   height: liveNibPreviewSize,

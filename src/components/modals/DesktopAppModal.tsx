@@ -12,8 +12,8 @@ import {
   Loader2,
   ShieldCheck,
   ExternalLink,
-  Info,
   RefreshCw,
+  Settings,
 } from 'lucide-react';
 import {
   AppVersionManifest,
@@ -368,14 +368,14 @@ export const PWAInstallTriggerButton: React.FC<{
       onClick={onOpenModal}
       title="Tải ứng dụng fzInK (.exe cho Windows / .dmg cho macOS)"
       aria-label="Tải ứng dụng về máy tính"
-      className={`inline-flex items-center gap-1.5 rounded-xl border transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
+      className={`inline-flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 transition-colors duration-150 cursor-pointer whitespace-nowrap shrink-0 ${
         compact
-          ? 'px-2.5 py-1.5 text-xs font-semibold bg-indigo-50/90 dark:bg-indigo-950/70 hover:bg-indigo-100 dark:hover:bg-indigo-900/80 text-indigo-700 dark:text-indigo-300 border-indigo-200/80 dark:border-indigo-800/80'
-          : 'h-9 px-3.5 text-xs font-semibold bg-indigo-50 dark:bg-indigo-950/70 hover:bg-indigo-100 dark:hover:bg-indigo-900/80 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800'
+          ? 'h-8 px-2.5 text-xs font-medium'
+          : 'h-9 w-9 sm:w-auto sm:px-3 text-xs font-medium'
       }`}
     >
-      <Download className="w-3.5 h-3.5 shrink-0" />
-      <span className={compact ? 'hidden xl:inline' : ''}>Tải ứng dụng (.exe / Mac)</span>
+      <Download className="w-4 h-4 text-slate-500 dark:text-slate-400 shrink-0" strokeWidth={1.75} />
+      <span className={compact ? 'hidden xl:inline' : 'hidden sm:inline'}>Tải ứng dụng</span>
     </button>
   );
 };
@@ -388,7 +388,7 @@ export const HomeSettingsMenu: React.FC<{
   const addToast = useBoardStore((s) => s.addToast);
   const [isOpen, setIsOpen] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
-  const [latestDesktopVersion, setLatestDesktopVersion] = useState<string>('v_fz.1.1.1.1.6');
+  const [latestDesktopVersion, setLatestDesktopVersion] = useState<string>('v_fz.1.1.1.1.7');
   const [checkResult, setCheckResult] = useState<
     | { status: 'idle' }
     | { status: 'up-to-date'; version: string; buildId: string }
@@ -438,7 +438,7 @@ export const HomeSettingsMenu: React.FC<{
       void syncInitialBadge();
       const onDownloaded = () => {
         setHasUpdateBadge(false);
-        const ver = getDownloadedVersion() || 'v_fz.1.1.1.1.6';
+        const ver = getDownloadedVersion() || 'v_fz.1.1.1.1.7';
         const id = getDownloadedBuildId() || '';
         setCheckResult({ status: 'up-to-date', version: ver, buildId: id });
       };
@@ -506,7 +506,7 @@ export const HomeSettingsMenu: React.FC<{
           latestManifest: latest,
           sourceOrigin: result.sourceOrigin,
         });
-        addToast(`Phát hiện bản cập nhật mới ${latest.version}!`, 'success');
+        addToast(`Phát hiện bản cập nhật mới ${latest.version}`, 'success');
       } else {
         setHasUpdateBadge(false);
         setCheckResult({
@@ -514,7 +514,7 @@ export const HomeSettingsMenu: React.FC<{
           version: installedVer || latest.version,
           buildId: installedId || latest.buildId,
         });
-        addToast(`Ứng dụng của bạn đang ở phiên bản mới nhất (${installedVer || latest.version})!`, 'success');
+        addToast(`Ứng dụng đang ở phiên bản mới nhất (${installedVer || latest.version})`, 'success');
       }
     } finally {
       setIsChecking(false);
@@ -540,7 +540,7 @@ export const HomeSettingsMenu: React.FC<{
   const currentVersionLabel =
     getDownloadedVersion() ||
     (typeof window !== 'undefined' && window.__BTTM_EMBEDDED_BUILD__?.version) ||
-    'v_fz.1.1.1.1.6';
+    'v_fz.1.1.1.1.7';
 
   return (
     <div className="relative" ref={menuRef}>
@@ -551,25 +551,13 @@ export const HomeSettingsMenu: React.FC<{
         aria-expanded={isOpen}
         aria-label="Cài đặt hệ thống"
         title="Cài đặt hệ thống"
-        className={`relative w-9 h-9 rounded-lg flex items-center justify-center transition-colors cursor-pointer shrink-0 ${
+        className={`relative w-9 h-9 rounded-lg flex items-center justify-center transition-colors duration-150 cursor-pointer shrink-0 ${
           isOpen
-            ? 'bg-indigo-50 dark:bg-indigo-950/70 text-indigo-600 dark:text-indigo-400'
-            : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+            ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100'
+            : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100'
         }`}
       >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="w-4 h-4"
-        >
-          <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
-          <circle cx="12" cy="12" r="3" />
-        </svg>
+        <Settings className="w-4 h-4" strokeWidth={1.75} />
         {isDesktop && hasUpdateBadge && (
           <span
             data-testid="settings-update-badge"
@@ -583,29 +571,29 @@ export const HomeSettingsMenu: React.FC<{
           data-testid="home-settings-dropdown"
           role="dialog"
           aria-label="Bảng cài đặt hệ thống"
-          className="absolute right-0 mt-2 w-[340px] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-3.5 z-40 space-y-3"
+          className="absolute right-0 mt-2 w-80 bg-white dark:bg-slate-900 rounded-xl shadow-lg dark:shadow-none border border-slate-200 dark:border-slate-800 p-4 z-40 space-y-3"
         >
           {isDesktop ? (
             /* =================== GIAO DIỆN DESKTOP APP =================== */
             <>
-              <div className="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-2.5">
+              <div className="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
                 <div className="min-w-0">
-                  <div className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
-                    Cài đặt & phiên bản ứng dụng
+                  <div className="text-xs font-medium text-slate-900 dark:text-slate-100 truncate">
+                    Cài đặt & phiên bản
                   </div>
-                  <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
-                    Ứng dụng máy tính (Desktop)
+                  <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+                    Ứng dụng máy tính
                   </div>
                 </div>
-                <span className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-[10px] font-mono font-semibold text-slate-600 dark:text-slate-300 whitespace-nowrap shrink-0">
+                <span className="text-xs font-mono text-slate-500 dark:text-slate-400 tabular-nums whitespace-nowrap shrink-0">
                   {currentVersionLabel}
                 </span>
               </div>
 
               {/* Check for Updates Section */}
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200/70 dark:border-slate-800 space-y-2.5">
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200/80 dark:border-slate-800 space-y-2.5">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                  <span className="text-xs font-medium text-slate-800 dark:text-slate-200">
                     Cập nhật ứng dụng
                   </span>
                   <button
@@ -613,25 +601,25 @@ export const HomeSettingsMenu: React.FC<{
                     data-testid="check-update-button"
                     disabled={isChecking}
                     onClick={() => void handleCheckUpdateNow()}
-                    className="h-7 px-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-[11px] font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                    className="h-7 px-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-xs font-medium inline-flex items-center gap-1.5 transition-colors duration-150 cursor-pointer"
                   >
                     {isChecking ? (
-                      <Loader2 className="w-3 h-3 animate-spin" />
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
                     ) : (
-                      <Download className="w-3 h-3" />
+                      <Download className="w-3.5 h-3.5" strokeWidth={1.75} />
                     )}
-                    <span>{isChecking ? 'Đang kiểm tra...' : 'Kiểm tra cập nhật'}</span>
+                    <span>{isChecking ? 'Đang kiểm tra' : 'Kiểm tra'}</span>
                   </button>
                 </div>
 
                 {checkResult.status === 'up-to-date' && (
                   <div
                     data-testid="update-status-up-to-date"
-                    className="p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-800/60 flex items-center gap-2 text-[11px] text-emerald-800 dark:text-emerald-300"
+                    className="p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-800/60 flex items-center gap-2 text-xs text-emerald-800 dark:text-emerald-300"
                   >
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" strokeWidth={1.75} />
                     <span>
-                      Bạn đang dùng bản mới nhất (<strong>{checkResult.version}</strong>).
+                      Đang dùng bản mới nhất (<strong className="font-mono font-medium">{checkResult.version}</strong>)
                     </span>
                   </div>
                 )}
@@ -639,24 +627,24 @@ export const HomeSettingsMenu: React.FC<{
                 {checkResult.status === 'update-available' && (
                   <div
                     data-testid="update-status-available"
-                    className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/70 space-y-2.5 text-[11px]"
+                    className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/70 space-y-2 text-xs"
                   >
-                    <div className="flex items-center gap-1.5 text-amber-900 dark:text-amber-200 font-bold text-xs">
-                      <CheckCircle2 className="w-4 h-4 text-amber-600 shrink-0" />
+                    <div className="flex items-center gap-1.5 text-amber-900 dark:text-amber-200 font-medium">
+                      <CheckCircle2 className="w-4 h-4 text-amber-600 shrink-0" strokeWidth={1.75} />
                       <span>
                         {checkResult.currentVersion !== checkResult.latestManifest.version
-                          ? `Đã có phiên bản mới: ${checkResult.latestManifest.version}!`
-                          : `Đã có bản cập nhật vá lỗi cho ${checkResult.latestManifest.version}!`}
+                          ? `Đã có phiên bản mới ${checkResult.latestManifest.version}`
+                          : `Đã có bản vá mới cho ${checkResult.latestManifest.version}`}
                       </span>
                     </div>
                     <div className="text-amber-800/90 dark:text-amber-300/90">
                       {checkResult.currentVersion !== checkResult.latestManifest.version ? (
                         <>
-                          Bản hiện tại: <span className="font-semibold">{checkResult.currentVersion}</span> → Bản mới nhất: <span className="font-semibold">{checkResult.latestManifest.version}</span>
+                          Hiện tại: <span className="font-mono font-medium">{checkResult.currentVersion}</span> → Mới nhất: <span className="font-mono font-medium">{checkResult.latestManifest.version}</span>
                         </>
                       ) : (
                         <>
-                          Phiên bản: <span className="font-semibold">{checkResult.latestManifest.version}</span> (Mã nguồn đã được cập nhật mới trên đám mây)
+                          Phiên bản <span className="font-mono font-medium">{checkResult.latestManifest.version}</span> đã có bản dựng mới
                         </>
                       )}
                     </div>
@@ -671,13 +659,13 @@ export const HomeSettingsMenu: React.FC<{
                               setIsOpen(false);
                               onOpenDesktopModal();
                             }}
-                            className="w-full h-8 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-sm"
+                            className="w-full h-8 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs flex items-center justify-center gap-1.5 transition-colors duration-150 cursor-pointer"
                           >
-                            <Download className="w-3.5 h-3.5" />
-                            <span>Tải bộ cài cập nhật mới (.exe / .dmg)</span>
+                            <Download className="w-3.5 h-3.5" strokeWidth={1.75} />
+                            <span>Tải bộ cài cập nhật (.exe / .dmg)</span>
                           </button>
-                          <p className="text-[10.5px] text-amber-800/80 dark:text-amber-300/80 leading-snug">
-                            Chạy tệp cài đặt mới để cập nhật vĩnh viễn ứng dụng trên máy tính.
+                          <p className="text-xs text-amber-800/80 dark:text-amber-300/80 leading-snug">
+                            Chạy tệp cài đặt mới để cập nhật ứng dụng trên máy tính.
                           </p>
                         </>
                       ) : (
@@ -687,16 +675,16 @@ export const HomeSettingsMenu: React.FC<{
                             data-testid="in-place-update-button"
                             disabled={isApplyingUpdate}
                             onClick={() => void handleInPlaceUpdate()}
-                            className="w-full h-8 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-sm"
+                            className="w-full h-8 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white font-medium text-xs flex items-center justify-center gap-1.5 transition-colors duration-150 cursor-pointer"
                           >
                             {isApplyingUpdate ? (
                               <>
                                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                <span>Đang cập nhật trực tiếp tại chỗ...</span>
+                                <span>Đang cập nhật trực tiếp</span>
                               </>
                             ) : (
                               <>
-                                <RefreshCw className="w-3.5 h-3.5" />
+                                <RefreshCw className="w-3.5 h-3.5" strokeWidth={1.75} />
                                 <span>Cập nhật trực tiếp ngay</span>
                               </>
                             )}
@@ -708,10 +696,10 @@ export const HomeSettingsMenu: React.FC<{
                               setIsOpen(false);
                               onOpenDesktopModal();
                             }}
-                            className="w-full h-7 rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-slate-800 hover:bg-amber-100/50 dark:hover:bg-slate-700 text-amber-900 dark:text-amber-200 font-medium text-[11px] flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                            className="w-full h-8 rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-slate-800 hover:bg-amber-100/50 dark:hover:bg-slate-700 text-amber-900 dark:text-amber-200 font-medium text-xs flex items-center justify-center gap-1.5 transition-colors duration-150 cursor-pointer"
                           >
-                            <Download className="w-3 h-3" />
-                            <span>Hoặc tải bộ cài mới (.exe / Mac)</span>
+                            <Download className="w-3.5 h-3.5" strokeWidth={1.75} />
+                            <span>Hoặc tải bộ cài (.exe / Mac)</span>
                           </button>
                         </>
                       )}
@@ -720,9 +708,9 @@ export const HomeSettingsMenu: React.FC<{
                 )}
 
                 {checkResult.status === 'not-installed' && (
-                  <div className="p-2.5 rounded-lg bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200/70 dark:border-indigo-800/60 space-y-2 text-[11px]">
-                    <div className="text-indigo-900 dark:text-indigo-200">
-                      Phiên bản mới nhất: <strong>{checkResult.latestManifest?.version || 'v_fz.1.1.1.1.6'}</strong>
+                  <div className="p-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 space-y-2 text-xs">
+                    <div className="text-slate-700 dark:text-slate-200">
+                      Phiên bản mới nhất: <strong className="font-mono font-medium">{checkResult.latestManifest?.version || 'v_fz.1.1.1.1.7'}</strong>
                     </div>
                     <button
                       type="button"
@@ -730,10 +718,10 @@ export const HomeSettingsMenu: React.FC<{
                         setIsOpen(false);
                         onOpenDesktopModal();
                       }}
-                      className="w-full h-7 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-[11px] flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                      className="w-full h-8 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs flex items-center justify-center gap-1.5 transition-colors duration-150 cursor-pointer"
                     >
-                      <Download className="w-3 h-3" />
-                      <span>Mở hộp thoại tải bộ cài (.exe / Mac)</span>
+                      <Download className="w-3.5 h-3.5" strokeWidth={1.75} />
+                      <span>Tải bộ cài (.exe / Mac)</span>
                     </button>
                   </div>
                 )}
@@ -741,11 +729,11 @@ export const HomeSettingsMenu: React.FC<{
                 {checkResult.status === 'check-failed' && checkResult.reason === 'offline' && (
                   <div
                     data-testid="update-status-offline"
-                    className="p-2.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/70 flex items-start gap-2 text-[11px] text-amber-900 dark:text-amber-200"
+                    className="p-2.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/70 flex items-start gap-2 text-xs text-amber-900 dark:text-amber-200"
                   >
-                    <WifiOff className="w-3.5 h-3.5 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
+                    <WifiOff className="w-4 h-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" strokeWidth={1.75} />
                     <span>
-                      Thiết bị đang ngoại tuyến — Hãy kết nối Internet để kiểm tra phiên bản mới.
+                      Thiết bị đang ngoại tuyến — Kết nối mạng để kiểm tra phiên bản mới.
                     </span>
                   </div>
                 )}
@@ -754,22 +742,22 @@ export const HomeSettingsMenu: React.FC<{
                   (checkResult.reason === 'no-update-origin' || checkResult.reason === 'server-unreachable') && (
                     <div
                       data-testid="update-status-unreachable"
-                      className="p-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed"
+                      className="p-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-xs text-slate-600 dark:text-slate-300 leading-relaxed"
                     >
-                      Máy vẫn trực tuyến nhưng máy chủ kiểm tra phiên bản tạm thời không phản hồi. Vui lòng thử lại sau.
+                      Máy chủ kiểm tra phiên bản tạm thời không phản hồi. Vui lòng thử lại sau.
                     </div>
                   )}
               </div>
 
               {/* Quick Preferences & Re-download */}
-              <div className="space-y-1 pt-0.5">
+              <div className="space-y-1">
                 <button
                   type="button"
                   onClick={onToggleTheme}
-                  className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                  className="w-full h-9 flex items-center justify-between px-2.5 rounded-lg text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors duration-150 cursor-pointer"
                 >
                   <span>Giao diện hiển thị</span>
-                  <span className="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400">
+                  <span className="text-xs text-slate-500 dark:text-slate-400">
                     {theme === 'dark' ? 'Chế độ tối' : 'Chế độ sáng'}
                   </span>
                 </button>
@@ -781,10 +769,10 @@ export const HomeSettingsMenu: React.FC<{
                     setIsOpen(false);
                     onOpenDesktopModal();
                   }}
-                  className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                  className="w-full h-9 flex items-center justify-between px-2.5 rounded-lg text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors duration-150 cursor-pointer"
                 >
-                  <span>Bộ cài đặt máy tính (.exe / .app)</span>
-                  <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                  <span>Bộ cài đặt máy tính (.exe / .dmg)</span>
+                  <span className="text-xs text-slate-500 dark:text-slate-400">
                     Tải lại
                   </span>
                 </button>
@@ -793,34 +781,34 @@ export const HomeSettingsMenu: React.FC<{
           ) : (
             /* =================== GIAO DIỆN WEB TRỰC TUYẾN =================== */
             <>
-              <div className="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-2.5">
+              <div className="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
                 <div className="min-w-0">
-                  <div className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
+                  <div className="text-xs font-medium text-slate-900 dark:text-slate-100 truncate">
                     Cài đặt hệ thống
                   </div>
-                  <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+                  <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">
                     Phiên bản web trực tuyến
                   </div>
                 </div>
-                <span className="px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/70 border border-emerald-200/60 dark:border-emerald-800/60 text-[10px] font-semibold text-emerald-700 dark:text-emerald-300 whitespace-nowrap shrink-0 flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-400 whitespace-nowrap shrink-0">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                   Trực tuyến
                 </span>
               </div>
 
-              {/* Desktop App Promo Card */}
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200/70 dark:border-slate-800 space-y-2.5">
+              {/* Desktop App Card */}
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200/80 dark:border-slate-800 space-y-2.5">
                 <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200">
-                    <Laptop className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                  <div className="flex items-center gap-2 text-xs font-medium text-slate-900 dark:text-slate-100">
+                    <Laptop className="w-4 h-4 text-slate-500 dark:text-slate-400 shrink-0" strokeWidth={1.75} />
                     <span>Ứng dụng máy tính</span>
                   </div>
-                  <span className="px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/60 text-[10px] font-mono font-semibold text-indigo-600 dark:text-indigo-400">
+                  <span className="text-xs font-mono text-slate-500 dark:text-slate-400 tabular-nums">
                     {latestDesktopVersion}
                   </span>
                 </div>
-                <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
-                  Cài đặt lên Windows hoặc macOS để vẽ mượt hơn, lưu trữ an toàn và làm việc ngoại tuyến không cần mạng.
+                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                  Cài đặt trên Windows hoặc macOS để lưu trữ cục bộ và làm việc ngoại tuyến không cần mạng.
                 </p>
                 <button
                   type="button"
@@ -829,29 +817,15 @@ export const HomeSettingsMenu: React.FC<{
                     setIsOpen(false);
                     onOpenDesktopModal();
                   }}
-                  className="w-full h-8 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-sm shadow-indigo-600/20"
+                  className="w-full h-9 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs flex items-center justify-center gap-1.5 transition-colors duration-150 cursor-pointer"
                 >
-                  <Download className="w-3.5 h-3.5" />
+                  <Download className="w-4 h-4" strokeWidth={1.75} />
                   <span>Tải bộ cài đặt (.exe / Mac)</span>
                 </button>
               </div>
 
-              {/* Quick Preferences */}
-              <div className="space-y-1 pt-0.5">
-                <button
-                  type="button"
-                  onClick={onToggleTheme}
-                  className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-                >
-                  <span>Giao diện hiển thị</span>
-                  <span className="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400">
-                    {theme === 'dark' ? 'Chế độ tối' : 'Chế độ sáng'}
-                  </span>
-                </button>
-              </div>
-
-              <div className="text-[10px] text-center text-slate-400 dark:text-slate-500 pt-1 border-t border-slate-100 dark:border-slate-800">
-                Bản web luôn tự động cập nhật phiên bản mới nhất từ đám mây.
+              <div className="text-xs text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-800">
+                Bản web luôn tự động cập nhật từ máy chủ
               </div>
             </>
           )}
@@ -987,7 +961,7 @@ export const DesktopAppModal: React.FC<DesktopAppModalProps> = ({ isOpen, onClos
   const handleInstallPWA = async () => {
     const success = await install();
     if (success) {
-      addToast('Đã bắt đầu cài đặt ứng dụng vào máy tính!', 'success');
+      addToast('Đã bắt đầu cài đặt ứng dụng vào máy tính', 'success');
       markDesktopAppAsDownloaded();
       onClose();
     }
@@ -999,23 +973,23 @@ export const DesktopAppModal: React.FC<DesktopAppModalProps> = ({ isOpen, onClos
       role="dialog"
       aria-modal="true"
       aria-label="Tải ứng dụng máy tính"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm select-text"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs select-text"
       onClick={onClose}
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-xl flex flex-col rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-2xl overflow-hidden text-slate-900 dark:text-slate-100"
+        className="relative w-full max-w-xl flex flex-col rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl dark:shadow-none overflow-hidden text-slate-900 dark:text-slate-100"
       >
         {/* Header */}
         <div className="px-6 pt-6 pb-4 flex items-start justify-between gap-4">
-          <div className="flex items-center gap-3.5">
-            <AppLogo size={44} className="rounded-2xl shadow-md shadow-indigo-600/20" />
+          <div className="flex items-center gap-3">
+            <AppLogo size={40} className="rounded-xl" />
             <div>
-              <h2 className="text-lg font-bold tracking-tight text-slate-900 dark:text-white">
+              <h2 className="text-base font-medium text-slate-900 dark:text-slate-100">
                 Tải ứng dụng máy tính
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Ứng dụng máy tính độc lập chính thức cho Windows và macOS, hoạt động hoàn toàn ngoại tuyến
+                Ứng dụng độc lập cho Windows và macOS, hoạt động hoàn toàn ngoại tuyến
               </p>
             </div>
           </div>
@@ -1024,9 +998,9 @@ export const DesktopAppModal: React.FC<DesktopAppModalProps> = ({ isOpen, onClos
             data-testid="close-desktop-app-modal-button"
             onClick={onClose}
             aria-label="Đóng"
-            className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer shrink-0"
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors duration-150 cursor-pointer shrink-0"
           >
-            <X className="w-4 h-4" />
+            <X className="w-4 h-4" strokeWidth={1.75} />
           </button>
         </div>
 
@@ -1036,52 +1010,56 @@ export const DesktopAppModal: React.FC<DesktopAppModalProps> = ({ isOpen, onClos
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Windows Card */}
             <div
-              className={`p-5 rounded-2xl border flex flex-col justify-between transition-all ${
+              className={`p-4 rounded-xl border flex flex-col justify-between transition-colors duration-150 ${
                 os !== 'macos'
-                  ? 'border-indigo-500/60 bg-gradient-to-b from-indigo-50/50 to-white dark:from-indigo-950/30 dark:to-slate-900/90 shadow-sm ring-1 ring-indigo-500/20'
-                  : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 hover:border-slate-300 dark:hover:border-slate-700'
+                  ? 'border-indigo-500/70 bg-white dark:bg-slate-900'
+                  : 'border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/40 hover:border-slate-300 dark:hover:border-slate-700'
               }`}
             >
               <div>
-                <div className="flex items-center justify-between">
-                  <div className="w-11 h-11 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 shadow-xs flex items-center justify-center shrink-0">
-                    <WindowsLogoIcon className="w-6 h-6" />
+                <div className="flex items-center justify-between gap-2">
+                  <div className="w-10 h-10 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center shrink-0">
+                    <WindowsLogoIcon className="w-5 h-5" />
                   </div>
                   {os !== 'macos' && (
-                    <span className="px-2.5 py-0.5 rounded-full bg-indigo-600 text-white text-[10px] font-semibold tracking-wide">
+                    <span className="text-xs font-medium text-indigo-600 dark:text-indigo-400">
                       Hệ điều hành của bạn
                     </span>
                   )}
                 </div>
 
                 <div className="mt-4">
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                  <h3 className="text-base font-medium text-slate-900 dark:text-slate-100">
                     Windows
                   </h3>
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                     Windows 10 / 11 (64-bit)
                   </p>
                 </div>
+
+                <div className="mt-3 p-2.5 rounded-lg bg-slate-100/80 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/70 text-xs text-slate-600 dark:text-slate-400 leading-snug">
+                  Gồm bản cài đặt tự tạo biểu tượng màn hình và bản Portable chạy ngay
+                </div>
               </div>
 
-              <div className="mt-5 space-y-2">
+              <div className="mt-4 space-y-2">
                 <button
                   type="button"
                   data-testid="download-windows-exe-button"
                   onClick={handleDownloadWindowsSetup}
-                  className="w-full h-10 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-[0.99] text-white font-semibold text-xs inline-flex items-center justify-center gap-2 shadow-sm shadow-indigo-600/20 transition-all cursor-pointer"
+                  className="w-full h-10 px-4 rounded-lg bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] text-white font-medium text-xs inline-flex items-center justify-center gap-2 transition-[background-color,transform] duration-150 cursor-pointer"
                 >
-                  <Download className="w-4 h-4 shrink-0" />
+                  <Download className="w-4 h-4 shrink-0" strokeWidth={1.75} />
                   <span>Tải bộ cài đặt (.exe Setup)</span>
                 </button>
                 <button
                   type="button"
                   onClick={handleDownloadWindowsPortable}
-                  className="w-full h-8 px-3 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium text-[11px] inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                  className="w-full h-8 px-3 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium text-xs inline-flex items-center justify-center gap-1.5 transition-colors duration-150 cursor-pointer"
                 >
                   <span>Bản chạy ngay (.exe Portable)</span>
                 </button>
-                <div className="text-[11px] font-mono text-center text-slate-400 dark:text-slate-500">
+                <div className="text-xs font-mono text-center text-slate-400 dark:text-slate-500">
                   fzInK-Setup.exe
                 </div>
               </div>
@@ -1089,32 +1067,32 @@ export const DesktopAppModal: React.FC<DesktopAppModalProps> = ({ isOpen, onClos
 
             {/* macOS Card */}
             <div
-              className={`p-5 rounded-2xl border flex flex-col justify-between transition-all ${
+              className={`p-4 rounded-xl border flex flex-col justify-between transition-colors duration-150 ${
                 os === 'macos'
-                  ? 'border-indigo-500/60 bg-gradient-to-b from-indigo-50/50 to-white dark:from-indigo-950/30 dark:to-slate-900/90 shadow-sm ring-1 ring-indigo-500/20'
-                  : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 hover:border-slate-300 dark:hover:border-slate-700'
+                  ? 'border-indigo-500/70 bg-white dark:bg-slate-900'
+                  : 'border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/40 hover:border-slate-300 dark:hover:border-slate-700'
               }`}
             >
               <div>
-                <div className="flex items-center justify-between">
-                  <div className="w-11 h-11 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 shadow-xs flex items-center justify-center shrink-0">
-                    <AppleLogoIcon className="w-6 h-6 text-slate-900 dark:text-white" />
+                <div className="flex items-center justify-between gap-2">
+                  <div className="w-10 h-10 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center shrink-0">
+                    <AppleLogoIcon className="w-5 h-5 text-slate-900 dark:text-slate-100" />
                   </div>
                   {os === 'macos' && (
-                    <span className="px-2.5 py-0.5 rounded-full bg-indigo-600 text-white text-[10px] font-semibold tracking-wide">
+                    <span className="text-xs font-medium text-indigo-600 dark:text-indigo-400">
                       Hệ điều hành của bạn
                     </span>
                   )}
                 </div>
 
                 <div className="mt-4">
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                  <h3 className="text-base font-medium text-slate-900 dark:text-slate-100">
                     macOS
                   </h3>
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                     {os === 'macos' && detectedMacArch
-                      ? `Đã tự nhận diện: ${detectedMacArch === 'arm64' ? 'Apple Silicon (M1–M4)' : 'chip Intel (x64)'}`
-                      : 'macOS 11 trở lên • Apple Silicon & Intel'}
+                      ? `Tự nhận diện: ${detectedMacArch === 'arm64' ? 'Apple Silicon (M1–M4)' : 'chip Intel (x64)'}`
+                      : 'macOS 11 trở lên · Apple Silicon & Intel'}
                   </p>
                 </div>
 
@@ -1122,7 +1100,7 @@ export const DesktopAppModal: React.FC<DesktopAppModalProps> = ({ isOpen, onClos
                 <div
                   role="radiogroup"
                   aria-label="Chọn kiến trúc chip macOS"
-                  className="mt-3 grid grid-cols-2 gap-1.5 p-1 rounded-xl bg-slate-100/90 dark:bg-slate-800/80 border border-slate-200/70 dark:border-slate-700/70"
+                  className="mt-3 grid grid-cols-2 gap-1 p-1 rounded-lg bg-slate-100 dark:bg-slate-800/80 border border-slate-200/70 dark:border-slate-700/70"
                 >
                   {(
                     [
@@ -1140,14 +1118,14 @@ export const DesktopAppModal: React.FC<DesktopAppModalProps> = ({ isOpen, onClos
                         aria-checked={isSelected}
                         data-testid={`mac-arch-${option.id}-button`}
                         onClick={() => handleSelectMacArch(option.id)}
-                        className={`px-2 py-1.5 rounded-lg text-left transition-all cursor-pointer ${
+                        className={`px-2 py-1.5 rounded-md text-left transition-colors duration-150 cursor-pointer ${
                           isSelected
-                            ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs ring-1 ring-slate-200 dark:ring-slate-700'
+                            ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-xs'
                             : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                         }`}
                       >
                         <div className="flex items-center justify-between gap-1">
-                          <span className="text-[11px] font-semibold leading-tight truncate">
+                          <span className="text-xs font-medium leading-tight truncate">
                             {option.label}
                           </span>
                           {isAutoMatched && (
@@ -1157,8 +1135,8 @@ export const DesktopAppModal: React.FC<DesktopAppModalProps> = ({ isOpen, onClos
                             />
                           )}
                         </div>
-                        <div className="text-[10px] text-slate-400 dark:text-slate-500 leading-tight mt-0.5">
-                          {isAutoMatched ? `${option.sub} • Máy này` : option.sub}
+                        <div className="text-xs font-mono text-slate-400 dark:text-slate-500 leading-tight mt-0.5">
+                          {isAutoMatched ? `${option.sub} · Máy này` : option.sub}
                         </div>
                       </button>
                     );
@@ -1171,19 +1149,19 @@ export const DesktopAppModal: React.FC<DesktopAppModalProps> = ({ isOpen, onClos
                   type="button"
                   data-testid="download-macos-app-button"
                   onClick={handleDownloadMacDmg}
-                  className="w-full h-10 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 dark:text-slate-900 active:scale-[0.99] text-white font-semibold text-xs inline-flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer"
+                  className="w-full h-10 px-4 rounded-lg bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 active:scale-[0.98] text-white font-medium text-xs inline-flex items-center justify-center gap-2 transition-[background-color,transform] duration-150 cursor-pointer"
                 >
-                  <Download className="w-4 h-4 shrink-0" />
+                  <Download className="w-4 h-4 shrink-0" strokeWidth={1.75} />
                   <span>Tải gói cài đặt (.dmg)</span>
                 </button>
                 <button
                   type="button"
                   onClick={handleDownloadMacZip}
-                  className="w-full h-8 px-3 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium text-[11px] inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                  className="w-full h-8 px-3 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium text-xs inline-flex items-center justify-center gap-1.5 transition-colors duration-150 cursor-pointer"
                 >
                   <span>Gói ứng dụng (.zip)</span>
                 </button>
-                <div className="text-[11px] font-mono text-center text-slate-400 dark:text-slate-500 truncate">
+                <div className="text-xs font-mono text-center text-slate-400 dark:text-slate-500 truncate">
                   {macDmgFileName}
                 </div>
               </div>
@@ -1192,9 +1170,9 @@ export const DesktopAppModal: React.FC<DesktopAppModalProps> = ({ isOpen, onClos
 
           {/* Quick PWA Option */}
           {isInstallable && (
-            <div className="p-3.5 rounded-2xl bg-indigo-50/60 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/50 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
-              <div className="flex items-center gap-2.5">
-                <Laptop className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
+            <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2">
+                <Laptop className="w-4 h-4 text-slate-500 dark:text-slate-400 shrink-0" strokeWidth={1.75} />
                 <span className="text-slate-700 dark:text-slate-300">
                   Dùng ngay không cần tải bộ cài đặt lớn?
                 </span>
@@ -1202,27 +1180,27 @@ export const DesktopAppModal: React.FC<DesktopAppModalProps> = ({ isOpen, onClos
               <button
                 type="button"
                 onClick={() => void handleInstallPWA()}
-                className="h-8 px-3.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer shrink-0"
+                className="h-8 px-3 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs inline-flex items-center justify-center gap-1.5 transition-colors duration-150 cursor-pointer shrink-0 whitespace-nowrap"
               >
                 <span>Cài đặt nhanh (PWA)</span>
               </button>
             </div>
           )}
 
-          {/* Minimalist Trust & Privacy Footer */}
-          <div className="pt-3 border-t border-slate-100 dark:border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400">
-            <div className="flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-              <span>Ứng dụng máy tính độc lập • Tự tạo icon Desktop • Hoạt động 100% ngoại tuyến</span>
+          {/* Footer */}
+          <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400">
+            <div className="flex items-center gap-2 min-w-0">
+              <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" strokeWidth={1.75} />
+              <span className="truncate">Ứng dụng độc lập · Lưu cục bộ · Hoạt động ngoại tuyến</span>
             </div>
             <a
               href={DESKTOP_RELEASES_PAGE}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[11px] text-indigo-600 dark:text-indigo-400 hover:underline inline-flex items-center gap-1"
+              className="text-xs text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 inline-flex items-center gap-1 whitespace-nowrap shrink-0 transition-colors duration-150"
             >
               <span>GitHub Releases</span>
-              <ExternalLink className="w-3 h-3" />
+              <ExternalLink className="w-3.5 h-3.5" strokeWidth={1.75} />
             </a>
           </div>
         </div>

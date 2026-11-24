@@ -11,7 +11,7 @@ interface GoogleSignInButtonProps {
 export const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
   onClick,
   isLoading = false,
-  label = 'Sign in with Google',
+  label = 'Đăng nhập bằng Google',
   testId = 'google-signin-button',
 }) => {
   return (
@@ -20,16 +20,16 @@ export const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
       data-testid={testId}
       onClick={onClick}
       disabled={isLoading}
-      className="inline-flex items-center justify-center gap-3 h-11 px-5 rounded-full bg-white hover:bg-slate-50 active:bg-slate-100 text-[#1f1f1f] border border-[#747775]/60 shadow-xs font-medium text-sm transition-colors disabled:opacity-60 cursor-pointer whitespace-nowrap shrink-0"
+      className="inline-flex items-center justify-center gap-2.5 h-10 px-4 rounded-lg bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 active:scale-[0.98] text-slate-900 dark:text-slate-100 border border-slate-300 dark:border-slate-700 shadow-xs font-medium text-sm transition-[background-color,border-color,transform] duration-150 disabled:opacity-60 cursor-pointer whitespace-nowrap shrink-0"
     >
       {isLoading ? (
-        <Loader2 className="w-4 h-4 animate-spin text-indigo-600" />
+        <Loader2 className="w-4 h-4 animate-spin text-slate-500" />
       ) : (
         <svg
           version="1.1"
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 48 48"
-          className="w-5 h-5 shrink-0 block"
+          className="w-4 h-4 shrink-0 block"
           aria-hidden="true"
         >
           <path
@@ -51,7 +51,7 @@ export const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
           <path fill="none" d="M0 0h48v48H0z" />
         </svg>
       )}
-      <span>{isLoading ? 'Đang kết nối Google...' : label}</span>
+      <span>{isLoading ? 'Đang kết nối Google' : label}</span>
     </button>
   );
 };

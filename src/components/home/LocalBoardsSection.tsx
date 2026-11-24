@@ -16,12 +16,9 @@ import {
   Copy,
   FileUp,
   FolderOpen,
-  Globe,
-  HardDrive,
   LayoutGrid,
   List,
   Pencil,
-  Plus,
   Search,
   Trash2,
   X,
@@ -67,13 +64,13 @@ export const LocalBoardsSection: React.FC<LocalBoardsSectionProps> = ({
         heading: 'Thư viện bảng trên máy',
         badgeSuffix: 'Lưu trên máy tính',
         filterAria: 'Lọc loại bảng trên máy',
-        searchPlaceholder: 'Tìm bảng trên máy...',
+        searchPlaceholder: 'Tìm bảng trên máy',
         sortAria: 'Sắp xếp bảng trên máy',
         gridAria: 'Hiển thị bảng trên máy dạng lưới',
         listAria: 'Hiển thị bảng trên máy dạng danh sách',
         emptyTitle: 'Chưa có bảng nào được lưu trên máy',
         emptyDesc:
-          'Khi bạn bắt đầu viết hoặc vẽ trên một bảng mới, bảng đó sẽ tự động lưu trực tiếp trên ổ cứng máy tính (hoạt động 100% không cần mạng) và hiển thị tại đây.',
+          'Khi bạn bắt đầu viết hoặc vẽ trên một bảng mới, bảng đó sẽ tự động lưu trực tiếp trên ổ cứng máy tính và hiển thị tại đây.',
         emptyFilter: 'Không tìm thấy bảng nào trên máy khớp với bộ lọc hiện tại.',
         deleteTooltip: 'Xóa khỏi máy',
         renameTitle: 'Đổi tên bảng trên máy',
@@ -84,13 +81,13 @@ export const LocalBoardsSection: React.FC<LocalBoardsSectionProps> = ({
         heading: 'Thư viện bảng trên trình duyệt',
         badgeSuffix: 'Lưu trên trình duyệt này',
         filterAria: 'Lọc loại bảng trên trình duyệt',
-        searchPlaceholder: 'Tìm bảng trên trình duyệt...',
+        searchPlaceholder: 'Tìm bảng trên trình duyệt',
         sortAria: 'Sắp xếp bảng trên trình duyệt',
         gridAria: 'Hiển thị bảng trên trình duyệt dạng lưới',
         listAria: 'Hiển thị bảng trên trình duyệt dạng danh sách',
         emptyTitle: 'Chưa có bảng nào được lưu trên trình duyệt',
         emptyDesc:
-          'Khi bạn bắt đầu viết hoặc vẽ trên một bảng mới, bảng đó sẽ tự động lưu trong bộ nhớ trình duyệt này (có thể mất nếu bạn xóa dữ liệu web). Hãy đăng nhập Google Drive hoặc tải ứng dụng máy tính để lưu lâu dài.',
+          'Khi bạn bắt đầu viết hoặc vẽ trên một bảng mới, bảng đó sẽ tự động lưu trong bộ nhớ trình duyệt này. Đăng nhập Google Drive hoặc tải ứng dụng máy tính để lưu lâu dài.',
         emptyFilter: 'Không tìm thấy bảng nào trên trình duyệt khớp với bộ lọc hiện tại.',
         deleteTooltip: 'Xóa khỏi trình duyệt',
         renameTitle: 'Đổi tên bảng trên trình duyệt',
@@ -216,20 +213,15 @@ export const LocalBoardsSection: React.FC<LocalBoardsSectionProps> = ({
       />
 
       {/* Section Header */}
-      <div className="flex flex-wrap items-center justify-between gap-2.5">
-        <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-baseline gap-2">
           <h2
             id="local-boards-heading"
-            className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2"
+            className="text-base font-medium text-slate-900 dark:text-slate-100"
           >
-            {isDesktop ? (
-              <HardDrive className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
-            ) : (
-              <Globe className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
-            )}
-            <span>{copy.heading}</span>
+            {copy.heading}
           </h2>
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 tabular-nums">
+          <span className="text-xs font-mono text-slate-500 dark:text-slate-400 tabular-nums">
             {localBoards.length} bảng · {copy.badgeSuffix}
           </span>
         </div>
@@ -238,18 +230,10 @@ export const LocalBoardsSection: React.FC<LocalBoardsSectionProps> = ({
           <button
             type="button"
             onClick={() => jsonInputRef.current?.click()}
-            className="h-8 inline-flex items-center gap-1.5 px-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-medium transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+            className="h-8 inline-flex items-center gap-2 px-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-medium transition-colors duration-150 whitespace-nowrap shrink-0 cursor-pointer"
           >
-            <FileUp className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+            <FileUp className="w-4 h-4 text-slate-500 dark:text-slate-400" strokeWidth={1.75} />
             <span>Mở tệp .json</span>
-          </button>
-          <button
-            type="button"
-            onClick={onCreateNewClick}
-            className="h-8 inline-flex items-center gap-1.5 px-3 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold transition-colors whitespace-nowrap shrink-0 cursor-pointer"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Thêm bảng</span>
           </button>
         </div>
       </div>
@@ -363,19 +347,19 @@ export const LocalBoardsSection: React.FC<LocalBoardsSectionProps> = ({
           {Array.from({ length: 4 }).map((_, idx) => (
             <div
               key={idx}
-              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden animate-pulse"
+              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden"
             >
-              <div className="h-28 bg-slate-100 dark:bg-slate-800/80" />
-              <div className="p-3.5 space-y-2">
-                <div className="h-3.5 w-2/3 rounded bg-slate-200 dark:bg-slate-800" />
-                <div className="h-3 w-1/2 rounded bg-slate-100 dark:bg-slate-800/70" />
+              <div className="h-28 bg-slate-100 dark:bg-slate-800/70" />
+              <div className="p-4 space-y-2">
+                <div className="h-3.5 w-2/3 rounded bg-slate-200/80 dark:bg-slate-800" />
+                <div className="h-3 w-1/2 rounded bg-slate-100 dark:bg-slate-800/60" />
               </div>
             </div>
           ))}
         </div>
       ) : localBoards.length === 0 ? (
-        <div className="bg-white dark:bg-slate-900 border border-dashed border-slate-300 dark:border-slate-800 rounded-xl px-6 py-9 text-center space-y-2">
-          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+        <div className="bg-white dark:bg-slate-900 border border-dashed border-slate-300 dark:border-slate-800 rounded-xl px-6 py-8 text-center space-y-2">
+          <h3 className="text-sm font-medium text-slate-900 dark:text-slate-100">
             {copy.emptyTitle}
           </h3>
           <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
@@ -420,22 +404,22 @@ export const LocalBoardsSection: React.FC<LocalBoardsSectionProps> = ({
                   aria-label={`Mở bảng ${board.title}`}
                   className="relative h-28 w-full border-b border-slate-100 dark:border-slate-800 block text-left cursor-pointer group focus-visible:outline-none overflow-hidden"
                 >
-                  <div className="w-full h-full group-hover:scale-[1.03] transition-transform duration-200">
+                  <div className="w-full h-full">
                     <BoardTemplatePreview type={board.boardType} className="w-full h-full" />
                   </div>
                   {isCurrent && (
-                    <span className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-emerald-600/95 text-white text-[10px] font-semibold shadow-xs">
+                    <span className="absolute top-2 right-2 px-2 py-0.5 rounded-md bg-slate-900/90 dark:bg-slate-100/95 text-white dark:text-slate-900 text-xs font-medium">
                       Đang mở
                     </span>
                   )}
                 </button>
 
-                <div className="p-3.5 flex-1 flex flex-col justify-between gap-3">
+                <div className="p-4 flex-1 flex flex-col justify-between gap-3">
                   <div className="space-y-1 min-w-0">
-                    <h3 className="text-[13px] font-semibold text-slate-900 dark:text-slate-100 truncate">
+                    <h3 className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">
                       {board.title}
                     </h3>
-                    <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400 tabular-nums">
+                    <div className="flex flex-wrap items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 tabular-nums">
                       <span>{getBoardTypeLabel(board.boardType)}</span>
                       <span aria-hidden="true">·</span>
                       <span>{board.elementCount} đối tượng</span>
@@ -565,7 +549,7 @@ export const LocalBoardsSection: React.FC<LocalBoardsSectionProps> = ({
                     disabled={isBusy}
                     onClick={() => setDeleteTarget(board)}
                     aria-label={`Xóa ${board.title}`}
-                    title="Xóa khỏi máy"
+                    title={copy.deleteTooltip}
                     className="w-8 h-8 rounded-lg flex items-center justify-center text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/50 transition-colors cursor-pointer"
                   >
                     <Trash2 className="w-3.5 h-3.5" />

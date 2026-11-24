@@ -207,10 +207,11 @@ export default function App() {
               onClick={handleToggleFocusMode}
               title="Thoát chế độ tập trung (F)"
               aria-label="Thoát chế độ tập trung (F)"
-              className="absolute top-3.5 right-3.5 z-30 flex items-center gap-1.5 px-3 py-2 rounded-full bg-white/92 dark:bg-slate-900/92 hover:bg-white dark:hover:bg-slate-800 backdrop-blur-md text-xs font-semibold text-slate-700 dark:text-slate-200 border border-slate-200/85 dark:border-slate-800 shadow-lg shadow-slate-900/8 dark:shadow-black/35 transition-colors whitespace-nowrap"
+              className="absolute top-4 right-4 z-30 flex items-center gap-2 px-3 py-2 rounded-lg bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-medium text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-800 shadow-sm dark:shadow-none transition-colors duration-150 whitespace-nowrap cursor-pointer"
             >
-              <Minimize2 className="w-3.5 h-3.5" />
-              <span>Thoát tập trung (F)</span>
+              <Minimize2 className="w-4 h-4 text-slate-500 dark:text-slate-400" strokeWidth={1.75} />
+              <span>Thoát tập trung</span>
+              <kbd className="kbd-keycap">F</kbd>
             </button>
           )}
 

@@ -129,9 +129,9 @@ export const DocumentPreviewModal: React.FC = () => {
         {/* Header */}
         <div className="flex items-center justify-between gap-3 px-5 py-3.5 border-b border-slate-200 dark:border-slate-800 shrink-0">
           <div className="flex items-center gap-2.5 min-w-0">
-            <FileText className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
+            <FileText className="w-4 h-4 text-slate-500 dark:text-slate-400 shrink-0" strokeWidth={1.75} />
             <div className="min-w-0">
-              <h2 id="doc-preview-title" className="text-sm font-bold truncate">
+              <h2 id="doc-preview-title" className="text-sm font-medium truncate">
                 {fileCard.fileName}
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">

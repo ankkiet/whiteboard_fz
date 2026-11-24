@@ -105,7 +105,7 @@ export const DocumentImportModal: React.FC<DocumentImportModalProps> = ({
       } catch {
         if (!cancelled) {
           setAnalysisError(
-            'Không thể tách trang tự động từ tệp này. Bạn vẫn có thể chèn dưới dạng Thẻ tài liệu.'
+            'Không thể tách trang tự động từ tệp này. Bạn vẫn có thể chèn dưới dạng thẻ tài liệu.'
           );
           setMode('card');
         }
@@ -236,7 +236,7 @@ export const DocumentImportModal: React.FC<DocumentImportModalProps> = ({
           <>
             {isLegacyDoc && (
               <div className="mb-4 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 text-xs text-amber-800 dark:text-amber-300">
-                Định dạng Word cũ (.doc) sẽ được chèn dưới dạng Thẻ tài liệu. Để trải trang trực tiếp lên bảng, hãy dùng định dạng <strong>.docx</strong> hoặc <strong>.pdf</strong>.
+                Định dạng Word cũ (.doc) sẽ được chèn dưới dạng thẻ tài liệu. Để trải trang trực tiếp lên bảng, hãy dùng định dạng <strong>.docx</strong> hoặc <strong>.pdf</strong>.
               </div>
             )}
 
@@ -263,7 +263,7 @@ export const DocumentImportModal: React.FC<DocumentImportModalProps> = ({
                   <span>Trải trang lên bảng</span>
                 </div>
                 <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                  Tách từng trang thành ảnh sắc nét để viết, gạch chân, khoanh tròn trực tiếp.
+                  Tách từng trang thành ảnh sắc nét để viết, gạch chân, khoanh tròn trực tiếp
                 </p>
               </button>
 
@@ -276,12 +276,12 @@ export const DocumentImportModal: React.FC<DocumentImportModalProps> = ({
                     : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50'
                 }`}
               >
-                <div className="flex items-center gap-2 font-semibold text-sm mb-1">
-                  <CreditCard className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                <div className="flex items-center gap-2 font-medium text-sm mb-1">
+                  <CreditCard className="w-4 h-4 text-slate-500 dark:text-slate-400" strokeWidth={1.75} />
                   <span>Thẻ tài liệu</span>
                 </div>
                 <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                  Đính kèm thẻ gọn gàng trên bảng, nhấp đúp để xem nhanh hoặc tải tệp gốc.
+                  Đính kèm thẻ gọn gàng trên bảng, nhấp đúp để xem nhanh hoặc tải tệp gốc
                 </p>
               </button>
             </div>
@@ -376,7 +376,7 @@ export const DocumentImportModal: React.FC<DocumentImportModalProps> = ({
                     ? 'Đang chèn vào bảng...'
                     : mode === 'spread'
                     ? `Trải ${selectedPageNumbers.length} trang lên bảng`
-                    : 'Chèn Thẻ tài liệu'}
+                    : 'Chèn thẻ tài liệu'}
                 </span>
               </button>
             </div>

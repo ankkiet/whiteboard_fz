@@ -1574,23 +1574,35 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
                 boardPattern === 'coordinate' ? 'items-end pb-8' : 'items-center'
               }`}
             >
-              <div className="max-w-md text-center space-y-1.5 select-none opacity-65 dark:opacity-55">
-                <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+              <div className="max-w-md text-center space-y-2 select-none opacity-70 dark:opacity-60">
+                <p className="text-sm font-medium text-slate-700 dark:text-slate-200">
                   {boardType === 'math'
                     ? boardPattern === 'coordinate'
-                      ? 'Bảng Toán Học — Hệ trục tọa độ Oxy'
-                      : 'Bảng Toán Học — Sẵn sàng viết vẽ & tính toán'
+                      ? 'Bảng toán học — Hệ trục tọa độ Oxy'
+                      : 'Bảng toán học — Sẵn sàng viết vẽ & tính toán'
                     : 'Bắt đầu viết vẽ trên không gian vô tận'}
                 </p>
-                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                  {boardType === 'math'
-                    ? 'Viết tay tự do, chèn công thức, dựng hình học hoặc vẽ đồ thị hàm số ở bảng bên phải'
-                    : 'Giữ Shift khi vẽ để kẻ đường thẳng · Phím [ ] chỉnh cỡ nét · Phím F bật chế độ tập trung'}
-                </p>
-                {boardType !== 'math' && (
-                  <p className="text-xs text-slate-400 dark:text-slate-500">
-                    Lăn chuột để thu phóng · Giữ chuột phải hoặc Space để kéo bảng · Kéo-thả ảnh, PDF, Word
+                {boardType === 'math' ? (
+                  <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                    Viết tay tự do, chèn công thức, dựng hình học hoặc vẽ đồ thị ở bảng bên phải
                   </p>
+                ) : (
+                  <>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed flex flex-wrap items-center justify-center gap-x-1.5 gap-y-1">
+                      <span>Giữ <kbd className="kbd-keycap">Shift</kbd> kẻ thẳng</span>
+                      <span aria-hidden="true">·</span>
+                      <span><kbd className="kbd-keycap">[</kbd> <kbd className="kbd-keycap">]</kbd> chỉnh cỡ nét</span>
+                      <span aria-hidden="true">·</span>
+                      <span><kbd className="kbd-keycap">F</kbd> tập trung</span>
+                    </p>
+                    <p className="text-xs text-slate-400 dark:text-slate-500 flex flex-wrap items-center justify-center gap-x-1.5 gap-y-1">
+                      <span>Lăn chuột thu phóng</span>
+                      <span aria-hidden="true">·</span>
+                      <span>Giữ <kbd className="kbd-keycap">Space</kbd> kéo bảng</span>
+                      <span aria-hidden="true">·</span>
+                      <span>Kéo-thả ảnh, PDF, Word</span>
+                    </p>
+                  </>
                 )}
               </div>
             </div>

@@ -64,9 +64,9 @@ export default defineConfig(() => {
                 .slice(0, 12);
 
               const versionManifest = {
-                version: 'v_fz.1.1.1.1.6',
+                version: 'v_fz.1.1.1.1.7',
                 buildId,
-                notes: 'Bản cập nhật chính thức fzInK (Thư viện nhiều bảng ngoại tuyến, Windows .exe & macOS Apple Silicon / Intel)',
+                notes: 'Bản cập nhật fzInK (Tinh gọn giao diện web & desktop, tối ưu bố cục mobile và bảng toán, nhận diện phẳng mới)',
                 updateOrigin: 'https://whiteboardfz.pages.dev',
               };
 

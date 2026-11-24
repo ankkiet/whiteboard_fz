@@ -256,7 +256,7 @@ export const GraphAndCalculusTab: React.FC<GraphAndCalculusTabProps> = ({
       uid
     );
     addElementsBatch(els, true);
-    addToast('Đã chèn Bảng biến thiên lên bảng', 'success');
+    addToast('Đã chèn bảng biến thiên lên bảng', 'success');
   };
 
   const handleInsertInterval = () => {
@@ -492,7 +492,7 @@ export const GraphAndCalculusTab: React.FC<GraphAndCalculusTabProps> = ({
         <>
           {/* Definite Integral & Variation Table */}
           <div className="rounded-xl border border-slate-200/80 dark:border-slate-800 p-3 bg-slate-50/60 dark:bg-slate-950/50 space-y-2">
-            <div className="text-xs font-bold">Tích phân xác định &amp; Bảng biến thiên</div>
+            <div className="text-xs font-medium">Tích phân xác định &amp; bảng biến thiên</div>
             <div className="grid grid-cols-2 gap-2">
               <label className="flex items-center gap-1.5 px-2 h-7 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-mono">
                 <span className="text-slate-500">a =</span>

@@ -32,13 +32,13 @@ export const PinnedProblemBar: React.FC = () => {
         left: safeRect.centerX,
         width: Math.min(480, Math.max(260, safeRect.width - 16)),
       }}
-      className="pointer-events-auto fixed top-15 -translate-x-1/2 z-20 rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-indigo-200/90 dark:border-indigo-800/80 shadow-lg shadow-slate-900/8 dark:shadow-black/40 text-slate-900 dark:text-slate-100 overflow-hidden select-text transition-all duration-150"
+      className="pointer-events-auto fixed top-16 -translate-x-1/2 z-20 rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200 dark:border-slate-800 shadow-lg dark:shadow-none text-slate-900 dark:text-slate-100 overflow-hidden select-text"
     >
-      <div className="px-3 py-1.5 bg-indigo-50/80 dark:bg-indigo-950/50 border-b border-indigo-100 dark:border-indigo-900/60 flex items-center justify-between gap-2">
+      <div className="px-3 py-2 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200/80 dark:border-slate-800 flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 min-w-0">
-          <Pin className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
-          <span className="text-xs font-bold text-indigo-900 dark:text-indigo-200 truncate">
-            Đề bài đang ghim (cố định khi kéo bảng)
+          <Pin className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" strokeWidth={1.75} />
+          <span className="text-xs font-medium text-slate-900 dark:text-slate-100 truncate">
+            Đề bài đang ghim
           </span>
         </div>
         <div className="flex items-center gap-1 shrink-0">

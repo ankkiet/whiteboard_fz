@@ -40,9 +40,9 @@ export function resolveColor(color: string, isDarkMode: boolean): string {
 
 export function getCanvasBackgroundColor(isDarkMode: boolean, boardType?: BoardType): string {
   if (boardType === 'notebook') {
-    return isDarkMode ? '#0b0f19' : '#eef1f6';
+    return isDarkMode ? '#0f0f10' : '#f1f1f3';
   }
-  return isDarkMode ? '#0f172a' : '#f8fafc';
+  return isDarkMode ? '#141415' : '#fafafa';
 }
 
 function pickCoordinateUnitStep(unitPxOnScreen: number): number {
@@ -84,7 +84,7 @@ export function drawWorldBackgroundPattern(
 
   ctx.save();
   if (pattern === 'grid') {
-    ctx.strokeStyle = isDarkMode ? 'rgba(148, 163, 184, 0.11)' : 'rgba(15, 23, 42, 0.065)';
+    ctx.strokeStyle = isDarkMode ? 'rgba(237, 237, 237, 0.065)' : 'rgba(23, 23, 23, 0.055)';
     ctx.lineWidth = 1 / camera.zoom;
     ctx.beginPath();
     for (let x = startX; x <= worldRight; x += step) {
@@ -101,7 +101,7 @@ export function drawWorldBackgroundPattern(
     const majorStep = step * 5;
     const majorStartX = Math.floor(worldLeft / majorStep) * majorStep;
     const majorStartY = Math.floor(worldTop / majorStep) * majorStep;
-    ctx.strokeStyle = isDarkMode ? 'rgba(148, 163, 184, 0.2)' : 'rgba(15, 23, 42, 0.12)';
+    ctx.strokeStyle = isDarkMode ? 'rgba(237, 237, 237, 0.13)' : 'rgba(23, 23, 23, 0.105)';
     ctx.beginPath();
     for (let x = majorStartX; x <= worldRight; x += majorStep) {
       ctx.moveTo(x, worldTop);
@@ -113,7 +113,7 @@ export function drawWorldBackgroundPattern(
     }
     ctx.stroke();
   } else if (pattern === 'dots') {
-    ctx.fillStyle = isDarkMode ? 'rgba(148, 163, 184, 0.28)' : 'rgba(15, 23, 42, 0.18)';
+    ctx.fillStyle = isDarkMode ? 'rgba(237, 237, 237, 0.22)' : 'rgba(23, 23, 23, 0.16)';
     const radius = Math.max(1.2 / camera.zoom, 0.9);
     for (let x = startX; x <= worldRight; x += step) {
       for (let y = startY; y <= worldBottom; y += step) {
@@ -123,7 +123,7 @@ export function drawWorldBackgroundPattern(
       }
     }
   } else if (pattern === 'lined') {
-    ctx.strokeStyle = isDarkMode ? 'rgba(148, 163, 184, 0.15)' : 'rgba(59, 130, 246, 0.15)';
+    ctx.strokeStyle = isDarkMode ? 'rgba(237, 237, 237, 0.11)' : 'rgba(59, 130, 246, 0.14)';
     ctx.lineWidth = 1 / camera.zoom;
     ctx.beginPath();
     for (let y = startY; y <= worldBottom; y += step) {
@@ -141,7 +141,7 @@ export function drawWorldBackgroundPattern(
     const coordStartY = Math.floor(worldTop / minorWorldStep) * minorWorldStep;
 
     // Minor unit grid
-    ctx.strokeStyle = isDarkMode ? 'rgba(148, 163, 184, 0.09)' : 'rgba(15, 23, 42, 0.055)';
+    ctx.strokeStyle = isDarkMode ? 'rgba(237, 237, 237, 0.055)' : 'rgba(23, 23, 23, 0.05)';
     ctx.lineWidth = 1 / camera.zoom;
     ctx.beginPath();
     for (let x = coordStartX; x <= worldRight; x += minorWorldStep) {
@@ -157,7 +157,7 @@ export function drawWorldBackgroundPattern(
     // Major grid every 5 unit steps
     const majorStartX = Math.floor(worldLeft / majorWorldStep) * majorWorldStep;
     const majorStartY = Math.floor(worldTop / majorWorldStep) * majorWorldStep;
-    ctx.strokeStyle = isDarkMode ? 'rgba(148, 163, 184, 0.18)' : 'rgba(15, 23, 42, 0.11)';
+    ctx.strokeStyle = isDarkMode ? 'rgba(237, 237, 237, 0.12)' : 'rgba(23, 23, 23, 0.095)';
     ctx.beginPath();
     for (let x = majorStartX; x <= worldRight; x += majorWorldStep) {
       ctx.moveTo(x, worldTop);

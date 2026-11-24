@@ -101,21 +101,21 @@ export const CreateBoardModal: React.FC<CreateBoardModalProps> = ({
           <div>
             <h2
               id="create-board-modal-title"
-              className="text-base font-bold text-slate-900 dark:text-white"
+              className="text-base font-medium text-slate-900 dark:text-slate-100"
             >
               Tạo bảng trắng mới
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Chọn loại không gian phù hợp với mục đích học tập hoặc làm việc của bạn
+              Chọn loại không gian phù hợp với mục đích học tập hoặc làm việc
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
             aria-label="Đóng hộp thoại tạo bảng mới"
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer shrink-0"
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors duration-150 cursor-pointer shrink-0"
           >
-            <X className="w-4 h-4" />
+            <X className="w-4 h-4" strokeWidth={1.75} />
           </button>
         </div>
 
@@ -133,9 +133,9 @@ export const CreateBoardModal: React.FC<CreateBoardModalProps> = ({
                   aria-checked={isSelected}
                   data-testid={`modal-template-${tpl.id}`}
                   onClick={() => handleSelectType(tpl.id)}
-                  className={`text-left rounded-xl border overflow-hidden transition-colors cursor-pointer flex flex-col ${
+                  className={`text-left rounded-xl border overflow-hidden transition-colors duration-150 cursor-pointer flex flex-col ${
                     isSelected
-                      ? 'border-indigo-600 dark:border-indigo-500 ring-2 ring-indigo-500/20 bg-indigo-50/40 dark:bg-indigo-950/25'
+                      ? 'border-indigo-600 dark:border-indigo-500 bg-indigo-50/30 dark:bg-indigo-950/20'
                       : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 bg-white dark:bg-slate-900'
                   }`}
                 >
@@ -144,17 +144,17 @@ export const CreateBoardModal: React.FC<CreateBoardModalProps> = ({
                     {isSelected && (
                       <span
                         aria-hidden="true"
-                        className="absolute top-2 right-2 w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center shadow-xs"
+                        className="absolute top-2 right-2 w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center"
                       >
                         <Check className="w-3 h-3" />
                       </span>
                     )}
                   </div>
                   <div className="p-3 space-y-1">
-                    <div className="text-[13px] font-semibold text-slate-900 dark:text-slate-100">
+                    <div className="text-sm font-medium text-slate-900 dark:text-slate-100">
                       {tpl.name}
                     </div>
-                    <p className="text-[11.5px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
                       {tpl.description}
                     </p>
                   </div>
@@ -267,7 +267,7 @@ export const CreateBoardModal: React.FC<CreateBoardModalProps> = ({
                 setBoardTitle(e.target.value);
                 setDidEditTitle(true);
               }}
-              placeholder="Nhập tên bảng..."
+              placeholder="Nhập tên bảng"
               className="w-full h-10 px-3 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 text-sm text-slate-900 dark:text-slate-100 focus:border-indigo-500 outline-none transition-colors"
             />
           </div>
@@ -277,7 +277,7 @@ export const CreateBoardModal: React.FC<CreateBoardModalProps> = ({
             <div className="flex items-start gap-2.5 px-3.5 py-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/35 border border-amber-200/80 dark:border-amber-900/60 text-xs text-amber-800 dark:text-amber-200 leading-relaxed">
               <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
               <span>
-                Bản nháp cục bộ hiện tại (&ldquo;{localDraftTitle || 'Bảng Trắng Mới'}&rdquo; gồm{' '}
+                Bản nháp cục bộ hiện tại (&ldquo;{localDraftTitle || 'Bảng trắng mới'}&rdquo; gồm{' '}
                 {localDraftElementCount} đối tượng) chưa lưu lên Drive và sẽ được thay thế khi tạo bảng mới.
               </span>
             </div>

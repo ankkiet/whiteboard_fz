@@ -65,7 +65,7 @@ function createMainWindow() {
     minHeight: 680,
     title: 'fzInK',
     icon: path.join(__dirname, '../dist/pwa-512x512.png'),
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#fafafa',
     autoHideMenuBar: true,
     webPreferences: {
       contextIsolation: true,

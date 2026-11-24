@@ -24,7 +24,6 @@ import {
   Globe,
   CheckCircle2,
   ArrowRight,
-  Sparkles,
 } from 'lucide-react';
 
 interface AuthBridgeModalProps {
@@ -346,29 +345,23 @@ export const AuthBridgeModal: React.FC<AuthBridgeModalProps> = ({
                ======================================================== */
             <div className="space-y-4">
               {connectStatus === 'waiting' && (
-                <div className="p-5 rounded-2xl bg-indigo-50/60 dark:bg-indigo-950/40 border border-indigo-200/80 dark:border-indigo-800/60 flex flex-col items-center text-center space-y-3.5">
-                  <div className="relative">
-                    <div className="w-14 h-14 rounded-2xl bg-white dark:bg-slate-900 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shadow-md">
-                      <Loader2 className="w-7 h-7 animate-spin" />
-                    </div>
-                    <span className="absolute -bottom-1 -right-1 flex h-3.5 w-3.5">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-emerald-500"></span>
-                    </span>
+                <div className="p-5 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 flex flex-col items-center text-center space-y-3">
+                  <div className="w-12 h-12 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                    <Loader2 className="w-6 h-6 animate-spin" />
                   </div>
 
-                  <div className="space-y-1.5">
-                    <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
-                      Đang chờ đăng nhập từ trình duyệt...
+                  <div className="space-y-1">
+                    <h3 className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                      Đang chờ đăng nhập từ trình duyệt
                     </h3>
-                    <p className="text-xs text-slate-600 dark:text-slate-300 max-w-sm leading-relaxed">
-                      Cửa sổ trình duyệt web đã được mở. Vui lòng chọn tài khoản Google của bạn trên trình duyệt.
+                    <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm leading-relaxed">
+                      Cửa sổ trình duyệt đã được mở. Vui lòng chọn tài khoản Google của bạn trên trình duyệt.
                     </p>
                   </div>
 
-                  <div className="w-full py-2 px-3 rounded-xl bg-white/80 dark:bg-slate-900/80 border border-indigo-100 dark:border-indigo-900 text-xs text-slate-600 dark:text-slate-300 flex items-center justify-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                    <span>Sẽ tự động nhận diện khi bạn chọn tài khoản và quay lại cửa sổ này</span>
+                  <div className="w-full py-2 px-3 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-300 flex items-center justify-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                    <span>Tự động nhận diện khi bạn chọn tài khoản và quay lại cửa sổ này</span>
                   </div>
 
                   <div className="pt-1 flex flex-wrap items-center justify-center gap-2">
@@ -416,8 +409,8 @@ export const AuthBridgeModal: React.FC<AuthBridgeModalProps> = ({
                     <CheckCircle2 className="w-8 h-8" />
                   </div>
                   <div className="space-y-1">
-                    <h3 className="text-base font-bold text-emerald-950 dark:text-emerald-100">
-                      Đăng nhập thành công!
+                    <h3 className="text-base font-medium text-emerald-950 dark:text-emerald-100">
+                      Đăng nhập thành công
                     </h3>
                     <p className="text-xs text-emerald-800 dark:text-emerald-300">
                       {connectedUser?.displayName || connectedUser?.email
@@ -485,8 +478,8 @@ export const AuthBridgeModal: React.FC<AuthBridgeModalProps> = ({
                         setInputToken(e.target.value);
                         setErrorMessage(null);
                       }}
-                      placeholder="Dán mã bắt đầu bằng BTTM-... vào đây"
-                      className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-mono text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all resize-none"
+                      placeholder="Dán mã bắt đầu bằng BTTM- vào đây"
+                      className="w-full p-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-mono text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors duration-150 resize-none"
                     />
                   </div>
 
@@ -580,16 +573,16 @@ export const AuthBridgeModal: React.FC<AuthBridgeModalProps> = ({
                       <button
                         type="button"
                         onClick={() => void handleReturnToDesktopApp()}
-                        className="w-full h-12 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer hover:shadow-indigo-500/25 active:scale-[0.99]"
+                        className="w-full h-11 px-4 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs sm:text-sm flex items-center justify-center gap-2 transition-[background-color,transform] duration-150 cursor-pointer active:scale-[0.98]"
                       >
-                        <Laptop className="w-4 h-4 shrink-0" />
+                        <Laptop className="w-4 h-4 shrink-0" strokeWidth={1.75} />
                         <span>Quay về ứng dụng máy tính</span>
-                        <ArrowRight className="w-3.5 h-3.5 shrink-0 opacity-80" />
+                        <ArrowRight className="w-4 h-4 shrink-0 opacity-80" strokeWidth={1.75} />
                       </button>
 
                       {appRedirectRequested && (
-                        <div className="p-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 text-[11px] text-indigo-900 dark:text-indigo-200 text-center leading-relaxed animate-fade-in">
-                          Đã kích hoạt quay về ứng dụng! Bạn hãy mở hoặc chuyển sang cửa sổ fzInK trên thanh tác vụ của máy tính.
+                        <div className="p-2.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 text-xs text-indigo-900 dark:text-indigo-200 text-center leading-relaxed">
+                          Đã kích hoạt quay về ứng dụng. Hãy mở hoặc chuyển sang cửa sổ fzInK trên thanh tác vụ của máy tính.
                         </div>
                       )}
 
@@ -623,9 +616,9 @@ export const AuthBridgeModal: React.FC<AuthBridgeModalProps> = ({
                             Mã phiên đăng nhập:
                           </span>
                           {copiedCode && (
-                            <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                              <Check className="w-3 h-3" />
-                              <span>Đã sao chép!</span>
+                            <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                              <Check className="w-3.5 h-3.5" strokeWidth={1.75} />
+                              <span>Đã sao chép</span>
                             </span>
                           )}
                         </div>

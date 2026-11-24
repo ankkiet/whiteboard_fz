@@ -5,6 +5,21 @@
 @theme {
   --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  /* Graphite neutral ramp (calm paper light & dark graphite surfaces) */
+  --color-slate-50: #fafafa;
+  --color-slate-100: #f4f4f5;
+  --color-slate-200: #e4e4e7;
+  --color-slate-300: #d4d4d8;
+  --color-slate-400: #a1a1aa;
+  --color-slate-500: #71717a;
+  --color-slate-600: #52525b;
+  --color-slate-700: #3f3f46;
+  --color-slate-800: #27272a;
+  --color-slate-900: #19191b;
+  --color-slate-950: #111113;
+
+  --ease-ui: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @font-face {
@@ -42,10 +57,36 @@
 
   button:focus-visible,
   input:focus-visible,
-  textarea:focus-visible {
+  textarea:focus-visible,
+  select:focus-visible {
     outline: 2px solid #4f46e5;
     outline-offset: 2px;
   }
+}
+
+/* Signature detail: quiet mono keycaps for keyboard shortcuts */
+.kbd-keycap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 5px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  border: 1px solid rgba(23, 23, 23, 0.14);
+  background-color: rgba(244, 244, 245, 0.9);
+  color: #52525b;
+}
+
+.dark .kbd-keycap {
+  border-color: rgba(237, 237, 237, 0.14);
+  background-color: rgba(39, 39, 42, 0.9);
+  color: #a1a1aa;
 }
 
 .cursor-grab-custom {

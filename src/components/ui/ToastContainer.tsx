@@ -13,28 +13,28 @@ export const ToastContainer: React.FC = () => {
   return (
     <div
       aria-live="polite"
-      className="fixed bottom-5 left-5 z-50 flex flex-col gap-2 pointer-events-none"
+      className="fixed bottom-4 left-4 z-50 flex flex-col gap-2 pointer-events-none"
     >
       {visibleToasts.map((toast) => (
         <div
           key={toast.id}
-          className="pointer-events-auto flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200 dark:border-slate-800 shadow-lg text-xs font-medium text-slate-800 dark:text-slate-100 max-w-xs"
+          className="pointer-events-auto flex items-center gap-2 px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm dark:shadow-none text-xs font-medium text-slate-900 dark:text-slate-100 max-w-xs"
         >
           {toast.variant === 'success' ? (
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" strokeWidth={1.75} />
           ) : toast.variant === 'error' ? (
-            <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0" />
+            <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0" strokeWidth={1.75} />
           ) : (
-            <Info className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
+            <Info className="w-4 h-4 text-slate-500 dark:text-slate-400 shrink-0" strokeWidth={1.75} />
           )}
           <span className="leading-snug">{toast.text}</span>
           <button
             type="button"
             onClick={() => dismissToast(toast.id)}
             aria-label="Đóng thông báo"
-            className="ml-1 p-0.5 rounded-md text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+            className="ml-1 p-1 rounded-md text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors duration-150 cursor-pointer"
           >
-            <X className="w-3.5 h-3.5" />
+            <X className="w-3.5 h-3.5" strokeWidth={1.75} />
           </button>
         </div>
       ))}

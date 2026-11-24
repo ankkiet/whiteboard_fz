@@ -27,7 +27,7 @@ export interface SafeViewportRect {
 
 /**
  * Computes the unobstructed canvas rectangle in screen pixels
- * when floating panels (MathPanel, Casio fx-580VN X, PinnedProblemBar, BottomDock) are open.
+ * when floating panels (MathPanel, Casio fx-580VN X, PinnedProblemBar, UnifiedTopBar) are open.
  */
 export function getSafeMathViewport(opts: SafeViewportOptions): SafeViewportRect {
   const viewW = Math.max(360, opts.viewW || 1280);
@@ -55,7 +55,7 @@ export function getSafeMathViewport(opts: SafeViewportOptions): SafeViewportRect
   }
   const right = Math.max(left + 200, viewW - rightMargin);
 
-  // Top inset: TopLeftBar/TopRightBar (~60px) + PinnedProblemBar if present
+  // Top inset: UnifiedTopBar (~60px) + PinnedProblemBar if present
   let top = 62;
   if (opts.hasPinnedProblem) {
     top = opts.isPinnedProblemCollapsed ? 104 : 168;

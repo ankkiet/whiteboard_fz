@@ -90,7 +90,7 @@ const TOOLS: ToolItem[] = [
   { id: 'pen', label: 'Bút vẽ', shortcut: 'P', icon: PenTool, group: 1 },
   { id: 'highlighter', label: 'Bút dạ quang', shortcut: 'M', icon: Highlighter, group: 1 },
   { id: 'eraser', label: 'Tẩy', shortcut: 'E', icon: Eraser, group: 1 },
-  { id: 'laser', label: 'Bút tia Laser', shortcut: 'L', icon: Wand2, group: 1 },
+  { id: 'laser', label: 'Bút tia laser', shortcut: 'L', icon: Wand2, group: 1 },
   { id: 'rectangle', label: 'Hình chữ nhật', shortcut: 'R', icon: Square, group: 2 },
   { id: 'ellipse', label: 'Hình tròn', shortcut: 'O', icon: Circle, group: 2 },
   { id: 'arrow', label: 'Mũi tên', shortcut: 'A', icon: ArrowUpRight, group: 2 },
@@ -201,6 +201,9 @@ export const UnifiedTopBar: React.FC<UnifiedTopBarProps> = ({
   const setNotebookPaperSize = useBoardStore((s) => s.setNotebookPaperSize);
   const camera = useBoardStore((s) => s.camera);
   const setCamera = useBoardStore((s) => s.setCamera);
+  const isMathPanelCollapsed = useBoardStore((s) => s.isMathPanelCollapsed);
+  const isCalculatorOpen = useBoardStore((s) => s.isCalculatorOpen);
+  const isCalculatorMinimized = useBoardStore((s) => s.isCalculatorMinimized);
 
   // Local state for expandable drawer & modals
   const [isExpanded, setIsExpanded] = useState(false);
@@ -378,17 +381,26 @@ export const UnifiedTopBar: React.FC<UnifiedTopBarProps> = ({
       ? stickyColor
       : null;
 
+  const hasOpenMathRight = boardType === 'math' && isMathPanelOpen && !isMathPanelCollapsed;
+  const hasOpenCalcLeft = isCalculatorOpen && !isCalculatorMinimized;
+  const flyoutMarginStyle: React.CSSProperties | undefined =
+    hasOpenMathRight && !hasOpenCalcLeft
+      ? { marginRight: 336 }
+      : hasOpenCalcLeft && !hasOpenMathRight
+      ? { marginLeft: 328 }
+      : undefined;
+
   return (
     <header
       ref={containerRef}
       role="banner"
-      aria-label="Thanh công cụ bảng trắng tinh gọn"
-      className="pointer-events-none absolute top-2.5 sm:top-3.5 inset-x-0 z-30 flex flex-col items-center px-2 sm:px-4"
+      aria-label="Thanh công cụ bảng trắng"
+      className="pointer-events-none absolute top-3 inset-x-0 z-30 flex flex-col items-center px-3"
     >
-      {/* 1. PERSISTENT FLOATING CAPSULE BAR (CHẾ ĐỘ THU GỌN SIÊU TINH GỌN) */}
+      {/* 1. Persistent floating bar */}
       <div
         data-testid="unified-capsule-bar"
-        className="pointer-events-auto flex items-center gap-1 sm:gap-1.5 md:gap-2 bg-white/94 dark:bg-slate-900/94 backdrop-blur-xl px-2 sm:px-3 py-1.5 rounded-full shadow-lg shadow-slate-900/8 dark:shadow-black/40 border border-slate-200/90 dark:border-slate-800 text-slate-800 dark:text-slate-100 transition-all duration-200 max-w-[calc(100vw-16px)] overflow-x-auto scrollbar-none"
+        className="pointer-events-auto flex items-center gap-1 sm:gap-1.5 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-2 py-1.5 rounded-2xl shadow-sm dark:shadow-none border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 transition-colors duration-150 max-w-[calc(100vw-24px)] overflow-x-auto scrollbar-none"
       >
         {/* Trang chủ */}
         <button
@@ -396,9 +408,9 @@ export const UnifiedTopBar: React.FC<UnifiedTopBarProps> = ({
           onClick={onHomeClick}
           title="Về trang chủ xem tất cả bảng đã lưu"
           aria-label="Về trang chủ"
-          className="w-8 h-8 rounded-full bg-indigo-600 hover:bg-indigo-700 flex items-center justify-center text-white shrink-0 transition-colors cursor-pointer"
+          className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center text-slate-700 dark:text-slate-200 shrink-0 transition-colors duration-150 cursor-pointer"
         >
-          <Home className="w-4 h-4" />
+          <Home className="w-4 h-4" strokeWidth={1.75} />
         </button>
 
         {/* Tiêu đề sổ ghi chép / bảng trắng */}
@@ -407,11 +419,11 @@ export const UnifiedTopBar: React.FC<UnifiedTopBarProps> = ({
           aria-label={boardType === 'notebook' ? 'Tên sổ ghi chép' : 'Tên bảng trắng'}
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          className="font-semibold text-xs sm:text-sm bg-transparent hover:bg-slate-100 dark:hover:bg-slate-800 focus:bg-slate-100 dark:focus:bg-slate-800 px-2 py-1 rounded-lg outline-none transition-colors w-28 sm:w-36 md:w-44 max-w-[280px] truncate text-slate-800 dark:text-slate-100"
-          placeholder={boardType === 'notebook' ? 'Tên sổ ghi chép...' : 'Tên bảng...'}
+          className="font-medium text-xs sm:text-sm bg-transparent hover:bg-slate-100 dark:hover:bg-slate-800 focus:bg-slate-100 dark:focus:bg-slate-800 px-2 py-1 rounded-lg outline-none transition-colors duration-150 w-28 sm:w-36 md:w-44 max-w-[280px] truncate text-slate-900 dark:text-slate-100"
+          placeholder={boardType === 'notebook' ? 'Tên sổ ghi chép' : 'Tên bảng'}
         />
 
-        <div className="h-4 sm:h-5 w-px bg-slate-200 dark:bg-slate-800 shrink-0" />
+        <div className="h-4 w-px bg-slate-200 dark:bg-slate-800 shrink-0" />
 
         {/* Công cụ đang chọn (Bấm để mở rộng / thu gọn) */}
         <button
@@ -420,45 +432,45 @@ export const UnifiedTopBar: React.FC<UnifiedTopBarProps> = ({
           title={`Công cụ hiện tại: ${activeToolDef.label} (${activeToolDef.shortcut}) — Bấm để mở rộng khay công cụ`}
           aria-label={`Công cụ hiện tại: ${activeToolDef.label}`}
           aria-expanded={isExpanded}
-          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full transition-all duration-150 shrink-0 cursor-pointer ${
+          className={`h-8 flex items-center gap-2 px-2.5 rounded-lg transition-colors duration-150 shrink-0 cursor-pointer ${
             isExpanded
-              ? 'bg-indigo-600 text-white shadow-sm'
-              : 'bg-indigo-50 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/60'
+              ? 'bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-slate-100'
+              : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100 hover:bg-slate-200/80 dark:hover:bg-slate-700'
           }`}
         >
           <ActiveToolIcon className="w-4 h-4" />
-          <span className="hidden sm:inline font-semibold text-xs">{activeToolDef.label}</span>
+          <span className="hidden sm:inline font-medium text-xs">{activeToolDef.label}</span>
           {inkDotColor && (
             <span
-              className="w-2.5 h-2.5 rounded-full ring-1 ring-white/80 shrink-0"
+              className="w-2.5 h-2.5 rounded-full ring-1 ring-black/15 dark:ring-white/30 shrink-0"
               style={{ backgroundColor: inkDotColor }}
             />
           )}
           {currentTool === 'pen' && (
-            <span className="hidden lg:inline text-[10px] font-mono opacity-80">{strokeWidth}px</span>
+            <span className="hidden lg:inline text-xs font-mono tabular-nums opacity-70">{strokeWidth}px</span>
           )}
         </button>
 
-        {/* Phím tắt nhanh chuyển đổi Tẩy / Bút vẽ */}
+        {/* Phím tắt nhanh chuyển đổi tẩy / bút vẽ */}
         <button
           type="button"
           onClick={handleQuickEraserToggle}
           title={
             currentTool === 'eraser'
-              ? 'Đang dùng Tẩy — Bấm để quay lại Bút vẽ (E)'
-              : 'Chuyển nhanh sang Tẩy (E)'
+              ? 'Đang dùng tẩy — Bấm để quay lại bút vẽ (E)'
+              : 'Chuyển nhanh sang tẩy (E)'
           }
           aria-label="Tẩy xóa nhanh"
-          className={`p-1.5 sm:p-2 rounded-full transition-colors shrink-0 ${
+          className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors duration-150 shrink-0 cursor-pointer ${
             currentTool === 'eraser'
-              ? 'bg-indigo-600 text-white shadow-xs'
-              : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200'
+              ? 'bg-indigo-600 text-white'
+              : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300'
           }`}
         >
-          <Eraser className="w-4 h-4" />
+          <Eraser className="w-4 h-4" strokeWidth={1.75} />
         </button>
 
-        <div className="h-4 sm:h-5 w-px bg-slate-200 dark:bg-slate-800 shrink-0" />
+        <div className="h-4 w-px bg-slate-200 dark:bg-slate-800 shrink-0" />
 
         {/* Hoàn tác & Làm lại */}
         <div className="flex items-center gap-0.5 shrink-0">
@@ -468,9 +480,9 @@ export const UnifiedTopBar: React.FC<UnifiedTopBarProps> = ({
             disabled={!canUndo}
             title="Hoàn tác (Ctrl+Z)"
             aria-label="Hoàn tác"
-            className="p-1.5 sm:p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-30 disabled:hover:bg-transparent transition-colors text-slate-700 dark:text-slate-200"
+            className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-30 disabled:hover:bg-transparent transition-colors duration-150 text-slate-600 dark:text-slate-300 cursor-pointer"
           >
-            <Undo2 className="w-4 h-4" />
+            <Undo2 className="w-4 h-4" strokeWidth={1.75} />
           </button>
           <button
             type="button"
@@ -478,13 +490,13 @@ export const UnifiedTopBar: React.FC<UnifiedTopBarProps> = ({
             disabled={!canRedo}
             title="Làm lại (Ctrl+Shift+Z)"
             aria-label="Làm lại"
-            className="p-1.5 sm:p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-30 disabled:hover:bg-transparent transition-colors text-slate-700 dark:text-slate-200"
+            className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-30 disabled:hover:bg-transparent transition-colors duration-150 text-slate-600 dark:text-slate-300 cursor-pointer"
           >
-            <Redo2 className="w-4 h-4" />
+            <Redo2 className="w-4 h-4" strokeWidth={1.75} />
           </button>
         </div>
 
-        <div className="h-4 sm:h-5 w-px bg-slate-200 dark:bg-slate-800 shrink-0" />
+        <div className="h-4 w-px bg-slate-200 dark:bg-slate-800 shrink-0" />
 
         {/* Thu phóng tỷ lệ */}
         <button
@@ -492,7 +504,7 @@ export const UnifiedTopBar: React.FC<UnifiedTopBarProps> = ({
           onClick={handleResetZoom}
           title="Đặt lại tỷ lệ 100% (Ctrl 0)"
           aria-label={`Tỷ lệ thu phóng ${zoomPercent}%, bấm để đặt lại 100%`}
-          className="px-1.5 sm:px-2 py-1 text-xs font-semibold font-mono tabular-nums hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors text-slate-700 dark:text-slate-200 shrink-0 text-center"
+          className="h-8 px-2 text-xs font-medium font-mono tabular-nums hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors duration-150 text-slate-600 dark:text-slate-300 shrink-0 text-center cursor-pointer"
         >
           {zoomPercent}%
         </button>
@@ -503,32 +515,33 @@ export const UnifiedTopBar: React.FC<UnifiedTopBarProps> = ({
           onClick={() => setIsExpanded((v) => !v)}
           title={isExpanded ? 'Thu gọn thanh công cụ' : 'Mở rộng toàn bộ công cụ & cài đặt'}
           aria-label={isExpanded ? 'Thu gọn' : 'Mở rộng'}
-          className={`flex items-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-semibold transition-all duration-150 shrink-0 cursor-pointer ${
+          className={`h-8 flex items-center gap-1.5 px-3 rounded-lg text-xs font-medium transition-colors duration-150 shrink-0 cursor-pointer ${
             isExpanded
-              ? 'bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-100'
-              : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm shadow-indigo-600/20'
+              ? 'bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-slate-100'
+              : 'bg-indigo-600 hover:bg-indigo-700 text-white'
           }`}
         >
           <span>{isExpanded ? 'Thu gọn' : 'Mở rộng'}</span>
           {isExpanded ? (
-            <ChevronUp className="w-3.5 h-3.5" />
+            <ChevronUp className="w-4 h-4" strokeWidth={1.75} />
           ) : (
-            <ChevronDown className="w-3.5 h-3.5" />
+            <ChevronDown className="w-4 h-4" strokeWidth={1.75} />
           )}
         </button>
       </div>
 
-      {/* 2. EXPANDED FLYOUT HUB (CHẾ ĐỘ MỞ RỘNG KHI CẦN DÙNG) */}
+      {/* 2. Expanded flyout hub (respects safe space between Casio and MathPanel) */}
       {isExpanded && (
         <section
           aria-label="Khay công cụ mở rộng"
-          className="pointer-events-auto mt-2.5 w-full max-w-4xl bg-white/96 dark:bg-slate-900/96 backdrop-blur-2xl border border-slate-200/90 dark:border-slate-800 shadow-2xl shadow-slate-900/15 dark:shadow-black/55 rounded-3xl p-3 sm:p-4 flex flex-col gap-3 text-slate-800 dark:text-slate-100 transition-all duration-200 animate-in fade-in slide-in-from-top-2 overflow-x-auto scrollbar-none"
+          style={flyoutMarginStyle}
+          className="pointer-events-auto mt-2 w-full max-w-[720px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-lg dark:shadow-none rounded-2xl p-4 flex flex-col gap-3 text-slate-800 dark:text-slate-100 overflow-x-auto scrollbar-none"
         >
-          {/* HÀNG 1: BỘ CÔNG CỤ VẼ & GHI CHÚ */}
+          {/* Hàng 1: Công cụ vẽ & ghi chú */}
           <div>
-            <div className="flex items-center justify-between mb-1.5 px-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                1. Công cụ vẽ & ghi chú
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                Công cụ vẽ & ghi chú
               </span>
               <div className="flex items-center gap-2">
                 <button
@@ -536,26 +549,26 @@ export const UnifiedTopBar: React.FC<UnifiedTopBarProps> = ({
                   onClick={() => setIsPinned((v) => !v)}
                   title={
                     isPinned
-                      ? 'Đang ghim mở cố định — Bấm để cho phép tự động thu gọn khi viết'
+                      ? 'Đang ghim mở cố định — Bấm để tự thu gọn khi viết'
                       : 'Ghim khay công cụ luôn mở'
                   }
                   aria-pressed={isPinned}
-                  className={`flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-medium transition-colors ${
+                  className={`h-7 flex items-center gap-1.5 px-2 rounded-lg text-xs font-medium transition-colors duration-150 cursor-pointer ${
                     isPinned
-                      ? 'bg-indigo-50 dark:bg-indigo-950/70 text-indigo-600 dark:text-indigo-400 ring-1 ring-indigo-300 dark:ring-indigo-700'
+                      ? 'bg-indigo-50 dark:bg-indigo-950/70 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800'
                       : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800'
                   }`}
                 >
-                  {isPinned ? <Pin className="w-3 h-3" /> : <PinOff className="w-3 h-3" />}
-                  <span className="text-[11px]">{isPinned ? 'Đã ghim mở' : 'Tự thu gọn'}</span>
+                  {isPinned ? <Pin className="w-3.5 h-3.5" strokeWidth={1.75} /> : <PinOff className="w-3.5 h-3.5" strokeWidth={1.75} />}
+                  <span>{isPinned ? 'Đã ghim mở' : 'Tự thu gọn'}</span>
                 </button>
               </div>
             </div>
 
             {/* Các nhóm công cụ */}
-            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap">
               {/* Nhóm 0: Chọn & Kéo bảng */}
-              <div className="flex items-center gap-0.5 p-1 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200/70 dark:border-slate-700/60">
+              <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200/70 dark:border-slate-700/60">
                 {TOOLS.filter((t) => t.group === 0).map((tool) => {
                   const Icon = tool.icon;
                   const isActive = currentTool === tool.id;
@@ -567,9 +580,9 @@ export const UnifiedTopBar: React.FC<UnifiedTopBarProps> = ({
                       title={`${tool.label} (${tool.shortcut})`}
                       aria-label={`${tool.label} (${tool.shortcut})`}
                       aria-pressed={isActive}
-                      className={`relative w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center transition-all duration-150 ${
+                      className={`relative w-9 h-9 rounded-lg flex items-center justify-center transition-colors duration-150 cursor-pointer ${
                         isActive
-                          ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/25'
+                          ? 'bg-indigo-600 text-white'
                           : 'hover:bg-slate-200/70 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200'
                       }`}
                     >
@@ -580,7 +593,7 @@ export const UnifiedTopBar: React.FC<UnifiedTopBarProps> = ({
               </div>
 
               {/* Nhóm 1: Bút vẽ, Dạ quang, Tẩy, Laser */}
-              <div className="flex items-center gap-0.5 p-1 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200/70 dark:border-slate-700/60">
+              <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200/70 dark:border-slate-700/60">
                 {TOOLS.filter((t) => t.group === 1).map((tool) => {
                   const Icon = tool.icon;
                   const isActive = currentTool === tool.id;
@@ -592,16 +605,16 @@ export const UnifiedTopBar: React.FC<UnifiedTopBarProps> = ({
                       title={`${tool.label} (${tool.shortcut})`}
                       aria-label={`${tool.label} (${tool.shortcut})`}
                       aria-pressed={isActive}
-                      className={`relative w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center transition-all duration-150 ${
+                      className={`relative w-9 h-9 rounded-lg flex items-center justify-center transition-colors duration-150 cursor-pointer ${
                         isActive
-                          ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/25'
+                          ? 'bg-indigo-600 text-white'
                           : 'hover:bg-slate-200/70 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200'
                       }`}
                     >
                       <Icon className="w-4 h-4" />
                       {tool.id === 'pen' && inkDotColor && (
                         <span
-                          className="absolute bottom-1.5 right-1.5 w-2 h-2 rounded-full ring-1 ring-white"
+                          className="absolute bottom-1 right-1 w-2 h-2 rounded-full ring-1 ring-white"
                           style={{ backgroundColor: inkDotColor }}
                         />
                       )}
@@ -611,7 +624,7 @@ export const UnifiedTopBar: React.FC<UnifiedTopBarProps> = ({
               </div>
 
               {/* Nhóm 2: Hình khối (Chữ nhật, Tròn, Mũi tên) */}
-              <div className="flex items-center gap-0.5 p-1 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200/70 dark:border-slate-700/60">
+              <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200/70 dark:border-slate-700/60">
                 {TOOLS.filter((t) => t.group === 2).map((tool) => {
                   const Icon = tool.icon;
                   const isActive = currentTool === tool.id;
@@ -623,9 +636,9 @@ export const UnifiedTopBar: React.FC<UnifiedTopBarProps> = ({
                       title={`${tool.label} (${tool.shortcut})`}
                       aria-label={`${tool.label} (${tool.shortcut})`}
                       aria-pressed={isActive}
-                      className={`relative w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center transition-all duration-150 ${
+                      className={`relative w-9 h-9 rounded-lg flex items-center justify-center transition-colors duration-150 cursor-pointer ${
                         isActive
-                          ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/25'
+                          ? 'bg-indigo-600 text-white'
                           : 'hover:bg-slate-200/70 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200'
                       }`}
                     >
@@ -636,7 +649,7 @@ export const UnifiedTopBar: React.FC<UnifiedTopBarProps> = ({
               </div>
 
               {/* Nhóm 3: Văn bản, Ghi chú, Ảnh/PDF */}
-              <div className="flex items-center gap-0.5 p-1 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200/70 dark:border-slate-700/60">
+              <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200/70 dark:border-slate-700/60">
                 {TOOLS.filter((t) => t.group === 3).map((tool) => {
                   const Icon = tool.icon;
                   const isActive = currentTool === tool.id;
@@ -648,9 +661,9 @@ export const UnifiedTopBar: React.FC<UnifiedTopBarProps> = ({
                       title={`${tool.label} (${tool.shortcut})`}
                       aria-label={`${tool.label} (${tool.shortcut})`}
                       aria-pressed={isActive}
-                      className={`relative w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center transition-all duration-150 ${
+                      className={`relative w-9 h-9 rounded-lg flex items-center justify-center transition-colors duration-150 cursor-pointer ${
                         isActive
-                          ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/25'
+                          ? 'bg-indigo-600 text-white'
                           : 'hover:bg-slate-200/70 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200'
                       }`}
                     >
@@ -662,18 +675,18 @@ export const UnifiedTopBar: React.FC<UnifiedTopBarProps> = ({
             </div>
           </div>
 
-          {/* HÀNG 2: THUỘC TÍNH NÉT VẼ, BẢNG MÀU & CHẾ ĐỘ TẨY */}
-          <div className="border-t border-slate-100 dark:border-slate-800/80 pt-2.5">
-            <div className="flex items-center justify-between mb-1.5 px-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                2. Bảng màu & thuộc tính nét
+          {/* Hàng 2: Màu sắc & nét vẽ */}
+          <div className="border-t border-slate-100 dark:border-slate-800 pt-3">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                Màu sắc & thuộc tính nét
               </span>
               {currentTool === 'eraser' && (
                 <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg">
                   <button
                     type="button"
                     onClick={() => setEraserMode('stroke')}
-                    className={`px-2 py-0.5 rounded-md text-xs font-semibold transition-colors ${
+                    className={`px-2 py-0.5 rounded-md text-xs font-medium transition-colors duration-150 cursor-pointer ${
                       eraserMode === 'stroke'
                         ? 'bg-indigo-600 text-white'
                         : 'text-slate-600 dark:text-slate-300'
@@ -684,7 +697,7 @@ export const UnifiedTopBar: React.FC<UnifiedTopBarProps> = ({
                   <button
                     type="button"
                     onClick={() => setEraserMode('area')}
-                    className={`px-2 py-0.5 rounded-md text-xs font-semibold transition-colors ${
+                    className={`px-2 py-0.5 rounded-md text-xs font-medium transition-colors duration-150 cursor-pointer ${
                       eraserMode === 'area'
                         ? 'bg-indigo-600 text-white'
                         : 'text-slate-600 dark:text-slate-300'
@@ -709,10 +722,10 @@ export const UnifiedTopBar: React.FC<UnifiedTopBarProps> = ({
                         onClick={() => handleColorSelect(item.hex)}
                         title={item.label}
                         aria-label={`Màu ${item.label}`}
-                        className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full transition-transform cursor-pointer ${
+                        className={`w-7 h-7 rounded-full border border-black/10 dark:border-white/15 transition-shadow duration-150 cursor-pointer ${
                           isSelected
-                            ? 'scale-110 ring-2 ring-indigo-600 dark:ring-indigo-400 ring-offset-2 dark:ring-offset-slate-900'
-                            : 'hover:scale-105'
+                            ? 'ring-2 ring-slate-900 dark:ring-slate-100 ring-offset-2 dark:ring-offset-slate-900'
+                            : 'hover:ring-2 hover:ring-slate-300 dark:hover:ring-slate-600 hover:ring-offset-1 dark:hover:ring-offset-slate-900'
                         }`}
                         style={{ backgroundColor: item.hex }}
                       />
@@ -732,15 +745,15 @@ export const UnifiedTopBar: React.FC<UnifiedTopBarProps> = ({
                     onClick={() => customColorInputRef.current?.click()}
                     title="Màu tùy chỉnh"
                     aria-label="Chọn màu tùy chỉnh"
-                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-full border border-dashed border-slate-300 dark:border-slate-600 hover:border-indigo-500 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-indigo-600 transition-colors"
+                    className="w-7 h-7 rounded-full border border-dashed border-slate-300 dark:border-slate-600 hover:border-slate-500 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors duration-150 cursor-pointer"
                   >
-                    <Pipette className="w-3.5 h-3.5" />
+                    <Pipette className="w-3.5 h-3.5" strokeWidth={1.75} />
                   </button>
                 </div>
               ) : currentTool === 'eraser' ? (
                 /* Eraser size picker */
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Cỡ đầu tẩy:</span>
+                  <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Cỡ đầu tẩy</span>
                   <div className="flex items-center gap-1">
                     {ERASER_SIZES.map((sz) => {
                       const isActive = eraserSize === sz.value;
@@ -751,10 +764,10 @@ export const UnifiedTopBar: React.FC<UnifiedTopBarProps> = ({
                           onClick={() => setEraserSize(sz.value)}
                           title={`Cỡ tẩy: ${sz.label} (${sz.value}px)`}
                           aria-label={`Cỡ tẩy ${sz.label}`}
-                          className={`w-7 h-7 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center transition-colors ${
+                          className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors duration-150 cursor-pointer ${
                             isActive
                               ? 'bg-indigo-600 text-white'
-                              : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200'
+                              : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200'
                           }`}
                         >
                           <span
@@ -780,13 +793,13 @@ export const UnifiedTopBar: React.FC<UnifiedTopBarProps> = ({
                   </span>
                 </div>
               ) : (
-                <div className="text-xs text-slate-500">Bút tia Laser chỉ dùng để thuyết trình và chỉ điểm</div>
+                <div className="text-xs text-slate-500 dark:text-slate-400">Bút tia laser dùng để chỉ điểm khi trình chiếu</div>
               )}
 
               {/* Chọn kích thước nét vẽ (Pen, Highlighter, Shapes) */}
               {currentTool !== 'eraser' && currentTool !== 'laser' && (
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Cỡ nét:</span>
+                  <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Cỡ nét</span>
                   <div className="flex items-center gap-1">
                     {STROKE_WIDTHS.map((sw) => {
                       const isActive = strokeWidth === sw.value;
@@ -797,10 +810,10 @@ export const UnifiedTopBar: React.FC<UnifiedTopBarProps> = ({
                           onClick={() => setStrokeWidth(sw.value)}
                           title={`Cỡ nét ${sw.label} (${sw.value}px)`}
                           aria-label={`Cỡ nét ${sw.label}`}
-                          className={`w-7 h-7 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center transition-colors ${
+                          className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors duration-150 cursor-pointer ${
                             isActive
                               ? 'bg-indigo-600 text-white'
-                              : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200'
+                              : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200'
                           }`}
                         >
                           <span
@@ -829,17 +842,17 @@ export const UnifiedTopBar: React.FC<UnifiedTopBarProps> = ({
             </div>
           </div>
 
-          {/* HÀNG 3: TIỆN ÍCH BẢNG & CÀI ĐẶT */}
-          <div className="border-t border-slate-100 dark:border-slate-800/80 pt-2.5">
-            <div className="flex items-center justify-between mb-1.5 px-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                3. Tiện ích bảng & thiết lập
+          {/* Hàng 3: Tiện ích bảng */}
+          <div className="border-t border-slate-100 dark:border-slate-800 pt-3">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                Tiện ích bảng
               </span>
             </div>
 
             <div className="flex items-center justify-between gap-2 flex-wrap">
-              {/* Cụm Nền bảng & Giao diện sáng tối */}
-              <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+              {/* Cụm nền bảng & giao diện sáng tối */}
+              <div className="flex items-center gap-2 flex-wrap">
                 {/* Pattern / Notebook Paper Style Menu */}
                 {boardType === 'notebook' ? (
                   <>
@@ -852,21 +865,21 @@ export const UnifiedTopBar: React.FC<UnifiedTopBarProps> = ({
                         }}
                         aria-label="Chọn loại giấy viết"
                         aria-expanded={showPatternMenu}
-                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-medium transition-colors cursor-pointer"
+                        className="h-8 flex items-center gap-1.5 px-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-medium transition-colors duration-150 cursor-pointer"
                       >
-                        <Grid className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                        <Grid className="w-4 h-4 text-slate-500 dark:text-slate-400" strokeWidth={1.75} />
                         <span>
                           Giấy:{' '}
                           {NOTEBOOK_PAPER_STYLES.find(
                             (s) => s.id === normalizeNotebookPaperStyle(boardPattern)
                           )?.shortLabel || 'Kẻ ngang'}
                         </span>
-                        <ChevronDown className="w-3 h-3 text-slate-400" />
+                        <ChevronDown className="w-3.5 h-3.5 text-slate-400" strokeWidth={1.75} />
                       </button>
 
                       {showPatternMenu && (
-                        <div className="absolute left-0 bottom-full mb-2 w-56 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 p-1.5 z-40">
-                          <div className="text-[11px] font-medium px-2.5 py-1 text-slate-500 dark:text-slate-400">
+                        <div className="absolute left-0 bottom-full mb-2 w-56 bg-white dark:bg-slate-900 rounded-xl shadow-lg dark:shadow-none border border-slate-200 dark:border-slate-800 p-1.5 z-40">
+                          <div className="text-xs font-medium px-2.5 py-1 text-slate-500 dark:text-slate-400">
                             Loại giấy viết
                           </div>
                           {NOTEBOOK_PAPER_STYLES.map((style) => {
@@ -879,15 +892,15 @@ export const UnifiedTopBar: React.FC<UnifiedTopBarProps> = ({
                                   setBoardPattern(style.id);
                                   setShowPatternMenu(false);
                                 }}
-                                className={`w-full flex items-center justify-between gap-2 px-2.5 py-1.5 text-left text-xs rounded-lg transition-colors cursor-pointer ${
+                                className={`w-full flex items-center justify-between gap-2 px-2.5 py-1.5 text-left text-xs rounded-lg transition-colors duration-150 cursor-pointer ${
                                   isSelected
-                                    ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 font-semibold'
+                                    ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 font-medium'
                                     : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200'
                                 }`}
                               >
                                 <div>
                                   <div>{style.label}</div>
-                                  <div className="text-[10px] text-slate-400 dark:text-slate-500 font-normal">
+                                  <div className="text-xs text-slate-400 dark:text-slate-500 font-normal">
                                     {style.description}
                                   </div>
                                 </div>
@@ -908,16 +921,16 @@ export const UnifiedTopBar: React.FC<UnifiedTopBarProps> = ({
                         }}
                         aria-label="Chọn khổ giấy vở ghi chú"
                         aria-expanded={showPaperSizeMenu}
-                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-medium transition-colors cursor-pointer"
+                        className="h-8 flex items-center gap-1.5 px-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-medium transition-colors duration-150 cursor-pointer"
                       >
-                        <BookOpen className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                        <BookOpen className="w-4 h-4 text-slate-500 dark:text-slate-400" strokeWidth={1.75} />
                         <span>{getNotebookConfig(notebookPaperSize).label}</span>
-                        <ChevronDown className="w-3 h-3 text-slate-400" />
+                        <ChevronDown className="w-3.5 h-3.5 text-slate-400" strokeWidth={1.75} />
                       </button>
 
                       {showPaperSizeMenu && (
-                        <div className="absolute left-0 bottom-full mb-2 w-48 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 p-1.5 z-40">
-                          <div className="text-[11px] font-medium px-2.5 py-1 text-slate-500 dark:text-slate-400">
+                        <div className="absolute left-0 bottom-full mb-2 w-48 bg-white dark:bg-slate-900 rounded-xl shadow-lg dark:shadow-none border border-slate-200 dark:border-slate-800 p-1.5 z-40">
+                          <div className="text-xs font-medium px-2.5 py-1 text-slate-500 dark:text-slate-400">
                             Khổ giấy vở ghi chú
                           </div>
                           {(
@@ -937,15 +950,15 @@ export const UnifiedTopBar: React.FC<UnifiedTopBarProps> = ({
                                   setNotebookPaperSize(paper.id);
                                   setShowPaperSizeMenu(false);
                                 }}
-                                className={`w-full flex items-center justify-between px-2.5 py-1.5 text-left text-xs rounded-lg transition-colors cursor-pointer ${
+                                className={`w-full flex items-center justify-between px-2.5 py-1.5 text-left text-xs rounded-lg transition-colors duration-150 cursor-pointer ${
                                   isSelected
-                                    ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 font-semibold'
+                                    ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 font-medium'
                                     : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200'
                                 }`}
                               >
                                 <div>
                                   <div>{paper.label}</div>
-                                  <div className="text-[10px] text-slate-400 dark:text-slate-500 font-normal">
+                                  <div className="text-xs font-mono text-slate-400 dark:text-slate-500 font-normal">
                                     {paper.desc}
                                   </div>
                                 </div>
@@ -962,15 +975,15 @@ export const UnifiedTopBar: React.FC<UnifiedTopBarProps> = ({
                     <button
                       type="button"
                       onClick={() => setShowPatternMenu((v) => !v)}
-                      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-xs font-medium transition-colors"
+                      className="h-8 flex items-center gap-1.5 px-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-medium transition-colors duration-150 cursor-pointer"
                     >
-                      <Grid className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                      <Grid className="w-4 h-4 text-slate-500 dark:text-slate-400" strokeWidth={1.75} />
                       <span>Nền: {PATTERNS.find((p) => p.id === boardPattern)?.label || 'Ô ly'}</span>
-                      <ChevronDown className="w-3 h-3 text-slate-400" />
+                      <ChevronDown className="w-3.5 h-3.5 text-slate-400" strokeWidth={1.75} />
                     </button>
 
                     {showPatternMenu && (
-                      <div className="absolute left-0 bottom-full mb-2 w-44 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 p-1.5 z-40">
+                      <div className="absolute left-0 bottom-full mb-2 w-44 bg-white dark:bg-slate-900 rounded-xl shadow-lg dark:shadow-none border border-slate-200 dark:border-slate-800 p-1.5 z-40">
                         {PATTERNS.map((pat) => (
                           <button
                             key={pat.id}
@@ -979,9 +992,9 @@ export const UnifiedTopBar: React.FC<UnifiedTopBarProps> = ({
                               setBoardPattern(pat.id);
                               setShowPatternMenu(false);
                             }}
-                            className={`w-full flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg transition-colors ${
+                            className={`w-full flex items-center justify-between px-2.5 py-1.5 text-xs rounded-lg transition-colors duration-150 cursor-pointer ${
                               boardPattern === pat.id
-                                ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 font-semibold'
+                                ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 font-medium'
                                 : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200'
                             }`}
                           >
@@ -1000,57 +1013,57 @@ export const UnifiedTopBar: React.FC<UnifiedTopBarProps> = ({
                   onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
                   title={theme === 'light' ? 'Chuyển sang giao diện tối' : 'Chuyển sang giao diện sáng'}
                   aria-label="Giao diện sáng tối"
-                  className="p-1.5 sm:p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200 transition-colors"
+                  className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center transition-colors duration-150 cursor-pointer"
                 >
-                  {theme === 'light' ? <Moon className="w-3.5 h-3.5" /> : <Sun className="w-3.5 h-3.5 text-amber-400" />}
+                  {theme === 'light' ? <Moon className="w-4 h-4" strokeWidth={1.75} /> : <Sun className="w-4 h-4" strokeWidth={1.75} />}
                 </button>
 
                 {/* Thu phóng +/- */}
-                <div className="flex items-center gap-0.5 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-xl">
+                <div className="h-8 flex items-center gap-0.5 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg">
                   <button
                     type="button"
                     onClick={handleZoomOut}
                     title="Thu nhỏ (Ctrl -)"
                     aria-label="Thu nhỏ"
-                    className="p-1.5 rounded-lg hover:bg-slate-200 text-slate-700 dark:text-slate-200"
+                    className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors duration-150 cursor-pointer"
                   >
-                    <ZoomOut className="w-3.5 h-3.5" />
+                    <ZoomOut className="w-4 h-4" strokeWidth={1.75} />
                   </button>
                   <button
                     type="button"
                     onClick={handleZoomIn}
                     title="Phóng to (Ctrl +)"
                     aria-label="Phóng to"
-                    className="p-1.5 rounded-lg hover:bg-slate-200 text-slate-700 dark:text-slate-200"
+                    className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors duration-150 cursor-pointer"
                   >
-                    <ZoomIn className="w-3.5 h-3.5" />
+                    <ZoomIn className="w-4 h-4" strokeWidth={1.75} />
                   </button>
                   <button
                     type="button"
                     onClick={handleFitToScreen}
                     title="Vừa màn hình"
                     aria-label="Vừa màn hình"
-                    className="p-1.5 rounded-lg hover:bg-slate-200 text-slate-700 dark:text-slate-200"
+                    className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors duration-150 cursor-pointer"
                   >
-                    <Maximize2 className="w-3.5 h-3.5" />
+                    <Maximize2 className="w-4 h-4" strokeWidth={1.75} />
                   </button>
                 </div>
               </div>
 
-              {/* Cụm Tiện ích Hành động */}
-              <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                {/* Bảng Toán học */}
+              {/* Cụm tiện ích hành động */}
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* Bảng toán học */}
                 {boardType === 'math' && onToggleMathPanel && (
                   <button
                     type="button"
                     onClick={onToggleMathPanel}
-                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl font-medium text-xs transition-colors ${
+                    className={`h-8 flex items-center gap-1.5 px-2.5 rounded-lg font-medium text-xs transition-colors duration-150 cursor-pointer ${
                       isMathPanelOpen
-                        ? 'bg-indigo-50 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 ring-1 ring-indigo-300 dark:ring-indigo-700'
-                        : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200'
+                        ? 'bg-indigo-50 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800'
+                        : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200'
                     }`}
                   >
-                    <Sigma className="w-3.5 h-3.5" />
+                    <Sigma className="w-4 h-4" strokeWidth={1.75} />
                     <span>Bảng toán</span>
                   </button>
                 )}
@@ -1059,43 +1072,43 @@ export const UnifiedTopBar: React.FC<UnifiedTopBarProps> = ({
                 <button
                   type="button"
                   onClick={onDriveClick}
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200 font-medium text-xs transition-colors"
+                  className="h-8 flex items-center gap-1.5 px-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-medium text-xs transition-colors duration-150 cursor-pointer"
                 >
                   {isDriveConnected && syncStatus === 'saving' ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-600" />
+                    <Loader2 className="w-4 h-4 animate-spin text-slate-500" />
                   ) : isDriveConnected && syncStatus === 'saved' ? (
-                    <Check className="w-3.5 h-3.5 text-emerald-600" />
+                    <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400" strokeWidth={1.75} />
                   ) : (
-                    <Cloud className="w-3.5 h-3.5 text-indigo-600" />
+                    <Cloud className="w-4 h-4 text-slate-500 dark:text-slate-400" strokeWidth={1.75} />
                   )}
                   <span>
                     {!isDriveConnected
                       ? 'Lưu Drive'
                       : syncStatus === 'saving'
-                      ? 'Đang lưu...'
+                      ? 'Đang lưu'
                       : syncStatus === 'saved'
                       ? 'Đã lưu'
                       : 'Drive'}
                   </span>
                 </button>
 
-                {/* Xuất bảng */}
+                {/* Xuất tệp */}
                 <button
                   type="button"
                   onClick={onExportClick}
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs transition-colors"
+                  className="h-8 flex items-center gap-1.5 px-3 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs transition-colors duration-150 cursor-pointer"
                 >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>Xuất file</span>
+                  <Download className="w-4 h-4" strokeWidth={1.75} />
+                  <span>Xuất tệp</span>
                 </button>
 
                 {/* Trình chiếu */}
                 <button
                   type="button"
                   onClick={onPresentClick}
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 hover:bg-slate-800 text-xs font-medium transition-colors"
+                  className="h-8 flex items-center gap-1.5 px-3 rounded-lg bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-white text-xs font-medium transition-colors duration-150 cursor-pointer"
                 >
-                  <Presentation className="w-3.5 h-3.5" />
+                  <Presentation className="w-4 h-4" strokeWidth={1.75} />
                   <span>Trình chiếu</span>
                 </button>
 
@@ -1105,9 +1118,9 @@ export const UnifiedTopBar: React.FC<UnifiedTopBarProps> = ({
                   onClick={onToggleFocusMode}
                   title="Chế độ tập trung (F)"
                   aria-label="Chế độ tập trung (F)"
-                  className="p-1.5 sm:p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200 transition-colors"
+                  className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center transition-colors duration-150 cursor-pointer"
                 >
-                  <Focus className="w-3.5 h-3.5" />
+                  <Focus className="w-4 h-4" strokeWidth={1.75} />
                 </button>
 
                 {/* Xóa bảng (Confirm popover) */}
@@ -1118,24 +1131,24 @@ export const UnifiedTopBar: React.FC<UnifiedTopBarProps> = ({
                       onClick={() => setConfirmClear((v) => !v)}
                       title="Xóa toàn bộ bảng"
                       aria-label="Xóa toàn bộ bảng"
-                      className="p-1.5 sm:p-2 rounded-xl bg-red-50 dark:bg-red-950/50 hover:bg-red-100 text-red-600 dark:text-red-400 transition-colors"
+                      className="w-8 h-8 rounded-lg bg-red-50 dark:bg-red-950/50 hover:bg-red-100 dark:hover:bg-red-950/80 text-red-600 dark:text-red-400 flex items-center justify-center transition-colors duration-150 cursor-pointer"
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
+                      <Trash2 className="w-4 h-4" strokeWidth={1.75} />
                     </button>
 
                     {confirmClear && (
-                      <div className="absolute right-0 bottom-full mb-2 w-64 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 p-3 z-40">
-                        <p className="text-xs font-semibold text-slate-800 dark:text-slate-100 mb-1">
+                      <div className="absolute right-0 bottom-full mb-2 w-64 bg-white dark:bg-slate-900 rounded-xl shadow-lg dark:shadow-none border border-slate-200 dark:border-slate-800 p-3 z-40">
+                        <p className="text-xs font-medium text-slate-900 dark:text-slate-100 mb-1">
                           Xóa toàn bộ bảng trắng?
                         </p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 mb-2.5">
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
                           Bạn vẫn có thể nhấn Hoàn tác (Ctrl+Z) sau khi xóa.
                         </p>
                         <div className="flex items-center justify-end gap-2">
                           <button
                             type="button"
                             onClick={() => setConfirmClear(false)}
-                            className="px-2.5 py-1 text-xs rounded-lg text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800"
+                            className="h-8 px-3 text-xs rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
                           >
                             Hủy
                           </button>
@@ -1145,7 +1158,7 @@ export const UnifiedTopBar: React.FC<UnifiedTopBarProps> = ({
                               clearBoard();
                               setConfirmClear(false);
                             }}
-                            className="px-3 py-1 text-xs font-semibold rounded-lg bg-red-600 text-white hover:bg-red-700"
+                            className="h-8 px-3 text-xs font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 cursor-pointer"
                           >
                             Xóa tất cả
                           </button>
