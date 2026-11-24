@@ -97,6 +97,10 @@ declare global {
 
 export function getDownloadedBuildId(): string | null {
   if (typeof window === 'undefined') return null;
+  // On packaged Desktop App (Electron / file://), the embedded build manifest reflects the true binary on disk.
+  if (isDesktopApp() && window.__BTTM_EMBEDDED_BUILD__?.buildId) {
+    return window.__BTTM_EMBEDDED_BUILD__.buildId;
+  }
   try {
     const stored = window.localStorage.getItem(DESKTOP_APP_DOWNLOADED_BUILD_ID_KEY);
     if (stored) return stored;
@@ -109,6 +113,10 @@ export function getDownloadedBuildId(): string | null {
 
 export function getDownloadedVersion(): string | null {
   if (typeof window === 'undefined') return null;
+  // On packaged Desktop App (Electron / file://), always trust the embedded version inside app.asar first.
+  if (isDesktopApp() && window.__BTTM_EMBEDDED_BUILD__?.version) {
+    return window.__BTTM_EMBEDDED_BUILD__.version;
+  }
   try {
     const stored = window.localStorage.getItem(DESKTOP_APP_DOWNLOADED_VERSION_KEY);
     if (stored) return stored;
@@ -654,38 +662,59 @@ export const HomeSettingsMenu: React.FC<{
                     </div>
 
                     <div className="space-y-1.5 pt-1">
-                      <button
-                        type="button"
-                        data-testid="in-place-update-button"
-                        disabled={isApplyingUpdate}
-                        onClick={() => void handleInPlaceUpdate()}
-                        className="w-full h-8 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-sm"
-                      >
-                        {isApplyingUpdate ? (
-                          <>
-                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                            <span>Đang cập nhật trực tiếp tại chỗ...</span>
-                          </>
-                        ) : (
-                          <>
-                            <RefreshCw className="w-3.5 h-3.5" />
-                            <span>Cập nhật trực tiếp ngay (Không cần tải lại tệp)</span>
-                          </>
-                        )}
-                      </button>
-
-                      <button
-                        type="button"
-                        data-testid="update-now-open-modal-button"
-                        onClick={() => {
-                          setIsOpen(false);
-                          onOpenDesktopModal();
-                        }}
-                        className="w-full h-7 rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-slate-800 hover:bg-amber-100/50 dark:hover:bg-slate-700 text-amber-900 dark:text-amber-200 font-medium text-[11px] flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-                      >
-                        <Download className="w-3 h-3" />
-                        <span>Hoặc tải bộ cài mới (.exe / Mac)</span>
-                      </button>
+                      {isDesktop ? (
+                        <>
+                          <button
+                            type="button"
+                            data-testid="update-now-open-modal-button"
+                            onClick={() => {
+                              setIsOpen(false);
+                              onOpenDesktopModal();
+                            }}
+                            className="w-full h-8 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-sm"
+                          >
+                            <Download className="w-3.5 h-3.5" />
+                            <span>Tải bộ cài cập nhật mới (.exe / .dmg)</span>
+                          </button>
+                          <p className="text-[10.5px] text-amber-800/80 dark:text-amber-300/80 leading-snug">
+                            Chạy tệp cài đặt mới để cập nhật vĩnh viễn ứng dụng trên máy tính.
+                          </p>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            data-testid="in-place-update-button"
+                            disabled={isApplyingUpdate}
+                            onClick={() => void handleInPlaceUpdate()}
+                            className="w-full h-8 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-sm"
+                          >
+                            {isApplyingUpdate ? (
+                              <>
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                <span>Đang cập nhật trực tiếp tại chỗ...</span>
+                              </>
+                            ) : (
+                              <>
+                                <RefreshCw className="w-3.5 h-3.5" />
+                                <span>Cập nhật trực tiếp ngay</span>
+                              </>
+                            )}
+                          </button>
+                          <button
+                            type="button"
+                            data-testid="update-now-open-modal-button"
+                            onClick={() => {
+                              setIsOpen(false);
+                              onOpenDesktopModal();
+                            }}
+                            className="w-full h-7 rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-slate-800 hover:bg-amber-100/50 dark:hover:bg-slate-700 text-amber-900 dark:text-amber-200 font-medium text-[11px] flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                          >
+                            <Download className="w-3 h-3" />
+                            <span>Hoặc tải bộ cài mới (.exe / Mac)</span>
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
                 )}
