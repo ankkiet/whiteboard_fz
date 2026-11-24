@@ -54,7 +54,7 @@ describe('desktopPackager — native Windows PE32+ .exe and macOS .app/.command 
     const cmd = buildMacOSSelfExtractingCommand(sampleHtml);
     const cmdText = new TextDecoder().decode(cmd);
     assert.ok(cmdText.startsWith('#!/bin/bash'));
-    assert.ok(cmdText.includes('fzINK.app'));
+    assert.ok(cmdText.includes('fzInK.app'));
     assert.ok(cmdText.includes(sampleHtml));
 
     const macZip = buildMacOSDesktopAppZip(sampleHtml);

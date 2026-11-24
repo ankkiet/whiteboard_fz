@@ -1,19 +1,19 @@
 END-USER LICENSE AGREEMENT (EULA) AND PRIVACY POLICY
-Software: fzINK
+Software: fzInK
 Version: 1.2
-Copyright (c) 2026 fzINK. All rights reserved.
+Copyright (c) 2026 fzInK. All rights reserved.
 
-Please read this agreement carefully before downloading, installing, or using the fzINK software. By clicking "I Agree" or by installing and using the software, you acknowledge that you have read, understood, and agreed to be bound by the terms and conditions below.
+Please read this agreement carefully before downloading, installing, or using the fzInK software. By clicking "I Agree" or by installing and using the software, you acknowledge that you have read, understood, and agreed to be bound by the terms and conditions below.
 
 --------------------------------------------------------------------------------
 SECTION 1: LICENSE GRANT
-1.1. The author grants you a non-exclusive, non-transferable, revocable license to install and use fzINK for personal, educational, teaching, or commercial purposes.
+1.1. The author grants you a non-exclusive, non-transferable, revocable license to install and use fzInK for personal, educational, teaching, or commercial purposes.
 1.2. You may install the software on computers and devices that you own or legally control.
 1.3. You agree not to reverse engineer, decompile, disassemble, or modify any binary components of the software without prior written permission from the author.
 
 --------------------------------------------------------------------------------
 SECTION 2: DATA PRIVACY AND SECURITY (OFFLINE-FIRST ARCHITECTURE)
-2.1. Offline-First Privacy: fzINK is built with strict privacy-by-design principles. All board drawings, handwritten strokes, imported images, and note data are stored locally on your device (IndexedDB and LocalStorage).
+2.1. Offline-First Privacy: fzInK is built with strict privacy-by-design principles. All board drawings, handwritten strokes, imported images, and note data are stored locally on your device (IndexedDB and LocalStorage).
 2.2. Zero Data Collection: The software does not automatically collect, store, or transmit your personal identity, passwords, location data, or sensitive files to external servers.
 2.3. Google Drive Cloud Sync: If you choose to enable cloud backup or Google Drive synchronization, data is transmitted directly and securely between your computer and official Google servers using standard Google OAuth authorization. The author does not have access to your credentials or board content.
 2.4. Data Ownership: You retain full ownership of all drawings, documents, and content created within the application. You can export, backup, or delete your data at any time.

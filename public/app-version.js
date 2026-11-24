@@ -1,1 +1,1 @@
-window.__BTTM_VERSION_CALLBACK__&&window.__BTTM_VERSION_CALLBACK__({"version":"v_fz.1.1.1.1.4","buildId":"bb959943d11a","notes":"Bản cập nhật chính thức fzINK (Windows .exe & macOS Apple Silicon / Intel)","updateOrigin":"https://whiteboardfz.pages.dev"});
+window.__BTTM_VERSION_CALLBACK__&&window.__BTTM_VERSION_CALLBACK__({"version":"v_fz.1.1.1.1.5","buildId":"682f19957fb8","notes":"Bản cập nhật chính thức fzInK (Thư viện nhiều bảng ngoại tuyến, Windows .exe & macOS Apple Silicon / Intel)","updateOrigin":"https://whiteboardfz.pages.dev"});

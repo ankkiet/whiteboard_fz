@@ -16,8 +16,9 @@ import { formatSyncTime, getLocalDraftActionState } from '../../services/driveSy
 import { BOARD_TEMPLATES, getBoardTypeLabel } from '../../engine/boardTemplates';
 import { BoardPattern, BoardType, NotebookPaperSize } from '../../types/board';
 import { BoardTemplatePreview } from './BoardTemplatePreview';
+import { LocalBoardsSection } from './LocalBoardsSection';
 import { CreateBoardModal } from '../modals/CreateBoardModal';
-import { HomeSettingsMenu, PWAInstallTriggerButton } from '../modals/DesktopAppModal';
+import { HomeSettingsMenu, PWAInstallTriggerButton, isDesktopApp } from '../modals/DesktopAppModal';
 import { getWebPortalOrigin } from '../../services/authBridge';
 import { GoogleSignInButton } from './GoogleSignInButton';
 import { AppLogo } from '../ui/AppLogo';
@@ -165,6 +166,7 @@ export const HomePage: React.FC<HomePageProps> = ({
   const startNewBoard = useBoardStore((s) => s.startNewBoard);
 
   const isFileProtocol = typeof window !== 'undefined' && window.location.protocol === 'file:';
+  const isDesktop = isDesktopApp();
 
   const [filter, setFilter] = useState<DriveFileFilter>('all');
   const [sort, setSort] = useState<DriveFileSort>('modifiedDesc');
@@ -212,7 +214,8 @@ export const HomePage: React.FC<HomePageProps> = ({
     syncStatus: drive.syncStatus,
   });
 
-  const hasUnsavedLocalDraft = localElementCount > 0 && !drive.activeDriveFile;
+  // Previous boards are automatically preserved in the local library when starting a new board.
+  const hasUnsavedLocalDraft = false;
 
   const handleOpenCreateModal = (initialType: BoardType = 'basic') => {
     setCreateModalState({ open: true, initialType });
@@ -231,10 +234,6 @@ export const HomePage: React.FC<HomePageProps> = ({
   };
 
   const handleQuickTemplateClick = (boardType: BoardType) => {
-    if (hasUnsavedLocalDraft) {
-      setCreateModalState({ open: true, initialType: boardType });
-      return;
-    }
     handleCreateBoard({ boardType });
   };
 
@@ -285,8 +284,8 @@ export const HomePage: React.FC<HomePageProps> = ({
           {/* Brand */}
           <div className="flex items-center gap-2.5 whitespace-nowrap shrink-0">
             <AppLogo size={30} concept="infinite" />
-            <span className="text-sm sm:text-[15px] font-bold tracking-tight text-slate-900 dark:text-slate-100 whitespace-nowrap shrink-0">
-              fzINK
+            <span className="font-fzink-brand text-xl sm:text-[22px] leading-none text-slate-900 dark:text-slate-100 whitespace-nowrap shrink-0 pr-1">
+              fzInK
             </span>
           </div>
 
@@ -472,7 +471,7 @@ export const HomePage: React.FC<HomePageProps> = ({
                     ·
                   </span>
                   <span className="text-xs font-medium text-indigo-600 dark:text-indigo-400 shrink-0">
-                    Đang mở trên máy
+                    {isDesktop ? 'Đang mở trên máy' : 'Đang mở trên trình duyệt'}
                   </span>
                 </div>
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-500 dark:text-slate-400 tabular-nums mt-0.5">
@@ -502,7 +501,11 @@ export const HomePage: React.FC<HomePageProps> = ({
                       )}
                     </span>
                   ) : (
-                    <span>Tự động lưu trên trình duyệt</span>
+                    <span>
+                      {isDesktop
+                        ? 'Tự động lưu vào thư viện trên máy'
+                        : 'Tự động lưu trên trình duyệt này'}
+                    </span>
                   )}
                 </div>
               </div>
@@ -598,6 +601,13 @@ export const HomePage: React.FC<HomePageProps> = ({
             ))}
           </div>
         </section>
+
+        {/* Multi-board Offline Local Library (IndexedDB) */}
+        <LocalBoardsSection
+          onOpenBoard={onEnterEditor}
+          onCreateNewClick={() => handleOpenCreateModal()}
+          onBoardOpenedFromLocal={() => drive.resetBoardSyncContext()}
+        />
 
         {/* Google Drive Saved Boards Workspace */}
         <section id="drive-boards-section" aria-labelledby="drive-boards-heading" className="space-y-4">

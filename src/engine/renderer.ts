@@ -1433,7 +1433,7 @@ export async function exportBoardToPdf(options: ExportPdfOptions): Promise<Expor
     if (title) {
       doc.setProperties({
         title,
-        creator: 'fzINK',
+        creator: 'fzInK',
       });
     }
 
@@ -1533,7 +1533,7 @@ export async function exportBoardToPdf(options: ExportPdfOptions): Promise<Expor
   if (title) {
     doc.setProperties({
       title,
-      creator: 'fzINK',
+      creator: 'fzInK',
     });
   }
 

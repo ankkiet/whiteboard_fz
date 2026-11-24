@@ -1,7 +1,7 @@
 import { BoardElement, BoardPattern, BoardType } from '../types/board';
 import { normalizeBoardPattern, normalizeBoardType } from '../engine/boardTemplates';
 
-export const APP_DRIVE_FOLDER_NAME = 'fzINK';
+export const APP_DRIVE_FOLDER_NAME = 'fzInK';
 export const DRIVE_FOLDER_MIME_TYPE = 'application/vnd.google-apps.folder';
 
 export interface DriveAppFolder {

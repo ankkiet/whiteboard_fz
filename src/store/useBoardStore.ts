@@ -1,6 +1,18 @@
 import { create } from 'zustand';
 import { get as idbGet, set as idbSet } from 'idb-keyval';
 import {
+  LocalBoardMeta,
+  LocalBoardPayload,
+  deleteLocalBoard,
+  duplicateLocalBoard,
+  generateLocalBoardId,
+  getLocalBoardPayload,
+  listLocalBoards,
+  renameLocalBoard,
+  saveLocalBoard,
+  shouldPersistBoardToLibrary,
+} from '../services/localBoardLibrary';
+import {
   BoardElement,
   BoardPattern,
   BoardType,
@@ -60,7 +72,30 @@ function uid(prefix: string): string {
   return `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
 }
 
+function pruneUnusedAssets(
+  elements: BoardElement[],
+  assets: Record<string, string>
+): Record<string, string> {
+  const usedAssetIds = new Set(
+    elements
+      .filter(
+        (el): el is ImageElement | FileCardElement =>
+          el.type === 'image' || el.type === 'file-card'
+      )
+      .map((el) => el.assetId)
+  );
+  const pruned: Record<string, string> = {};
+  for (const id of usedAssetIds) {
+    if (assets[id]) pruned[id] = assets[id];
+  }
+  return pruned;
+}
+
 interface BoardState {
+  activeLocalBoardId: string | null;
+  hasUserEditedCurrentBoard: boolean;
+  localBoards: LocalBoardMeta[];
+  isLoadingLocalBoards: boolean;
   title: string;
   elements: BoardElement[];
   selectedIds: string[];
@@ -189,6 +224,7 @@ interface BoardState {
     boardPattern?: BoardPattern;
     notebookPaperSize?: NotebookPaperSize;
     resetHistory?: boolean;
+    localBoardId?: string;
   }) => void;
   startNewBoard: (
     options?:
@@ -202,6 +238,13 @@ interface BoardState {
   ) => void;
   clearBoard: () => void;
 
+  // Multi-board local library (IndexedDB)
+  refreshLocalBoards: () => Promise<void>;
+  openLocalBoard: (id: string) => Promise<boolean>;
+  renameLocalBoardById: (id: string, newTitle: string) => Promise<boolean>;
+  duplicateLocalBoardById: (id: string) => Promise<LocalBoardMeta | null>;
+  deleteLocalBoardById: (id: string) => Promise<void>;
+
   // Persistence
   loadFromStorage: () => Promise<void>;
   scheduleSave: () => void;
@@ -209,7 +252,11 @@ interface BoardState {
 }
 
 export const useBoardStore = create<BoardState>((set, get) => ({
-  title: 'Bảng Trắng Mới',
+  activeLocalBoardId: null,
+  hasUserEditedCurrentBoard: false,
+  localBoards: [],
+  isLoadingLocalBoards: false,
+  title: 'Bảng trắng mới',
   elements: [],
   selectedIds: [],
   editingGroupId: null,
@@ -264,6 +311,7 @@ export const useBoardStore = create<BoardState>((set, get) => ({
     set({
       history: trimmed,
       historyIndex: trimmed.length - 1,
+      hasUserEditedCurrentBoard: true,
     });
     get().scheduleSave();
   },
@@ -828,6 +876,7 @@ export const useBoardStore = create<BoardState>((set, get) => ({
     boardPattern,
     notebookPaperSize,
     resetHistory = false,
+    localBoardId,
   }) => {
     const safeElements = Array.isArray(elements) ? elements : [];
     const resolvedType = boardType ? normalizeBoardType(boardType) : 'basic';
@@ -858,7 +907,41 @@ export const useBoardStore = create<BoardState>((set, get) => ({
     }
 
     if (resetHistory) {
+      // Snapshot & preserve previous local board only if it actually has content
+      const prevState = get();
+      if (saveTimeout) {
+        clearTimeout(saveTimeout);
+        saveTimeout = null;
+      }
+      if (
+        shouldPersistBoardToLibrary({
+          elementCount: prevState.elements.length,
+          activeLocalBoardId: prevState.activeLocalBoardId,
+          hasUserEditedCurrentBoard: prevState.hasUserEditedCurrentBoard,
+        })
+      ) {
+        const prevId = prevState.activeLocalBoardId || generateLocalBoardId();
+        const prevSnapshot: LocalBoardPayload = {
+          id: prevId,
+          title: prevState.title,
+          elements: prevState.elements,
+          assets: pruneUnusedAssets(prevState.elements, prevState.assets),
+          theme: prevState.theme,
+          boardType: prevState.boardType,
+          boardPattern: prevState.boardPattern,
+          notebookPaperSize: prevState.notebookPaperSize,
+          mathGradeMode: prevState.mathGradeMode,
+        };
+        void saveLocalBoard(prevSnapshot).then(({ list }) => {
+          set({ localBoards: list });
+        });
+      }
+
+      const hasImportedContent = safeElements.length > 0;
+      const nextLocalId = hasImportedContent ? localBoardId || generateLocalBoardId() : null;
       set({
+        activeLocalBoardId: nextLocalId,
+        hasUserEditedCurrentBoard: hasImportedContent,
         title: title || template.defaultTitle,
         boardType: resolvedType,
         boardPattern: resolvedPattern,
@@ -873,7 +956,7 @@ export const useBoardStore = create<BoardState>((set, get) => ({
         history: [safeElements],
         historyIndex: 0,
       });
-      get().scheduleSave();
+      void get().saveToStorageNow();
     } else {
       set({
         title: title || get().title,
@@ -892,6 +975,36 @@ export const useBoardStore = create<BoardState>((set, get) => ({
   },
 
   startNewBoard: (options) => {
+    // Snapshot & persist the previous board only if it actually has written/drawn content
+    const prevState = get();
+    if (saveTimeout) {
+      clearTimeout(saveTimeout);
+      saveTimeout = null;
+    }
+    if (
+      shouldPersistBoardToLibrary({
+        elementCount: prevState.elements.length,
+        activeLocalBoardId: prevState.activeLocalBoardId,
+        hasUserEditedCurrentBoard: prevState.hasUserEditedCurrentBoard,
+      })
+    ) {
+      const prevId = prevState.activeLocalBoardId || generateLocalBoardId();
+      const prevSnapshot: LocalBoardPayload = {
+        id: prevId,
+        title: prevState.title,
+        elements: prevState.elements,
+        assets: pruneUnusedAssets(prevState.elements, prevState.assets),
+        theme: prevState.theme,
+        boardType: prevState.boardType,
+        boardPattern: prevState.boardPattern,
+        notebookPaperSize: prevState.notebookPaperSize,
+        mathGradeMode: prevState.mathGradeMode,
+      };
+      void saveLocalBoard(prevSnapshot).then(({ list }) => {
+        set({ localBoards: list });
+      });
+    }
+
     const resolvedType: BoardType =
       typeof options === 'object' && options?.boardType
         ? normalizeBoardType(options.boardType)
@@ -934,7 +1047,10 @@ export const useBoardStore = create<BoardState>((set, get) => ({
       initialCamera = { x: 0, y: 0, zoom: 1 };
     }
 
+    // Do NOT assign a library ID yet; board will only be added to the library once the user draws/writes.
     set({
+      activeLocalBoardId: null,
+      hasUserEditedCurrentBoard: false,
       title: resolvedTitle,
       boardType: resolvedType,
       boardPattern: resolvedPattern,
@@ -952,7 +1068,7 @@ export const useBoardStore = create<BoardState>((set, get) => ({
       virtualTools: DEFAULT_VIRTUAL_TOOLS,
       isMathPanelCollapsed: false,
     });
-    get().scheduleSave();
+    void get().saveToStorageNow();
   },
 
   clearBoard: () => {
@@ -961,12 +1077,192 @@ export const useBoardStore = create<BoardState>((set, get) => ({
     get().addToast('Đã xóa toàn bộ nội dung bảng', 'info');
   },
 
-  loadFromStorage: async () => {
+  refreshLocalBoards: async () => {
+    set({ isLoadingLocalBoards: true });
     try {
+      const list = await listLocalBoards();
+      set({ localBoards: list, isLoadingLocalBoards: false });
+    } catch {
+      set({ isLoadingLocalBoards: false });
+    }
+  },
+
+  openLocalBoard: async (id) => {
+    try {
+      // Flush current active board before switching
+      const curr = get();
+      if (curr.activeLocalBoardId && curr.activeLocalBoardId !== id) {
+        await curr.saveToStorageNow();
+      }
+
+      const isDesktop =
+        typeof window !== 'undefined' &&
+        (window.location.protocol === 'file:' ||
+          (typeof navigator !== 'undefined' && /Electron/i.test(navigator.userAgent)));
+
+      const payload = await getLocalBoardPayload(id);
+      if (!payload) {
+        get().addToast(
+          isDesktop
+            ? 'Không tìm thấy dữ liệu bảng trên máy.'
+            : 'Không tìm thấy dữ liệu bảng trên trình duyệt.',
+          'error'
+        );
+        return false;
+      }
+
+      const safeType = normalizeBoardType(payload.boardType);
+      const template = getBoardTemplate(safeType);
+      const safePattern = normalizeBoardPattern(payload.boardPattern || template.pattern);
+      const safePaperSize = normalizeNotebookPaperSize(payload.notebookPaperSize);
+      const safeGradeMode = normalizeMathGradeMode(payload.mathGradeMode);
+
+      const viewW = typeof window !== 'undefined' ? window.innerWidth : 1280;
+      const viewH = typeof window !== 'undefined' ? window.innerHeight : 800;
+      let initialCamera: Camera;
+      if (safeType === 'notebook') {
+        const config = getNotebookConfig(safePaperSize);
+        initialCamera = getNotebookFitCamera({ width: viewW, height: viewH }, config);
+      } else if (template.centerOriginCamera) {
+        initialCamera = { x: Math.round(viewW / 2), y: Math.round(viewH / 2), zoom: 1 };
+      } else {
+        initialCamera = { x: 0, y: 0, zoom: 1 };
+      }
+
+      set({
+        activeLocalBoardId: id,
+        hasUserEditedCurrentBoard: false,
+        title: payload.title,
+        elements: payload.elements,
+        assets: payload.assets,
+        boardType: safeType,
+        boardPattern: safePattern,
+        notebookPaperSize: safePaperSize,
+        mathGradeMode: safeGradeMode,
+        selectedIds: [],
+        editingGroupId: null,
+        editingElementId: null,
+        previewFileCardId: null,
+        camera: initialCamera,
+        history: [payload.elements],
+        historyIndex: 0,
+        currentTool: template.defaultTool,
+        virtualTools: DEFAULT_VIRTUAL_TOOLS,
+        isMathPanelCollapsed: false,
+      });
+
+      await idbSet(STORAGE_KEY, {
+        activeLocalBoardId: id,
+        elements: payload.elements,
+        title: payload.title,
+        theme: get().theme,
+        boardType: safeType,
+        boardPattern: safePattern,
+        notebookPaperSize: safePaperSize,
+        mathGradeMode: safeGradeMode,
+        assets: pruneUnusedAssets(payload.elements, payload.assets),
+      });
+
+      return true;
+    } catch (e) {
+      console.error('Failed to open local board', e);
+      const isDesktop =
+        typeof window !== 'undefined' &&
+        (window.location.protocol === 'file:' ||
+          (typeof navigator !== 'undefined' && /Electron/i.test(navigator.userAgent)));
+      get().addToast(
+        isDesktop
+          ? 'Không thể mở bảng từ bộ nhớ máy.'
+          : 'Không thể mở bảng từ bộ nhớ trình duyệt.',
+        'error'
+      );
+      return false;
+    }
+  },
+
+  renameLocalBoardById: async (id, newTitle) => {
+    const res = await renameLocalBoard(id, newTitle);
+    if (!res) return false;
+    set((state) => ({
+      localBoards: res.list,
+      title: state.activeLocalBoardId === id ? res.meta.title : state.title,
+    }));
+    if (get().activeLocalBoardId === id) {
+      await get().saveToStorageNow();
+    }
+    get().addToast(`Đã đổi tên thành "${res.meta.title}"`, 'success');
+    return true;
+  },
+
+  duplicateLocalBoardById: async (id) => {
+    // If duplicating the currently active board, save latest edits first
+    if (get().activeLocalBoardId === id) {
+      await get().saveToStorageNow();
+    }
+    const res = await duplicateLocalBoard(id);
+    if (!res) {
+      get().addToast('Không thể nhân bản bảng này.', 'error');
+      return null;
+    }
+    set({ localBoards: res.list });
+    get().addToast(`Đã tạo bản sao "${res.meta.title}"`, 'success');
+    return res.meta;
+  },
+
+  deleteLocalBoardById: async (id) => {
+    const nextList = await deleteLocalBoard(id);
+    const wasActive = get().activeLocalBoardId === id;
+    set({ localBoards: nextList });
+
+    if (wasActive) {
+      if (nextList.length > 0) {
+        await get().openLocalBoard(nextList[0].id);
+      } else {
+        set({
+          activeLocalBoardId: null,
+          title: 'Bảng trắng mới',
+          elements: [],
+          assets: {},
+          selectedIds: [],
+          editingGroupId: null,
+          editingElementId: null,
+          previewFileCardId: null,
+          history: [[]],
+          historyIndex: 0,
+        });
+        await idbSet(STORAGE_KEY, {
+          activeLocalBoardId: null,
+          elements: [],
+          title: 'Bảng trắng mới',
+          theme: get().theme,
+          boardType: get().boardType,
+          boardPattern: get().boardPattern,
+          notebookPaperSize: get().notebookPaperSize,
+          mathGradeMode: get().mathGradeMode,
+          assets: {},
+        });
+      }
+    }
+    const isDesktop =
+      typeof window !== 'undefined' &&
+      (window.location.protocol === 'file:' ||
+        (typeof navigator !== 'undefined' && /Electron/i.test(navigator.userAgent)));
+    get().addToast(
+      isDesktop ? 'Đã xóa bảng khỏi bộ nhớ máy' : 'Đã xóa bảng khỏi bộ nhớ trình duyệt',
+      'info'
+    );
+  },
+
+  loadFromStorage: async () => {
+    set({ isLoadingLocalBoards: true });
+    try {
+      let localList = await listLocalBoards();
       const savedData =
         (await idbGet<any>(STORAGE_KEY)) || (await idbGet<any>(LEGACY_STORAGE_KEY));
+
       if (savedData) {
         const {
+          activeLocalBoardId,
           elements,
           title,
           theme,
@@ -982,6 +1278,9 @@ export const useBoardStore = create<BoardState>((set, get) => ({
         const safePattern = normalizeBoardPattern(boardPattern || getBoardTemplate(safeType).pattern);
         const safePaperSize = normalizeNotebookPaperSize(notebookPaperSize);
         const safeGradeMode = normalizeMathGradeMode(mathGradeMode);
+        const safeTitle = title || 'Bảng trắng mới';
+        const safeAssets = assets || {};
+
         if (typeof document !== 'undefined') {
           document.documentElement.classList.toggle('dark', safeTheme === 'dark');
         }
@@ -1001,11 +1300,45 @@ export const useBoardStore = create<BoardState>((set, get) => ({
         } else {
           initialCamera = { x: 0, y: 0, zoom: 1 };
         }
+
+        let resolvedLocalId: string | null =
+          typeof activeLocalBoardId === 'string' && activeLocalBoardId ? activeLocalBoardId : null;
+
+        // Auto-migrate existing single-board local data only when it actually has content
+        const existsInIndex = resolvedLocalId
+          ? localList.some((item) => item.id === resolvedLocalId)
+          : false;
+        if (!existsInIndex && safeElements.length > 0) {
+          resolvedLocalId = resolvedLocalId || generateLocalBoardId();
+          const migrated = await saveLocalBoard({
+            id: resolvedLocalId,
+            title: safeTitle,
+            elements: safeElements,
+            assets: pruneUnusedAssets(safeElements, safeAssets),
+            theme: safeTheme,
+            boardType: safeType,
+            boardPattern: safePattern,
+            notebookPaperSize: safePaperSize,
+            mathGradeMode: safeGradeMode,
+          });
+          localList = migrated.list;
+          await idbSet(STORAGE_KEY, {
+            ...savedData,
+            activeLocalBoardId: resolvedLocalId,
+          });
+        } else if (!existsInIndex && safeElements.length === 0) {
+          resolvedLocalId = null;
+        }
+
         set({
+          activeLocalBoardId: resolvedLocalId,
+          hasUserEditedCurrentBoard: false,
+          localBoards: localList,
+          isLoadingLocalBoards: false,
           elements: safeElements,
           history: [safeElements],
           historyIndex: 0,
-          title: title || 'Bảng Trắng Mới',
+          title: safeTitle,
           theme: safeTheme,
           isDarkMode: safeTheme === 'dark',
           boardType: safeType,
@@ -1013,15 +1346,18 @@ export const useBoardStore = create<BoardState>((set, get) => ({
           notebookPaperSize: safePaperSize,
           mathGradeMode: safeGradeMode,
           camera: initialCamera,
-          assets: assets || {},
+          assets: safeAssets,
           hasLoaded: true,
         });
+      } else if (localList.length > 0) {
+        set({ localBoards: localList, isLoadingLocalBoards: false, hasLoaded: true });
+        await get().openLocalBoard(localList[0].id);
       } else {
-        set({ hasLoaded: true });
+        set({ localBoards: localList, isLoadingLocalBoards: false, hasLoaded: true });
       }
     } catch (e) {
       console.error('Failed to load from IndexedDB', e);
-      set({ hasLoaded: true });
+      set({ isLoadingLocalBoards: false, hasLoaded: true });
     }
   },
 
@@ -1034,6 +1370,7 @@ export const useBoardStore = create<BoardState>((set, get) => ({
 
   saveToStorageNow: async () => {
     try {
+      const state = get();
       const {
         elements,
         title,
@@ -1043,22 +1380,23 @@ export const useBoardStore = create<BoardState>((set, get) => ({
         notebookPaperSize,
         mathGradeMode,
         assets,
-      } = get();
-      // Prune unreferenced assets to keep IndexedDB lean
-      const usedAssetIds = new Set(
-        elements
-          .filter(
-            (el): el is ImageElement | FileCardElement =>
-              el.type === 'image' || el.type === 'file-card'
-          )
-          .map((el) => el.assetId)
-      );
-      const prunedAssets: Record<string, string> = {};
-      for (const id of usedAssetIds) {
-        if (assets[id]) prunedAssets[id] = assets[id];
+      } = state;
+
+      const prunedAssets = pruneUnusedAssets(elements, assets);
+      const shouldPersist = shouldPersistBoardToLibrary({
+        elementCount: elements.length,
+        activeLocalBoardId: state.activeLocalBoardId,
+        hasUserEditedCurrentBoard: state.hasUserEditedCurrentBoard,
+      });
+
+      let activeId = state.activeLocalBoardId;
+      if (shouldPersist && !activeId) {
+        activeId = generateLocalBoardId();
+        set({ activeLocalBoardId: activeId });
       }
 
       await idbSet(STORAGE_KEY, {
+        activeLocalBoardId: activeId,
         elements,
         title,
         theme,
@@ -1068,6 +1406,21 @@ export const useBoardStore = create<BoardState>((set, get) => ({
         mathGradeMode,
         assets: prunedAssets,
       });
+
+      if (shouldPersist && activeId) {
+        const saved = await saveLocalBoard({
+          id: activeId,
+          title,
+          elements,
+          assets: prunedAssets,
+          theme,
+          boardType,
+          boardPattern,
+          notebookPaperSize,
+          mathGradeMode,
+        });
+        set({ localBoards: saved.list });
+      }
     } catch (e) {
       console.error('Failed to save to IndexedDB', e);
     }

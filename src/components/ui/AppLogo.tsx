@@ -252,11 +252,11 @@ export const AppLogo: React.FC<AppLogoProps> = ({
         {renderSvg()}
       </div>
       <div className="flex flex-col min-w-0 leading-none">
-        <span className="text-sm sm:text-[15px] font-bold tracking-tight text-slate-900 dark:text-white truncate">
-          fzINK
+        <span className="font-fzink-brand text-xl sm:text-[22px] leading-none text-slate-900 dark:text-white pr-1 truncate">
+          fzInK
         </span>
         {showSubtitle && (
-          <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+          <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400 mt-1 truncate">
             Bảng trắng tương tác
           </span>
         )}

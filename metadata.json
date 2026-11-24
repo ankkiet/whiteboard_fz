@@ -1,5 +1,5 @@
 {
-  "name": "fzINK",
+  "name": "fzInK",
   "description": "Ứng dụng bảng trắng tương tác vô tận với công cụ vẽ mượt mà, ghi chú dán, hình khối và chèn ảnh.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]

@@ -1,6 +1,6 @@
 {
   "appId": "vn.fzink.app",
-  "productName": "fzINK",
+  "productName": "fzInK",
   "compression": "maximum",
   "npmRebuild": false,
   "afterPack": "electron/afterPack.cjs",
@@ -16,7 +16,7 @@
     "main": "electron/main.cjs"
   },
   "protocols": {
-    "name": "fzINK",
+    "name": "fzInK",
     "schemes": ["fzink", "bttm"]
   },
   "win": {
@@ -31,7 +31,7 @@
       }
     ],
     "icon": "public/pwa-512x512.png",
-    "legalTrademarks": "Bản quyền © 2026 fzINK. Toàn quyền bảo lưu."
+    "legalTrademarks": "Bản quyền © 2026 fzInK. Toàn quyền bảo lưu."
   },
   "mac": {
     "target": [
@@ -46,27 +46,27 @@
     ],
     "category": "public.app-category.education",
     "icon": "public/pwa-512x512.png",
-    "artifactName": "fzINK-macOS-${arch}.${ext}",
+    "artifactName": "fzInK-macOS-${arch}.${ext}",
     "identity": null
   },
   "nsis": {
-    "artifactName": "fzINK-Setup.${ext}",
+    "artifactName": "fzInK-Setup.${ext}",
     "oneClick": false,
     "perMachine": false,
     "allowElevation": true,
     "allowToChangeInstallationDirectory": true,
     "createDesktopShortcut": true,
     "createStartMenuShortcut": true,
-    "shortcutName": "fzINK",
-    "uninstallDisplayName": "fzINK",
+    "shortcutName": "fzInK",
+    "uninstallDisplayName": "fzInK",
     "license": "electron/license.txt",
     "runAfterFinish": true,
     "deleteAppDataOnUninstall": false
   },
   "portable": {
-    "artifactName": "fzINK-Portable.${ext}"
+    "artifactName": "fzInK-Portable.${ext}"
   },
   "dmg": {
-    "artifactName": "fzINK-macOS-${arch}.${ext}"
+    "artifactName": "fzInK-macOS-${arch}.${ext}"
   }
 }

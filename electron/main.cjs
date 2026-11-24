@@ -1,6 +1,6 @@
 /**
  * Electron Main Process (Windows .exe & macOS .dmg / .app)
- * Cho phép đóng gói dự án fzINK thành ứng dụng desktop độc lập
+ * Cho phép đóng gói dự án fzInK thành ứng dụng desktop độc lập
  * mà vẫn dùng chung 100% mã nguồn với phiên bản website.
  */
 const { app, BrowserWindow, shell, Menu } = require('electron');
@@ -63,7 +63,7 @@ function createMainWindow() {
     height: 900,
     minWidth: 1024,
     minHeight: 680,
-    title: 'fzINK',
+    title: 'fzInK',
     icon: path.join(__dirname, '../dist/pwa-512x512.png'),
     backgroundColor: '#f8fafc',
     autoHideMenuBar: true,
@@ -110,7 +110,7 @@ app.whenReady().then(() => {
       {
         label: app.name,
         submenu: [
-          { role: 'about', label: 'Giới thiệu fzINK' },
+          { role: 'about', label: 'Giới thiệu fzInK' },
           { type: 'separator' },
           { role: 'services', label: 'Dịch vụ' },
           { type: 'separator' },

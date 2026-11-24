@@ -40,6 +40,7 @@ function shouldAutoOpenAuthBridge(): boolean {
 
 export default function App() {
   const loadFromStorage = useBoardStore((s) => s.loadFromStorage);
+  const saveToStorageNow = useBoardStore((s) => s.saveToStorageNow);
   const insertImageFromDataUrl = useBoardStore((s) => s.insertImageFromDataUrl);
   const insertFileCard = useBoardStore((s) => s.insertFileCard);
   const addToast = useBoardStore((s) => s.addToast);
@@ -93,11 +94,12 @@ export default function App() {
     setIsPresentOpen(false);
     setIsFocusMode(false);
     setPendingDoc(null);
+    void saveToStorageNow();
     setActiveView('home');
     if (!drive.needsAuth) {
       void drive.flushAutoSaveNow().then(() => drive.refreshFiles());
     }
-  }, [drive]);
+  }, [drive, saveToStorageNow]);
 
   const handleTriggerFileUpload = useCallback(() => {
     fileInputRef.current?.click();

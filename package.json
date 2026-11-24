@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.2.5",
   "description": "Ứng dụng bảng trắng tương tác vô tận với công cụ vẽ mượt mà, ghi chú dán, hình khối và chèn ảnh.",
-  "author": "fzINK",
+  "author": "fzInK",
   "type": "module",
   "main": "electron/main.cjs",
   "scripts": {

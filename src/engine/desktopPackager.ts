@@ -195,7 +195,7 @@ export function buildWindowsExeInstaller(bundledHtml: string): Uint8Array {
 
   // Static strings in .rdata:
   // 0x21d0: target HTML filename appended to %TEMP%\
-  writeAscii(out, rdata + 0x1d0, 'fzINK-App.html\0');
+  writeAscii(out, rdata + 0x1d0, 'fzInK-App.html\0');
   // 0x21f0: "open" verb for ShellExecuteA
   writeAscii(out, rdata + 0x1f0, 'open\0');
   // 0x2200: "msedge.exe" (registered in App Paths on all Windows 10/11 machines -> opens standalone chromeless app window)
@@ -370,24 +370,24 @@ export function buildWindowsExeInstaller(bundledHtml: string): Uint8Array {
 }
 
 /**
- * Builds a Windows Portable ZIP Package (`fzINK-Windows-Portable.zip`)
- * containing `fzINK.exe` + `fzINK-Offline.html` + `HUONG-DAN.txt`.
+ * Builds a Windows Portable ZIP Package (`fzInK-Windows-Portable.zip`)
+ * containing `fzInK.exe` + `fzInK-Offline.html` + `HUONG-DAN.txt`.
  */
 export function buildWindowsDesktopZip(bundledHtml: string): Uint8Array {
   const exeBytes = buildWindowsExeInstaller(bundledHtml);
   const readme = [
     '================================================================',
-    '  fzINK - BỘ ỨNG DỤNG WINDOWS (100% OFFLINE)',
+    '  fzInK - BỘ ỨNG DỤNG WINDOWS (100% OFFLINE)',
     '================================================================',
     '',
     '1. Chạy trực tiếp file thực thi Windows (.exe):',
-    '   - Bấm đúp vào "fzINK.exe".',
+    '   - Bấm đúp vào "fzInK.exe".',
     '   - Nếu Windows SmartScreen hiện thông báo màu xanh (do ứng dụng',
     '     không mua chứng chỉ EV trả phí của Microsoft), bạn chỉ cần bấm:',
     '     "More info (Thêm thông tin)" -> "Run anyway (Vẫn chạy)".',
     '',
     '2. Chạy bản Không Cảnh Báo SmartScreen (100% an toàn tuyệt đối):',
-    '   - Bấm đúp vào file "fzINK-Offline.html" đi kèm.',
+    '   - Bấm đúp vào file "fzInK-Offline.html" đi kèm.',
     '   - Chạy ngay lập tức mọi tính năng Offline mà không bao giờ bị',
     '     Windows SmartScreen hay trình diệt virus hỏi xác nhận.',
     '',
@@ -395,17 +395,17 @@ export function buildWindowsDesktopZip(bundledHtml: string): Uint8Array {
 
   return createZipArchive([
     {
-      path: 'fzINK-Windows/fzINK.exe',
+      path: 'fzInK-Windows/fzInK.exe',
       content: exeBytes,
       isExecutable: true,
     },
     {
-      path: 'fzINK-Windows/fzINK-Offline.html',
+      path: 'fzInK-Windows/fzInK-Offline.html',
       content: bundledHtml,
       isExecutable: false,
     },
     {
-      path: 'fzINK-Windows/HUONG-DAN.txt',
+      path: 'fzInK-Windows/HUONG-DAN.txt',
       content: readme,
       isExecutable: false,
     },
@@ -414,15 +414,15 @@ export function buildWindowsDesktopZip(bundledHtml: string): Uint8Array {
 
 
 /**
- * Builds a single-file self-extracting macOS installer (`fzINK-Installer.command`)
- * that creates `fzINK.app` on the user's Mac Desktop & /Applications folder and opens it immediately.
+ * Builds a single-file self-extracting macOS installer (`fzInK-Installer.command`)
+ * that creates `fzInK.app` on the user's Mac Desktop & /Applications folder and opens it immediately.
  */
 export function buildMacOSSelfExtractingCommand(bundledHtml: string): Uint8Array {
   const header = [
     '#!/bin/bash',
-    '# Bo cai dat tu dong fzINK.app cho macOS',
+    '# Bo cai dat tu dong fzInK.app cho macOS',
     'set -e',
-    'APP_DIR="$HOME/Desktop/fzINK.app"',
+    'APP_DIR="$HOME/Desktop/fzInK.app"',
     'mkdir -p "$APP_DIR/Contents/MacOS" "$APP_DIR/Contents/Resources"',
     'cat << \'EOF_PLIST\' > "$APP_DIR/Contents/Info.plist"',
     '<?xml version="1.0" encoding="UTF-8"?>',
@@ -430,9 +430,9 @@ export function buildMacOSSelfExtractingCommand(bundledHtml: string): Uint8Array
     '<plist version="1.0">',
     '<dict>',
     '  <key>CFBundleName</key>',
-    '  <string>fzINK</string>',
+    '  <string>fzInK</string>',
     '  <key>CFBundleDisplayName</key>',
-    '  <string>fzINK</string>',
+    '  <string>fzInK</string>',
     '  <key>CFBundleIdentifier</key>',
     '  <string>vn.fzink.desktop</string>',
     '  <key>CFBundleVersion</key>',
@@ -442,16 +442,16 @@ export function buildMacOSSelfExtractingCommand(bundledHtml: string): Uint8Array
     '  <key>CFBundlePackageType</key>',
     '  <string>APPL</string>',
     '  <key>CFBundleExecutable</key>',
-    '  <string>fzINK</string>',
+    '  <string>fzInK</string>',
     '  <key>NSHighResolutionCapable</key>',
     '  <true/>',
     '</dict>',
     '</plist>',
     'EOF_PLIST',
-    'cat << \'EOF_BIN\' > "$APP_DIR/Contents/MacOS/fzINK"',
+    'cat << \'EOF_BIN\' > "$APP_DIR/Contents/MacOS/fzInK"',
     '#!/bin/bash',
     'DIR="$(cd "$(dirname "$0")" && pwd)"',
-    'HTML_PATH="$DIR/../Resources/fzINK-App.html"',
+    'HTML_PATH="$DIR/../Resources/fzInK-App.html"',
     'FILE_URL="file://$HTML_PATH"',
     'if [ -d "/Applications/Google Chrome.app" ]; then',
     '  open -n -a "Google Chrome" --args --app="$FILE_URL" --window-size=1440,900',
@@ -463,10 +463,10 @@ export function buildMacOSSelfExtractingCommand(bundledHtml: string): Uint8Array
     '  open "$HTML_PATH"',
     'fi',
     'EOF_BIN',
-    'chmod +x "$APP_DIR/Contents/MacOS/fzINK"',
+    'chmod +x "$APP_DIR/Contents/MacOS/fzInK"',
     'ARCHIVE_LINE=$(awk \'/^__BTTM_PAYLOAD_BELOW__/ {print NR + 1; exit 0; }\' "$0")',
-    'tail -n +$ARCHIVE_LINE "$0" > "$APP_DIR/Contents/Resources/fzINK-App.html"',
-    'cp -R "$APP_DIR" "/Applications/fzINK.app" 2>/dev/null || true',
+    'tail -n +$ARCHIVE_LINE "$0" > "$APP_DIR/Contents/Resources/fzInK-App.html"',
+    'cp -R "$APP_DIR" "/Applications/fzInK.app" 2>/dev/null || true',
     'open "$APP_DIR"',
     'exit 0',
     '__BTTM_PAYLOAD_BELOW__',
@@ -567,7 +567,7 @@ export function createZipArchive(entries: ZipEntryInput[]): Uint8Array {
 }
 
 /**
- * Builds a complete, 100% offline macOS Application Bundle (`fzINK.app`) packaged inside a `.zip`.
+ * Builds a complete, 100% offline macOS Application Bundle (`fzInK.app`) packaged inside a `.zip`.
  */
 export function buildMacOSDesktopAppZip(bundledHtml: string): Uint8Array {
   const infoPlist = [
@@ -576,9 +576,9 @@ export function buildMacOSDesktopAppZip(bundledHtml: string): Uint8Array {
     '<plist version="1.0">',
     '<dict>',
     '  <key>CFBundleName</key>',
-    '  <string>fzINK</string>',
+    '  <string>fzInK</string>',
     '  <key>CFBundleDisplayName</key>',
-    '  <string>fzINK</string>',
+    '  <string>fzInK</string>',
     '  <key>CFBundleIdentifier</key>',
     '  <string>vn.fzink.desktop</string>',
     '  <key>CFBundleVersion</key>',
@@ -588,7 +588,7 @@ export function buildMacOSDesktopAppZip(bundledHtml: string): Uint8Array {
     '  <key>CFBundlePackageType</key>',
     '  <string>APPL</string>',
     '  <key>CFBundleExecutable</key>',
-    '  <string>fzINK</string>',
+    '  <string>fzInK</string>',
     '  <key>NSHighResolutionCapable</key>',
     '  <true/>',
     '</dict>',
@@ -599,7 +599,7 @@ export function buildMacOSDesktopAppZip(bundledHtml: string): Uint8Array {
   const macExecutable = [
     '#!/bin/bash',
     'DIR="$(cd "$(dirname "$0")" && pwd)"',
-    'HTML_PATH="$DIR/../Resources/fzINK-App.html"',
+    'HTML_PATH="$DIR/../Resources/fzInK-App.html"',
     'FILE_URL="file://$HTML_PATH"',
     'if [ -d "/Applications/Google Chrome.app" ]; then',
     '  open -n -a "Google Chrome" --args --app="$FILE_URL" --window-size=1440,900',
@@ -615,17 +615,17 @@ export function buildMacOSDesktopAppZip(bundledHtml: string): Uint8Array {
 
   return createZipArchive([
     {
-      path: 'fzINK.app/Contents/Info.plist',
+      path: 'fzInK.app/Contents/Info.plist',
       content: infoPlist,
       isExecutable: false,
     },
     {
-      path: 'fzINK.app/Contents/Resources/fzINK-App.html',
+      path: 'fzInK.app/Contents/Resources/fzInK-App.html',
       content: bundledHtml,
       isExecutable: false,
     },
     {
-      path: 'fzINK.app/Contents/MacOS/fzINK',
+      path: 'fzInK.app/Contents/MacOS/fzInK',
       content: macExecutable,
       isExecutable: true,
     },
