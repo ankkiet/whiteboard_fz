@@ -1,1 +1,1 @@
-window.__BTTM_VERSION_CALLBACK__&&window.__BTTM_VERSION_CALLBACK__({"version":"v_fz.1.1.1.1.7","buildId":"d206da2884b4","notes":"Bản cập nhật fzInK (Tinh gọn giao diện web & desktop, tối ưu bố cục mobile và bảng toán, nhận diện phẳng mới)","updateOrigin":"https://whiteboardfz.pages.dev"});
+window.__BTTM_VERSION_CALLBACK__&&window.__BTTM_VERSION_CALLBACK__({"version":"v_fz.1.1.1.1.8","buildId":"75097c9750fe","notes":"Bản cập nhật fzInK (Giữ phiên đăng nhập qua cập nhật & Portable, tinh gọn giao diện web & desktop)","updateOrigin":"https://whiteboardfz.pages.dev"});

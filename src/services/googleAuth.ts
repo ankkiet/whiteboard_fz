@@ -10,10 +10,13 @@ import firebaseConfig from '../../firebase-applet-config.json';
 import {
   BridgeSession,
   clearBridgeSession,
+  clearLastGoogleEmail,
   clearWebAccessTokenCache,
   loadBridgeSession,
+  loadLastGoogleEmail,
   loadWebAccessTokenCache,
   saveBridgeSession,
+  saveLastGoogleEmail,
   saveWebAccessTokenCache,
 } from './authBridge';
 
@@ -22,11 +25,23 @@ export const SCOPES = ['https://www.googleapis.com/auth/drive.file'];
 const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
-const provider = new GoogleAuthProvider();
-for (const scope of SCOPES) {
-  provider.addScope(scope);
+function buildGoogleProvider(options?: { forceAccountPicker?: boolean }): GoogleAuthProvider {
+  const googleProvider = new GoogleAuthProvider();
+  for (const scope of SCOPES) {
+    googleProvider.addScope(scope);
+  }
+  if (options?.forceAccountPicker) {
+    googleProvider.setCustomParameters({ prompt: 'select_account' });
+  } else {
+    const hintEmail = auth.currentUser?.email || loadLastGoogleEmail();
+    if (hintEmail) {
+      googleProvider.setCustomParameters({ login_hint: hintEmail });
+    } else {
+      googleProvider.setCustomParameters({ prompt: 'select_account' });
+    }
+  }
+  return googleProvider;
 }
-provider.setCustomParameters({ prompt: 'select_account' });
 
 let isSigningIn = false;
 let cachedAccessToken: string | null = null;
@@ -87,7 +102,9 @@ export const initGoogleAuth = (
   });
 };
 
-export const googleSignIn = async (): Promise<{ user: User; accessToken: string }> => {
+export const googleSignIn = async (options?: {
+  forceAccountPicker?: boolean;
+}): Promise<{ user: User; accessToken: string }> => {
   try {
     isSigningIn = true;
     if (typeof window !== 'undefined' && window.location.protocol === 'file:') {
@@ -95,13 +112,15 @@ export const googleSignIn = async (): Promise<{ user: User; accessToken: string 
         'Bản cài đặt chạy từ tệp cục bộ (file://) không hỗ trợ đăng nhập Google do chính sách bảo mật của Google OAuth. Vui lòng bấm "Đăng nhập qua trình duyệt" để kết nối an toàn.'
       );
     }
-    const result = await signInWithPopup(auth, provider);
+    const googleProvider = buildGoogleProvider(options);
+    const result = await signInWithPopup(auth, googleProvider);
     const credential = GoogleAuthProvider.credentialFromResult(result);
     if (!credential?.accessToken) {
       throw new Error('Không nhận được mã truy cập Google Drive từ phiên đăng nhập.');
     }
     cachedAccessToken = credential.accessToken;
-    saveWebAccessTokenCache(cachedAccessToken);
+    saveWebAccessTokenCache(cachedAccessToken, result.user.email);
+    saveLastGoogleEmail(result.user.email);
     return { user: result.user, accessToken: cachedAccessToken };
   } finally {
     isSigningIn = false;
@@ -124,6 +143,7 @@ export const googleLogout = async (): Promise<void> => {
   bridgeUser = null;
   clearBridgeSession();
   clearWebAccessTokenCache();
+  clearLastGoogleEmail();
   try {
     await auth.signOut();
   } catch {

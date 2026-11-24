@@ -351,7 +351,7 @@ export const HomePage: React.FC<HomePageProps> = ({
                       disabled={drive.isLoggingIn || Boolean(drive.busyAction)}
                       onClick={() => {
                         setShowAccountMenu(false);
-                        void drive.signIn();
+                        void drive.signIn({ forceAccountPicker: true });
                       }}
                       className="w-full h-9 flex items-center gap-2 px-2.5 rounded-lg text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors duration-150 cursor-pointer"
                     >

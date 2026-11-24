@@ -388,7 +388,7 @@ export const HomeSettingsMenu: React.FC<{
   const addToast = useBoardStore((s) => s.addToast);
   const [isOpen, setIsOpen] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
-  const [latestDesktopVersion, setLatestDesktopVersion] = useState<string>('v_fz.1.1.1.1.7');
+  const [latestDesktopVersion, setLatestDesktopVersion] = useState<string>('v_fz.1.1.1.1.8');
   const [checkResult, setCheckResult] = useState<
     | { status: 'idle' }
     | { status: 'up-to-date'; version: string; buildId: string }
@@ -438,7 +438,7 @@ export const HomeSettingsMenu: React.FC<{
       void syncInitialBadge();
       const onDownloaded = () => {
         setHasUpdateBadge(false);
-        const ver = getDownloadedVersion() || 'v_fz.1.1.1.1.7';
+        const ver = getDownloadedVersion() || 'v_fz.1.1.1.1.8';
         const id = getDownloadedBuildId() || '';
         setCheckResult({ status: 'up-to-date', version: ver, buildId: id });
       };
@@ -540,7 +540,7 @@ export const HomeSettingsMenu: React.FC<{
   const currentVersionLabel =
     getDownloadedVersion() ||
     (typeof window !== 'undefined' && window.__BTTM_EMBEDDED_BUILD__?.version) ||
-    'v_fz.1.1.1.1.7';
+    'v_fz.1.1.1.1.8';
 
   return (
     <div className="relative" ref={menuRef}>
@@ -710,7 +710,7 @@ export const HomeSettingsMenu: React.FC<{
                 {checkResult.status === 'not-installed' && (
                   <div className="p-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 space-y-2 text-xs">
                     <div className="text-slate-700 dark:text-slate-200">
-                      Phiên bản mới nhất: <strong className="font-mono font-medium">{checkResult.latestManifest?.version || 'v_fz.1.1.1.1.7'}</strong>
+                      Phiên bản mới nhất: <strong className="font-mono font-medium">{checkResult.latestManifest?.version || 'v_fz.1.1.1.1.8'}</strong>
                     </div>
                     <button
                       type="button"

@@ -3,11 +3,74 @@
  * Cho phép đóng gói dự án fzInK thành ứng dụng desktop độc lập
  * mà vẫn dùng chung 100% mã nguồn với phiên bản website.
  */
-const { app, BrowserWindow, shell, Menu } = require('electron');
+const { app, BrowserWindow, shell, Menu, ipcMain, safeStorage } = require('electron');
+const fs = require('fs');
 const path = require('path');
 
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 let mainWindow = null;
+
+function getAuthSessionFilePath() {
+  return path.join(app.getPath('userData'), 'auth-session.bin');
+}
+
+function readPersistedAuthSession() {
+  try {
+    const filePath = getAuthSessionFilePath();
+    if (!fs.existsSync(filePath)) return null;
+    const raw = fs.readFileSync(filePath);
+    if (!raw || raw.length === 0) return null;
+    const prefix = raw.subarray(0, 4).toString('ascii');
+    if (prefix === 'ENC:' && safeStorage.isEncryptionAvailable()) {
+      return safeStorage.decryptString(raw.subarray(4));
+    }
+    if (prefix === 'RAW:') {
+      return raw.subarray(4).toString('utf8');
+    }
+    return raw.toString('utf8');
+  } catch {
+    return null;
+  }
+}
+
+function writePersistedAuthSession(serialized) {
+  try {
+    const filePath = getAuthSessionFilePath();
+    fs.mkdirSync(path.dirname(filePath), { recursive: true });
+    if (safeStorage.isEncryptionAvailable()) {
+      const encrypted = safeStorage.encryptString(serialized);
+      fs.writeFileSync(filePath, Buffer.concat([Buffer.from('ENC:', 'ascii'), encrypted]));
+    } else {
+      fs.writeFileSync(filePath, Buffer.concat([Buffer.from('RAW:', 'ascii'), Buffer.from(serialized, 'utf8')]));
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function clearPersistedAuthSession() {
+  try {
+    const filePath = getAuthSessionFilePath();
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+ipcMain.on('fzink:auth:load', (event) => {
+  event.returnValue = readPersistedAuthSession();
+});
+
+ipcMain.handle('fzink:auth:save', (_event, serialized) => {
+  if (typeof serialized !== 'string' || !serialized) return false;
+  return writePersistedAuthSession(serialized);
+});
+
+ipcMain.handle('fzink:auth:clear', () => clearPersistedAuthSession());
 
 // Đăng ký custom protocol fzink:// (và bttm:// để tương thích ngược) để Web có thể mở lại Desktop App
 for (const scheme of ['fzink', 'bttm']) {
@@ -68,6 +131,7 @@ function createMainWindow() {
     backgroundColor: '#fafafa',
     autoHideMenuBar: true,
     webPreferences: {
+      preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
       nodeIntegration: false,
       spellcheck: false,

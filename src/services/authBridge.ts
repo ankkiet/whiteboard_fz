@@ -1,7 +1,6 @@
 /**
  * Cầu nối xác thực Google Drive cho ứng dụng máy tính (Browser Auth Bridge)
- * Cho phép bản ứng dụng tải về máy (.exe / file cục bộ) kết nối an toàn với
- * Google Drive thông qua phiên đăng nhập trên trình duyệt web.
+ * và bộ nhớ đệm phiên đăng nhập cho web/desktop.
  */
 
 import { PRODUCTION_UPDATE_ORIGIN } from '../engine/versionCheck';
@@ -20,9 +19,32 @@ export interface BridgeSession {
   expiresIn?: number;
 }
 
+interface DesktopAuthBridgeApi {
+  loadSessionSync?: () => string | null;
+  saveSession?: (serialized: string) => Promise<boolean> | void;
+  clearSession?: () => Promise<boolean> | void;
+}
+
+declare global {
+  interface Window {
+    fzinkDesktopAuth?: DesktopAuthBridgeApi;
+  }
+}
+
+interface WebTokenCacheRecord {
+  accessToken: string;
+  expiresAt: number;
+  email?: string | null;
+}
+
 const BRIDGE_PREFIX = 'BTTM-';
 const STORAGE_KEY = 'bttm_desktop_auth_bridge_session_v1';
-const WEB_STORAGE_KEY = 'bttm_web_last_access_token_v1';
+const LEGACY_WEB_SESSION_KEY = 'bttm_web_last_access_token_v1';
+const WEB_TOKEN_LOCAL_KEY = 'bttm_web_access_token_cache_v2';
+const LAST_GOOGLE_EMAIL_KEY = 'bttm_last_google_email_v1';
+
+// Google OAuth access tokens expire after 3600s; leave a small safety buffer.
+export const DEFAULT_TOKEN_TTL_MS = 55 * 60 * 1000;
 
 export function getWebPortalOrigin(): string {
   if (typeof window !== 'undefined' && window.location.protocol.startsWith('http')) {
@@ -99,22 +121,86 @@ export function parseAuthBridgeToken(raw: string): BridgeSession {
   }
 }
 
-export function saveBridgeSession(session: BridgeSession): void {
-  if (typeof window === 'undefined') return;
+export function isBridgeSessionExpired(session: BridgeSession, now = Date.now()): boolean {
+  if (!session.createdAt || typeof session.createdAt !== 'number') return false;
+  const ttlSeconds = typeof session.expiresIn === 'number' && session.expiresIn > 0 ? session.expiresIn : 3600;
+  // Leave a 90s buffer so we don't hand out a token right as it expires
+  const expiresAt = session.createdAt + Math.max(60, ttlSeconds - 90) * 1000;
+  return now >= expiresAt;
+}
+
+export function saveLastGoogleEmail(email: string | null | undefined): void {
+  if (typeof window === 'undefined' || !email) return;
   try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+    window.localStorage.setItem(LAST_GOOGLE_EMAIL_KEY, email.trim());
   } catch {
-    // ignore storage quota errors
+    // ignore storage errors
   }
 }
 
-export function loadBridgeSession(): BridgeSession | null {
+export function loadLastGoogleEmail(): string | null {
   if (typeof window === 'undefined') return null;
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
+    const email = window.localStorage.getItem(LAST_GOOGLE_EMAIL_KEY);
+    return email && email.trim() ? email.trim() : null;
+  } catch {
+    return null;
+  }
+}
+
+export function clearLastGoogleEmail(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.removeItem(LAST_GOOGLE_EMAIL_KEY);
+  } catch {
+    // ignore
+  }
+}
+
+export function saveBridgeSession(session: BridgeSession): void {
+  if (typeof window === 'undefined') return;
+  const serialized = JSON.stringify(session);
+  if (session.user?.email) {
+    saveLastGoogleEmail(session.user.email);
+  }
+  try {
+    window.localStorage.setItem(STORAGE_KEY, serialized);
+  } catch {
+    // ignore storage quota errors
+  }
+  try {
+    void window.fzinkDesktopAuth?.saveSession?.(serialized);
+  } catch {
+    // ignore IPC errors
+  }
+}
+
+export function loadBridgeSession(now = Date.now()): BridgeSession | null {
+  if (typeof window === 'undefined') return null;
+
+  let raw: string | null = null;
+  try {
+    raw = window.fzinkDesktopAuth?.loadSessionSync?.() || null;
+  } catch {
+    raw = null;
+  }
+
+  if (!raw) {
+    try {
+      raw = window.localStorage.getItem(STORAGE_KEY);
+    } catch {
+      raw = null;
+    }
+  }
+
+  if (!raw) return null;
+
+  try {
     const parsed = JSON.parse(raw) as BridgeSession;
     if (!parsed.accessToken || !parsed.user?.email) return null;
+    if (isBridgeSessionExpired(parsed, now)) {
+      return null;
+    }
     return parsed;
   } catch {
     return null;
@@ -128,21 +214,65 @@ export function clearBridgeSession(): void {
   } catch {
     // ignore
   }
-}
-
-export function saveWebAccessTokenCache(token: string): void {
-  if (typeof window === 'undefined') return;
   try {
-    window.sessionStorage.setItem(WEB_STORAGE_KEY, token);
+    void window.fzinkDesktopAuth?.clearSession?.();
   } catch {
     // ignore
   }
 }
 
-export function loadWebAccessTokenCache(): string | null {
+export function saveWebAccessTokenCache(
+  token: string,
+  email?: string | null,
+  ttlMs = DEFAULT_TOKEN_TTL_MS,
+  now = Date.now()
+): void {
+  if (typeof window === 'undefined') return;
+  const record: WebTokenCacheRecord = {
+    accessToken: token,
+    expiresAt: now + ttlMs,
+    email: email || null,
+  };
+  if (email) {
+    saveLastGoogleEmail(email);
+  }
+  try {
+    window.localStorage.setItem(WEB_TOKEN_LOCAL_KEY, JSON.stringify(record));
+    window.sessionStorage.removeItem(LEGACY_WEB_SESSION_KEY);
+  } catch {
+    // Fallback to sessionStorage if localStorage is restricted
+    try {
+      window.sessionStorage.setItem(LEGACY_WEB_SESSION_KEY, token);
+    } catch {
+      // ignore
+    }
+  }
+}
+
+export function loadWebAccessTokenCache(now = Date.now()): string | null {
   if (typeof window === 'undefined') return null;
   try {
-    return window.sessionStorage.getItem(WEB_STORAGE_KEY);
+    const raw = window.localStorage.getItem(WEB_TOKEN_LOCAL_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as Partial<WebTokenCacheRecord>;
+      if (
+        typeof parsed.accessToken === 'string' &&
+        parsed.accessToken &&
+        typeof parsed.expiresAt === 'number' &&
+        now < parsed.expiresAt
+      ) {
+        return parsed.accessToken;
+      }
+      // Expired or malformed record -> clean up
+      window.localStorage.removeItem(WEB_TOKEN_LOCAL_KEY);
+    }
+  } catch {
+    // ignore
+  }
+
+  // Legacy fallback during migration
+  try {
+    return window.sessionStorage.getItem(LEGACY_WEB_SESSION_KEY);
   } catch {
     return null;
   }
@@ -151,7 +281,12 @@ export function loadWebAccessTokenCache(): string | null {
 export function clearWebAccessTokenCache(): void {
   if (typeof window === 'undefined') return;
   try {
-    window.sessionStorage.removeItem(WEB_STORAGE_KEY);
+    window.localStorage.removeItem(WEB_TOKEN_LOCAL_KEY);
+  } catch {
+    // ignore
+  }
+  try {
+    window.sessionStorage.removeItem(LEGACY_WEB_SESSION_KEY);
   } catch {
     // ignore
   }

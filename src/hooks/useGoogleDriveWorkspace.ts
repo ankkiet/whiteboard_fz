@@ -72,7 +72,7 @@ export interface GoogleDriveWorkspaceState {
   resetBoardSyncContext: () => void;
   flushAutoSaveNow: () => Promise<void>;
   organizeFilesIntoFolder: () => Promise<void>;
-  signIn: () => Promise<boolean>;
+  signIn: (options?: { forceAccountPicker?: boolean }) => Promise<boolean>;
   signOut: () => Promise<void>;
   refreshFiles: () => Promise<void>;
   saveNewBoard: () => Promise<DriveWhiteboardFile | null>;
@@ -389,13 +389,13 @@ export function useGoogleDriveWorkspace(): GoogleDriveWorkspaceState {
     }
   }, [needsAuth, refreshFiles]);
 
-  const signIn = useCallback(async () => {
+  const signIn = useCallback(async (options?: { forceAccountPicker?: boolean }) => {
     setIsLoggingIn(true);
     setError(null);
     try {
       clearCachedDriveFolder();
       setAppFolder(null);
-      const result = await googleSignIn();
+      const result = await googleSignIn(options);
       setUser(result.user);
       setNeedsAuth(false);
       needsAuthRef.current = false;
