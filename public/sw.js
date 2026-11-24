@@ -1,6 +1,6 @@
 // Service Worker cho fzInK (PWA)
 // Cho phép ứng dụng hoạt động ngoại tuyến và tự động cập nhật ngầm khi có bản mới
-const CACHE_NAME = 'bttm-pwa-v1';
+const CACHE_NAME = 'fzink-pwa-v2';
 const PRECACHE_ASSETS = [
   '/',
   '/index.html',
@@ -41,8 +41,17 @@ self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   const url = new URL(event.request.url);
 
-  // app-version.json và app-version.js luôn lấy trực tiếp từ mạng để kiểm tra phiên bản mới nhất
-  if (url.pathname === '/app-version.json' || url.pathname === '/app-version.js') {
+  // Không bao giờ chặn các request khác tên miền (như tải bộ cài từ GitHub Releases, Google Drive, Fonts...)
+  if (url.origin !== self.location.origin) {
+    return;
+  }
+
+  // Bỏ qua các tệp cài đặt lớn và manifest kiểm tra phiên bản
+  if (
+    url.pathname === '/app-version.json' ||
+    url.pathname === '/app-version.js' ||
+    /\.(exe|dmg|zip|msi)$/i.test(url.pathname)
+  ) {
     return;
   }
 

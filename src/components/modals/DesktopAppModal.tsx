@@ -903,7 +903,19 @@ function triggerDirectDownload(url: string, fileName: string) {
   const a = document.createElement('a');
   a.style.display = 'none';
   a.href = url;
-  a.download = fileName;
+  const isCrossOrigin =
+    typeof window !== 'undefined' &&
+    /^https?:\/\//i.test(url) &&
+    !url.startsWith(window.location.origin);
+
+  if (isCrossOrigin) {
+    // Mở tách khỏi Service Worker của trang để trình duyệt tải thẳng bằng trình quản lý tải gốc (giống bấm trực tiếp trên GitHub)
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+  } else {
+    a.download = fileName;
+  }
+
   document.body.appendChild(a);
   a.click();
   setTimeout(() => {
