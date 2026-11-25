@@ -16,6 +16,7 @@ import { normalizeNotebookPaperSize } from '../engine/notebookEngine';
 
 export const LOCAL_BOARDS_INDEX_KEY = 'fzink_local_boards_index_v1';
 export const LOCAL_BOARD_DATA_PREFIX = 'fzink_local_board_data_v1:';
+export const LOCAL_BOARD_ASSETS_PREFIX = 'fzink_local_board_assets_v1:';
 
 export type LocalBoardSort = 'updatedDesc' | 'nameAsc' | 'elementsDesc';
 export type LocalBoardFilter = 'all' | BoardType;
@@ -30,6 +31,8 @@ export interface LocalBoardMeta {
   elementCount: number;
   createdAt: string;
   updatedAt: string;
+  driveFileId?: string | null;
+  driveSyncedSignature?: string | null;
 }
 
 export interface LocalBoardPayload {
@@ -42,6 +45,16 @@ export interface LocalBoardPayload {
   boardPattern: BoardPattern;
   notebookPaperSize: NotebookPaperSize;
   mathGradeMode: MathGradeMode;
+  driveFileId?: string | null;
+  driveSyncedSignature?: string | null;
+}
+
+export function findLocalBoardByDriveFileId(
+  list: LocalBoardMeta[],
+  driveFileId: string | null | undefined
+): LocalBoardMeta | undefined {
+  if (!driveFileId || typeof driveFileId !== 'string') return undefined;
+  return list.find((item) => item.driveFileId === driveFileId);
 }
 
 export function generateLocalBoardId(): string {
@@ -53,6 +66,27 @@ export function generateLocalBoardId(): string {
 export function getLocalBoardDataKey(id: string): string {
   return `${LOCAL_BOARD_DATA_PREFIX}${id}`;
 }
+
+export function getLocalBoardAssetsKey(id: string): string {
+  return `${LOCAL_BOARD_ASSETS_PREFIX}${id}`;
+}
+
+function areAssetMapsEqual(
+  a: Record<string, string> | undefined,
+  b: Record<string, string> | undefined
+): boolean {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  const keysA = Object.keys(a);
+  const keysB = Object.keys(b);
+  if (keysA.length !== keysB.length) return false;
+  for (const key of keysA) {
+    if (a[key] !== b[key]) return false;
+  }
+  return true;
+}
+
+const savedBoardAssetsCache = new Map<string, Record<string, string>>();
 
 /**
  * Only persist a board into the local library once it actually has content
@@ -168,6 +202,11 @@ export function normalizeLocalBoardMeta(raw: Partial<LocalBoardMeta>): LocalBoar
     elementCount: typeof raw.elementCount === 'number' && raw.elementCount >= 0 ? raw.elementCount : 0,
     createdAt: typeof raw.createdAt === 'string' ? raw.createdAt : nowIso,
     updatedAt: typeof raw.updatedAt === 'string' ? raw.updatedAt : nowIso,
+    driveFileId: typeof raw.driveFileId === 'string' && raw.driveFileId.trim() ? raw.driveFileId.trim() : null,
+    driveSyncedSignature:
+      typeof raw.driveSyncedSignature === 'string' && raw.driveSyncedSignature
+        ? raw.driveSyncedSignature
+        : null,
   };
 }
 
@@ -187,21 +226,43 @@ export async function listLocalBoards(): Promise<LocalBoardMeta[]> {
   }
 }
 
+type StoredLocalBoardRecord = Partial<LocalBoardPayload> & {
+  hasSeparateAssets?: boolean;
+};
+
 export async function getLocalBoardPayload(id: string): Promise<LocalBoardPayload | null> {
   try {
-    const raw = await idbGet<Partial<LocalBoardPayload>>(getLocalBoardDataKey(id));
+    const raw = await idbGet<StoredLocalBoardRecord>(getLocalBoardDataKey(id));
     if (!raw || typeof raw !== 'object') return null;
     const boardType = normalizeBoardType(raw.boardType);
+    let resolvedAssets: Record<string, string> = {};
+    if (raw.hasSeparateAssets) {
+      const separateAssets = await idbGet<Record<string, string>>(getLocalBoardAssetsKey(id));
+      if (separateAssets && typeof separateAssets === 'object') {
+        resolvedAssets = separateAssets;
+      } else if (raw.assets && typeof raw.assets === 'object') {
+        resolvedAssets = raw.assets;
+      }
+    } else if (raw.assets && typeof raw.assets === 'object') {
+      resolvedAssets = raw.assets;
+    }
+    savedBoardAssetsCache.set(id, resolvedAssets);
+
     return {
       id,
       title: typeof raw.title === 'string' && raw.title.trim() ? raw.title.trim() : 'Bảng trắng mới',
       elements: Array.isArray(raw.elements) ? raw.elements : [],
-      assets: raw.assets && typeof raw.assets === 'object' ? raw.assets : {},
+      assets: resolvedAssets,
       theme: raw.theme === 'dark' ? 'dark' : 'light',
       boardType,
       boardPattern: normalizeBoardPattern(raw.boardPattern || getBoardTemplate(boardType).pattern),
       notebookPaperSize: normalizeNotebookPaperSize(raw.notebookPaperSize),
       mathGradeMode: normalizeMathGradeMode(raw.mathGradeMode),
+      driveFileId: typeof raw.driveFileId === 'string' && raw.driveFileId.trim() ? raw.driveFileId.trim() : null,
+      driveSyncedSignature:
+        typeof raw.driveSyncedSignature === 'string' && raw.driveSyncedSignature
+          ? raw.driveSyncedSignature
+          : null,
     };
   } catch (err) {
     console.error('Failed to load local board payload from IndexedDB', err);
@@ -227,6 +288,12 @@ export async function saveLocalBoard(
     const existingList = await listLocalBoards();
     const prevMeta = existingList.find((item) => item.id === payload.id);
     const nowIso = new Date().toISOString();
+    const resolvedDriveFileId =
+      payload.driveFileId !== undefined ? payload.driveFileId : prevMeta?.driveFileId ?? null;
+    const resolvedDriveSig =
+      payload.driveSyncedSignature !== undefined
+        ? payload.driveSyncedSignature
+        : prevMeta?.driveSyncedSignature ?? null;
 
     const meta: LocalBoardMeta = {
       id: payload.id,
@@ -238,9 +305,24 @@ export async function saveLocalBoard(
       elementCount: payload.elements.length,
       createdAt: prevMeta?.createdAt || nowIso,
       updatedAt: nowIso,
+      driveFileId: resolvedDriveFileId,
+      driveSyncedSignature: resolvedDriveSig,
     };
 
-    await idbSet(getLocalBoardDataKey(payload.id), payload);
+    const { assets: payloadAssets, ...boardWithoutAssets } = payload;
+    const safeAssets = payloadAssets && typeof payloadAssets === 'object' ? payloadAssets : {};
+    const cachedAssets = savedBoardAssetsCache.get(payload.id);
+    if (!cachedAssets || !areAssetMapsEqual(cachedAssets, safeAssets)) {
+      await idbSet(getLocalBoardAssetsKey(payload.id), safeAssets);
+      savedBoardAssetsCache.set(payload.id, safeAssets);
+    }
+
+    await idbSet(getLocalBoardDataKey(payload.id), {
+      ...boardWithoutAssets,
+      hasSeparateAssets: true,
+      driveFileId: resolvedDriveFileId,
+      driveSyncedSignature: resolvedDriveSig,
+    });
     const nextList = upsertLocalBoardMeta(existingList, meta);
     await idbSet(LOCAL_BOARDS_INDEX_KEY, nextList);
 
@@ -267,9 +349,9 @@ export async function renameLocalBoard(
       updatedAt: nowIso,
     };
 
-    const payload = await getLocalBoardPayload(id);
-    if (payload) {
-      await idbSet(getLocalBoardDataKey(id), { ...payload, title: trimmed });
+    const raw = await idbGet<StoredLocalBoardRecord>(getLocalBoardDataKey(id));
+    if (raw && typeof raw === 'object') {
+      await idbSet(getLocalBoardDataKey(id), { ...raw, title: trimmed });
     }
 
     const nextList = upsertLocalBoardMeta(existingList, updatedMeta);
@@ -292,6 +374,8 @@ export async function duplicateLocalBoard(
     ...payload,
     id: copyId,
     title: copyTitle,
+    driveFileId: null,
+    driveSyncedSignature: null,
   });
 }
 
@@ -300,6 +384,8 @@ export async function deleteLocalBoard(id: string): Promise<LocalBoardMeta[]> {
     const existingList = await listLocalBoards();
     const nextList = removeLocalBoardMeta(existingList, id);
     await idbDel(getLocalBoardDataKey(id));
+    await idbDel(getLocalBoardAssetsKey(id));
+    savedBoardAssetsCache.delete(id);
     await idbSet(LOCAL_BOARDS_INDEX_KEY, nextList);
     return nextList;
   });

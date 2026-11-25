@@ -52,7 +52,12 @@ export default function App() {
   const activeViewRef = useRef<AppView>(activeView);
   const [isDesktopAppOpen, setIsDesktopAppOpen] = useState(false);
   const [isAuthBridgeOpen, setIsAuthBridgeOpen] = useState<boolean>(shouldAutoOpenAuthBridge);
+  const isAuthBridgeOpenRef = useRef(isAuthBridgeOpen);
   const [authBridgeVersion, setAuthBridgeVersion] = useState(0);
+
+  useEffect(() => {
+    isAuthBridgeOpenRef.current = isAuthBridgeOpen;
+  }, [isAuthBridgeOpen]);
 
   useEffect(() => {
     activeViewRef.current = activeView;
@@ -130,6 +135,10 @@ export default function App() {
   useEffect(() => {
     const handleAuthMessage = (event: MessageEvent) => {
       if (event.data?.type === 'BTTM_AUTH_SUCCESS' && typeof event.data.token === 'string') {
+        // When AuthBridgeModal is open on desktop, it handles the token with visual progress UI.
+        if (isAuthBridgeOpenRef.current && window.location.protocol === 'file:') {
+          return;
+        }
         const ok = drive.applyBridgeToken(event.data.token);
         if (ok) {
           setIsAuthBridgeOpen(false);

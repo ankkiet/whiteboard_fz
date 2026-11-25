@@ -149,7 +149,8 @@ export const DocumentImportModal: React.FC<DocumentImportModalProps> = ({
           if (!pdfBytes) {
             throw new Error('PDF data not ready');
           }
-          const rendered = await renderPdfPages(pdfBytes, cappedPages, 2.5);
+          const renderScale = cappedPages.length >= 10 ? 1.65 : 2;
+          const rendered = await renderPdfPages(pdfBytes, cappedPages, renderScale);
           insertDocumentPages(rendered, file.name, {
             layout,
             lockPages,

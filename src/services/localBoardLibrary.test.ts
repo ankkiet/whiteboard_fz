@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   LocalBoardMeta,
   filterAndSortLocalBoards,
+  findLocalBoardByDriveFileId,
   formatLocalBoardTime,
   normalizeLocalBoardMeta,
   removeLocalBoardMeta,
@@ -176,5 +177,23 @@ describe('localBoardLibrary — multi-board offline index helpers', () => {
       }),
       true
     );
+  });
+
+  it('links and finds local boards by driveFileId without duplicating', () => {
+    const linkedMeta = normalizeLocalBoardMeta({
+      id: 'local_drive_1',
+      title: 'Bảng từ Drive',
+      elementCount: 3,
+      driveFileId: 'drive_abc',
+      driveSyncedSignature: 'sig_1',
+    });
+    assert.ok(linkedMeta);
+    assert.equal(linkedMeta.driveFileId, 'drive_abc');
+    assert.equal(linkedMeta.driveSyncedSignature, 'sig_1');
+
+    const list = upsertLocalBoardMeta(sampleBoards, linkedMeta);
+    assert.equal(findLocalBoardByDriveFileId(list, 'drive_abc')?.id, 'local_drive_1');
+    assert.equal(findLocalBoardByDriveFileId(list, 'missing_id'), undefined);
+    assert.equal(findLocalBoardByDriveFileId(list, null), undefined);
   });
 });

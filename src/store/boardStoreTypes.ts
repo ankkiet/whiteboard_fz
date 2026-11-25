@@ -33,8 +33,24 @@ export const DEFAULT_VIRTUAL_TOOLS: VirtualGeometryToolsState = {
 };
 
 export const STORAGE_KEY = 'smart_whiteboard_data_v2';
+export const STORAGE_ASSETS_KEY = 'smart_whiteboard_assets_v2';
 export const LEGACY_STORAGE_KEY = 'smart_whiteboard_data';
 export const MAX_HISTORY = 80;
+
+export function areAssetsEqual(
+  a: Record<string, string> | null | undefined,
+  b: Record<string, string> | null | undefined
+): boolean {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  const keysA = Object.keys(a);
+  const keysB = Object.keys(b);
+  if (keysA.length !== keysB.length) return false;
+  for (const key of keysA) {
+    if (a[key] !== b[key]) return false;
+  }
+  return true;
+}
 
 export function uid(prefix: string): string {
   return `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
@@ -100,6 +116,8 @@ export function resolveBoardInitialCamera(
 
 export interface BoardState {
   activeLocalBoardId: string | null;
+  activeDriveFileId: string | null;
+  driveSyncedSignature: string | null;
   hasUserEditedCurrentBoard: boolean;
   localBoards: LocalBoardMeta[];
   isLoadingLocalBoards: boolean;
@@ -230,8 +248,15 @@ export interface BoardState {
     boardType?: BoardType;
     boardPattern?: BoardPattern;
     notebookPaperSize?: NotebookPaperSize;
+    mathGradeMode?: MathGradeMode;
     resetHistory?: boolean;
     localBoardId?: string;
+    driveFileId?: string | null;
+    driveSyncedSignature?: string | null;
+  }) => void;
+  setDriveSyncMeta: (meta: {
+    driveFileId: string | null;
+    driveSyncedSignature: string | null;
   }) => void;
   startNewBoard: (
     options?:

@@ -1,5 +1,5 @@
-import * as pdfjsLib from 'pdfjs-dist';
-import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
+import pdfWorkerUrl from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?url';
 import mammoth from 'mammoth';
 import { paginatePlainText } from './documentUtils';
 
@@ -12,6 +12,33 @@ export interface RenderedPageAsset {
   width: number;
   height: number;
   pageNumber: number;
+}
+
+/**
+ * Encodes a white-backed document page canvas to compact WebP (falling back to JPEG)
+ * so 20+ rendered pages use a fraction of the RAM and IndexedDB space of raw PNG.
+ */
+function encodePageCanvasDataUrl(canvas: HTMLCanvasElement, quality = 0.9): string {
+  const webp = canvas.toDataURL('image/webp', quality);
+  if (webp.startsWith('data:image/webp')) {
+    return webp;
+  }
+  return canvas.toDataURL('image/jpeg', 0.92);
+}
+
+function yieldToMainThread(): Promise<void> {
+  if (typeof MessageChannel !== 'undefined') {
+    return new Promise((resolve) => {
+      const channel = new MessageChannel();
+      channel.port1.onmessage = () => {
+        channel.port1.close();
+        channel.port2.close();
+        resolve();
+      };
+      channel.port2.postMessage(null);
+    });
+  }
+  return new Promise((resolve) => setTimeout(resolve, 0));
 }
 
 export async function inspectPdfBytes(bytes: Uint8Array): Promise<{ pageCount: number }> {
@@ -28,7 +55,7 @@ export async function inspectPdfBytes(bytes: Uint8Array): Promise<{ pageCount: n
 export async function renderPdfPages(
   bytes: Uint8Array,
   pageNumbers: number[],
-  scale = 2.5
+  scale = 2
 ): Promise<RenderedPageAsset[]> {
   const loadingTask = pdfjsLib.getDocument({
     data: bytes.slice(),
@@ -38,7 +65,8 @@ export async function renderPdfPages(
   const results: RenderedPageAsset[] = [];
 
   try {
-    for (const pageNum of pageNumbers) {
+    for (let i = 0; i < pageNumbers.length; i++) {
+      const pageNum = pageNumbers[i];
       if (pageNum < 1 || pageNum > pdf.numPages) continue;
       const page = await pdf.getPage(pageNum);
       const viewport = page.getViewport({ scale });
@@ -46,7 +74,10 @@ export async function renderPdfPages(
       canvas.width = Math.round(viewport.width);
       canvas.height = Math.round(viewport.height);
       const ctx = canvas.getContext('2d');
-      if (!ctx) continue;
+      if (!ctx) {
+        page.cleanup();
+        continue;
+      }
 
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -58,12 +89,18 @@ export async function renderPdfPages(
       }).promise;
 
       results.push({
-        dataUrl: canvas.toDataURL('image/png'),
+        dataUrl: encodePageCanvasDataUrl(canvas, 0.9),
         width: Math.round(viewport.width / scale),
         height: Math.round(viewport.height / scale),
         pageNumber: pageNum,
       });
+      canvas.width = 0;
+      canvas.height = 0;
       page.cleanup();
+
+      if (i + 1 < pageNumbers.length) {
+        await yieldToMainThread();
+      }
     }
   } finally {
     await loadingTask.destroy();
@@ -95,7 +132,7 @@ export function renderTextDocumentPages(
 
   const pageW = 595; // A4 pt width
   const pageH = 842; // A4 pt height
-  const dpr = 3;
+  const dpr = 2;
 
   return pageNums.map((pageNum) => {
     const lines = allPages[pageNum - 1] || [];
@@ -147,8 +184,12 @@ export function renderTextDocumentPages(
       }
     }
 
+    const dataUrl = encodePageCanvasDataUrl(canvas, 0.9);
+    canvas.width = 0;
+    canvas.height = 0;
+
     return {
-      dataUrl: canvas.toDataURL('image/png'),
+      dataUrl,
       width: pageW,
       height: pageH,
       pageNumber: pageNum,

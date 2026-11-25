@@ -110,7 +110,6 @@ export const LocalBoardsSection: React.FC<LocalBoardsSectionProps> = ({
     try {
       const ok = await openLocalBoard(board.id);
       if (ok) {
-        onBoardOpenedFromLocal();
         onOpenBoard();
       }
     } finally {

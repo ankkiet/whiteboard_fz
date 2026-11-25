@@ -1,5 +1,10 @@
-import { BoardElement, BoardPattern, BoardType } from '../types/board';
-import { normalizeBoardPattern, normalizeBoardType } from '../engine/boardTemplates';
+import { BoardElement, BoardPattern, BoardType, MathGradeMode, NotebookPaperSize } from '../types/board';
+import {
+  normalizeBoardPattern,
+  normalizeBoardType,
+  normalizeMathGradeMode,
+} from '../engine/boardTemplates';
+import { normalizeNotebookPaperSize } from '../engine/notebookEngine';
 
 export const APP_DRIVE_FOLDER_NAME = 'fzInK';
 export const DRIVE_FOLDER_MIME_TYPE = 'application/vnd.google-apps.folder';
@@ -28,6 +33,8 @@ export interface WhiteboardPayload {
   assets: Record<string, string>;
   boardType?: BoardType;
   boardPattern?: BoardPattern;
+  notebookPaperSize?: NotebookPaperSize;
+  mathGradeMode?: MathGradeMode;
   version: number;
   exportedAt: string;
 }
@@ -200,6 +207,8 @@ export function parseWhiteboardPayload(raw: unknown): {
   assets: Record<string, string>;
   boardType?: BoardType;
   boardPattern?: BoardPattern;
+  notebookPaperSize?: NotebookPaperSize;
+  mathGradeMode?: MathGradeMode;
 } {
   if (!raw || typeof raw !== 'object') {
     throw new Error('Nội dung tệp bảng trắng không hợp lệ.');
@@ -218,6 +227,14 @@ export function parseWhiteboardPayload(raw: unknown): {
     boardType: typeof obj.boardType === 'string' ? normalizeBoardType(obj.boardType) : undefined,
     boardPattern:
       typeof obj.boardPattern === 'string' ? normalizeBoardPattern(obj.boardPattern) : undefined,
+    notebookPaperSize:
+      typeof obj.notebookPaperSize === 'string'
+        ? normalizeNotebookPaperSize(obj.notebookPaperSize)
+        : undefined,
+    mathGradeMode:
+      typeof obj.mathGradeMode === 'string'
+        ? normalizeMathGradeMode(obj.mathGradeMode)
+        : undefined,
   };
 }
 

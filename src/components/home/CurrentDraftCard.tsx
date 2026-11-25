@@ -147,7 +147,7 @@ export const CurrentDraftCard: React.FC<CurrentDraftCardProps> = ({
           {draftAction === 'save-new' && (
             <button
               type="button"
-              onClick={() => void drive.saveNewBoard()}
+              onClick={() => void drive.saveNewBoard({ onlyIfUnlinked: true })}
               disabled={Boolean(drive.busyAction)}
               className="h-9 flex-1 sm:flex-initial justify-center inline-flex items-center gap-2 px-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium transition-colors duration-150 whitespace-nowrap shrink-0 cursor-pointer disabled:opacity-60"
             >

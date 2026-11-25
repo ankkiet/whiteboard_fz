@@ -102,6 +102,7 @@ export const createElementsSlice: StateCreator<BoardState, [], [], ElementsSlice
       set({
         elements: history[nextIndex],
         historyIndex: nextIndex,
+        hasUserEditedCurrentBoard: true,
         selectedIds: [],
         editingGroupId: null,
         editingElementId: null,
@@ -117,6 +118,7 @@ export const createElementsSlice: StateCreator<BoardState, [], [], ElementsSlice
       set({
         elements: history[nextIndex],
         historyIndex: nextIndex,
+        hasUserEditedCurrentBoard: true,
         selectedIds: [],
         editingGroupId: null,
         editingElementId: null,

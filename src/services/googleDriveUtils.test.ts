@@ -154,10 +154,16 @@ test('parseWhiteboardPayload validates structure and rejects invalid files', () 
     title: 'Bảng A',
     elements: [{ id: '1', type: 'rectangle' }],
     assets: { a1: 'data:image/png;base64,abc' },
+    boardType: 'notebook',
+    boardPattern: 'lined',
+    notebookPaperSize: 'a3',
+    mathGradeMode: 'middle',
   });
   assert.equal(valid.title, 'Bảng A');
   assert.equal(valid.elements.length, 1);
   assert.equal(valid.assets.a1, 'data:image/png;base64,abc');
+  assert.equal(valid.notebookPaperSize, 'a3');
+  assert.equal(valid.mathGradeMode, 'middle');
 
   assert.throws(() => parseWhiteboardPayload({ title: 'No elements' }));
   assert.throws(() => parseWhiteboardPayload(null));

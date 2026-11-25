@@ -57,52 +57,60 @@ export function getArrowEndpoints(el: ShapeElement): { start: Point; end: Point 
   };
 }
 
+const boundsCache = new WeakMap<BoardElement, Bounds>();
+
 export function getElementBounds(element: BoardElement): Bounds {
+  const cached = boundsCache.get(element);
+  if (cached) return cached;
+
+  let result: Bounds;
   if (element.type === 'stroke' || element.type === 'highlighter') {
     if (!element.points || element.points.length === 0) {
-      return {
+      result = {
         minX: element.x,
         minY: element.y,
         maxX: element.x + element.width,
         maxY: element.y + element.height,
       };
+    } else {
+      let minX = Infinity;
+      let minY = Infinity;
+      let maxX = -Infinity;
+      let maxY = -Infinity;
+      for (const p of element.points) {
+        if (p[0] < minX) minX = p[0];
+        if (p[1] < minY) minY = p[1];
+        if (p[0] > maxX) maxX = p[0];
+        if (p[1] > maxY) maxY = p[1];
+      }
+      const pad = Math.max(element.strokeWidth / 2, 4);
+      result = {
+        minX: minX - pad,
+        minY: minY - pad,
+        maxX: maxX + pad,
+        maxY: maxY + pad,
+      };
     }
-    let minX = Infinity;
-    let minY = Infinity;
-    let maxX = -Infinity;
-    let maxY = -Infinity;
-    for (const p of element.points) {
-      if (p[0] < minX) minX = p[0];
-      if (p[1] < minY) minY = p[1];
-      if (p[0] > maxX) maxX = p[0];
-      if (p[1] > maxY) maxY = p[1];
-    }
-    const pad = Math.max(element.strokeWidth / 2, 4);
-    return {
-      minX: minX - pad,
-      minY: minY - pad,
-      maxX: maxX + pad,
-      maxY: maxY + pad,
-    };
-  }
-
-  if (element.type === 'arrow' || element.type === 'line') {
+  } else if (element.type === 'arrow' || element.type === 'line') {
     const { start, end } = getArrowEndpoints(element);
     const pad = Math.max(element.strokeWidth, 8);
-    return {
+    result = {
       minX: Math.min(start.x, end.x) - pad,
       minY: Math.min(start.y, end.y) - pad,
       maxX: Math.max(start.x, end.x) + pad,
       maxY: Math.max(start.y, end.y) + pad,
     };
+  } else {
+    result = {
+      minX: Math.min(element.x, element.x + element.width),
+      minY: Math.min(element.y, element.y + element.height),
+      maxX: Math.max(element.x, element.x + element.width),
+      maxY: Math.max(element.y, element.y + element.height),
+    };
   }
 
-  return {
-    minX: Math.min(element.x, element.x + element.width),
-    minY: Math.min(element.y, element.y + element.height),
-    maxX: Math.max(element.x, element.x + element.width),
-    maxY: Math.max(element.y, element.y + element.height),
-  };
+  boundsCache.set(element, result);
+  return result;
 }
 
 export function getSelectionRect(elements: BoardElement[], selectedIds: string[]): Rect | null {

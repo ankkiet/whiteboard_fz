@@ -28,7 +28,7 @@ export const useBoardStore = create<BoardState>()((set, get, api) => ({
   toasts: [],
 
   setTitle: (title) => {
-    set({ title });
+    set({ title, hasUserEditedCurrentBoard: true });
     get().scheduleSave();
   },
 
@@ -64,18 +64,18 @@ export const useBoardStore = create<BoardState>()((set, get, api) => ({
   },
 
   setBoardType: (boardType) => {
-    set({ boardType });
+    set({ boardType, hasUserEditedCurrentBoard: true });
     get().scheduleSave();
   },
 
   setBoardPattern: (boardPattern) => {
-    set({ boardPattern });
+    set({ boardPattern, hasUserEditedCurrentBoard: true });
     get().scheduleSave();
   },
 
   setNotebookPaperSize: (notebookPaperSize) => {
     const safeSize = normalizeNotebookPaperSize(notebookPaperSize);
-    set({ notebookPaperSize: safeSize });
+    set({ notebookPaperSize: safeSize, hasUserEditedCurrentBoard: true });
     get().scheduleSave();
   },
 

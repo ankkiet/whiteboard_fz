@@ -34,7 +34,7 @@ export const createMathToolsSlice: StateCreator<BoardState, [], [], MathToolsSli
   pinnedProblem: null,
 
   setMathGradeMode: (mathGradeMode) => {
-    set({ mathGradeMode });
+    set({ mathGradeMode, hasUserEditedCurrentBoard: true });
     get().scheduleSave();
   },
 

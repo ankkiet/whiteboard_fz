@@ -74,7 +74,7 @@ export interface GoogleDriveWorkspaceState {
   signIn: (options?: { forceAccountPicker?: boolean }) => Promise<boolean>;
   signOut: () => Promise<void>;
   refreshFiles: () => Promise<void>;
-  saveNewBoard: () => Promise<DriveWhiteboardFile | null>;
+  saveNewBoard: (options?: { onlyIfUnlinked?: boolean }) => Promise<DriveWhiteboardFile | null>;
   overwriteBoard: (file: DriveWhiteboardFile) => Promise<DriveWhiteboardFile | null>;
   savePngSnapshot: () => Promise<DriveWhiteboardFile | null>;
   openBoardFile: (
@@ -89,10 +89,19 @@ export interface GoogleDriveWorkspaceState {
 export function useGoogleDriveWorkspace(): GoogleDriveWorkspaceState {
   const addToast = useBoardStore((s) => s.addToast);
   const importBoardData = useBoardStore((s) => s.importBoardData);
+  const setDriveSyncMeta = useBoardStore((s) => s.setDriveSyncMeta);
   const title = useBoardStore((s) => s.title);
   const elements = useBoardStore((s) => s.elements);
   const assets = useBoardStore((s) => s.assets);
+  const boardType = useBoardStore((s) => s.boardType);
+  const boardPattern = useBoardStore((s) => s.boardPattern);
+  const notebookPaperSize = useBoardStore((s) => s.notebookPaperSize);
+  const mathGradeMode = useBoardStore((s) => s.mathGradeMode);
   const hasLoaded = useBoardStore((s) => s.hasLoaded);
+  const hasUserEditedCurrentBoard = useBoardStore((s) => s.hasUserEditedCurrentBoard);
+  const activeLocalBoardId = useBoardStore((s) => s.activeLocalBoardId);
+  const activeDriveFileId = useBoardStore((s) => s.activeDriveFileId);
+  const driveSyncedSignature = useBoardStore((s) => s.driveSyncedSignature);
 
   const [user, setUser] = useState<User | null>(null);
   const [needsAuth, setNeedsAuth] = useState(true);
@@ -114,8 +123,11 @@ export function useGoogleDriveWorkspace(): GoogleDriveWorkspaceState {
   const busyActionRef = useRef<string | null>(null);
   const lastSyncedSignatureRef = useRef<string | null>(null);
   const isAutoSavingRef = useRef(false);
+  const inFlightAutoSaveRef = useRef<Promise<void> | null>(null);
   const boardSessionRef = useRef(0);
+  const prevActiveLocalBoardIdRef = useRef<string | null>(activeLocalBoardId);
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastBridgeApplyRef = useRef<{ token: string; at: number } | null>(null);
 
   useEffect(() => {
     needsAuthRef.current = needsAuth;
@@ -202,27 +214,94 @@ export function useGoogleDriveWorkspace(): GoogleDriveWorkspaceState {
       assets: state.assets,
       boardType: state.boardType,
       boardPattern: state.boardPattern,
+      notebookPaperSize: state.notebookPaperSize,
+      mathGradeMode: state.mathGradeMode,
       version: 2,
       exportedAt: new Date().toISOString(),
     };
   };
 
-  const getCurrentSignature = () => {
-    const state = useBoardStore.getState();
-    return computeBoardSignature(state.title, state.elements, state.assets);
+  const getSignatureFromState = (state: ReturnType<typeof useBoardStore.getState>) => {
+    return computeBoardSignature(state.title, state.elements, state.assets, {
+      boardType: state.boardType,
+      boardPattern: state.boardPattern,
+      notebookPaperSize: state.notebookPaperSize,
+      mathGradeMode: state.mathGradeMode,
+    });
   };
+
+  const getCurrentSignature = () => {
+    return getSignatureFromState(useBoardStore.getState());
+  };
+
+  // Keep Drive sync context synchronized with the active board persisted in Zustand/IndexedDB.
+  useEffect(() => {
+    if (!hasLoaded) return;
+
+    if (prevActiveLocalBoardIdRef.current !== activeLocalBoardId) {
+      // Only treat as a board switch if switching between non-null boards or to null;
+      // assigning the first local ID (null -> local_xxx) during first save keeps the same session.
+      if (prevActiveLocalBoardIdRef.current !== null) {
+        boardSessionRef.current += 1;
+        clearPendingAutoSaveTimer();
+      }
+      prevActiveLocalBoardIdRef.current = activeLocalBoardId;
+    }
+
+    if (!activeDriveFileId) {
+      clearPendingAutoSaveTimer();
+      lastSyncedSignatureRef.current = null;
+      if (activeDriveFileRef.current) {
+        setActiveDriveFile(null);
+      }
+      if (!isAutoSavingRef.current) {
+        setSyncStatus('idle');
+        setLastSyncedAt(null);
+      }
+      return;
+    }
+
+    lastSyncedSignatureRef.current = driveSyncedSignature;
+    const matched = files.find((f) => f.id === activeDriveFileId) || null;
+    if (matched) {
+      if (
+        activeDriveFileRef.current?.id !== matched.id ||
+        activeDriveFileRef.current?.modifiedTime !== matched.modifiedTime ||
+        activeDriveFileRef.current?.name !== matched.name
+      ) {
+        setActiveDriveFile(matched);
+      }
+      setLastSyncedAt(matched.modifiedTime || null);
+      const currentSig = getSignatureFromState(useBoardStore.getState());
+      if (driveSyncedSignature && currentSig === driveSyncedSignature && !isAutoSavingRef.current) {
+        setSyncStatus('saved');
+      }
+    } else if (activeDriveFileRef.current && activeDriveFileRef.current.id !== activeDriveFileId) {
+      setActiveDriveFile(null);
+    }
+  }, [
+    hasLoaded,
+    activeLocalBoardId,
+    activeDriveFileId,
+    driveSyncedSignature,
+    files,
+    clearPendingAutoSaveTimer,
+    setActiveDriveFile,
+  ]);
 
   const runAutoSave = useCallback(async () => {
     clearPendingAutoSaveTimer();
     if (isAutoSavingRef.current) return;
 
     const state = useBoardStore.getState();
-    const currentSig = computeBoardSignature(state.title, state.elements, state.assets);
+    const currentSig = getSignatureFromState(state);
     const decision = shouldTriggerDriveAutoSave({
       autoSaveEnabled: autoSaveEnabledRef.current,
       isAuthenticated: !needsAuthRef.current,
       hasLoaded: state.hasLoaded,
       hasActiveDriveFile: Boolean(activeDriveFileRef.current),
+      activeDriveFileId: state.activeDriveFileId,
+      hasUserEditedCurrentBoard: state.hasUserEditedCurrentBoard,
       elementCount: state.elements.length,
       currentSignature: currentSig,
       lastSyncedSignature: lastSyncedSignatureRef.current,
@@ -243,41 +322,51 @@ export function useGoogleDriveWorkspace(): GoogleDriveWorkspaceState {
     isAutoSavingRef.current = true;
     setSyncStatus('saving');
 
-    try {
-      const saved =
-        decision === 'update' && targetFile
-          ? await updateDriveWhiteboardFile(targetFile.id, payload.title, payload)
-          : await createDriveWhiteboardFile(payload.title, payload);
+    const savePromise = (async () => {
+      try {
+        const saved =
+          decision === 'update' && targetFile
+            ? await updateDriveWhiteboardFile(targetFile.id, payload.title, payload)
+            : await createDriveWhiteboardFile(payload.title, payload);
 
-      // Ignore result if user switched or reset board mid-upload
-      if (boardSessionRef.current !== sessionId) return;
+        // Ignore result if user switched or reset board mid-upload
+        if (boardSessionRef.current !== sessionId) return;
 
-      setActiveDriveFile(saved);
-      setFiles((prev) => [saved, ...prev.filter((f) => f.id !== saved.id)]);
-      lastSyncedSignatureRef.current = currentSig;
-      setLastSyncedAt(saved.modifiedTime || new Date().toISOString());
-      setError(null);
+        setActiveDriveFile(saved);
+        setFiles((prev) => [saved, ...prev.filter((f) => f.id !== saved.id)]);
+        lastSyncedSignatureRef.current = currentSig;
+        setDriveSyncMeta({ driveFileId: saved.id, driveSyncedSignature: currentSig });
+        setLastSyncedAt(saved.modifiedTime || new Date().toISOString());
+        setError(null);
 
-      // If user kept drawing during upload, schedule one follow-up sync
-      const latestSig = getCurrentSignature();
-      if (latestSig !== currentSig && autoSaveEnabledRef.current && !needsAuthRef.current) {
-        setSyncStatus('pending');
-        autoSaveTimerRef.current = setTimeout(() => {
-          void runAutoSave();
-        }, AUTOSAVE_DEBOUNCE_MS);
-      } else {
-        setSyncStatus('saved');
+        // If user kept drawing during upload, schedule one follow-up sync
+        const latestSig = getCurrentSignature();
+        if (latestSig !== currentSig && autoSaveEnabledRef.current && !needsAuthRef.current) {
+          setSyncStatus('pending');
+          autoSaveTimerRef.current = setTimeout(() => {
+            void runAutoSave();
+          }, AUTOSAVE_DEBOUNCE_MS);
+        } else {
+          setSyncStatus('saved');
+        }
+      } catch (err) {
+        if (boardSessionRef.current !== sessionId) return;
+        handleDriveError(err, 'Tự động lưu lên Google Drive không thành công.', true);
+      } finally {
+        isAutoSavingRef.current = false;
+        inFlightAutoSaveRef.current = null;
       }
-    } catch (err) {
-      if (boardSessionRef.current !== sessionId) return;
-      handleDriveError(err, 'Tự động lưu lên Google Drive không thành công.', true);
-    } finally {
-      isAutoSavingRef.current = false;
-    }
-  }, [clearPendingAutoSaveTimer, handleDriveError, setActiveDriveFile]);
+    })();
+
+    inFlightAutoSaveRef.current = savePromise;
+    await savePromise;
+  }, [clearPendingAutoSaveTimer, handleDriveError, setActiveDriveFile, setDriveSyncMeta]);
 
   const flushAutoSaveNow = useCallback(async () => {
     if (!autoSaveEnabledRef.current || needsAuthRef.current) return;
+    if (inFlightAutoSaveRef.current) {
+      await inFlightAutoSaveRef.current;
+    }
     await runAutoSave();
   }, [runAutoSave]);
 
@@ -285,12 +374,19 @@ export function useGoogleDriveWorkspace(): GoogleDriveWorkspaceState {
   useEffect(() => {
     if (!hasLoaded || needsAuth || !autoSaveEnabled) return;
 
-    const currentSig = computeBoardSignature(title, elements, assets);
+    const currentSig = computeBoardSignature(title, elements, assets, {
+      boardType,
+      boardPattern,
+      notebookPaperSize,
+      mathGradeMode,
+    });
     const decision = shouldTriggerDriveAutoSave({
       autoSaveEnabled,
       isAuthenticated: !needsAuth,
       hasLoaded,
       hasActiveDriveFile: Boolean(activeDriveFile),
+      activeDriveFileId,
+      hasUserEditedCurrentBoard,
       elementCount: elements.length,
       currentSignature: currentSig,
       lastSyncedSignature: lastSyncedSignatureRef.current,
@@ -315,10 +411,16 @@ export function useGoogleDriveWorkspace(): GoogleDriveWorkspaceState {
     title,
     elements,
     assets,
+    boardType,
+    boardPattern,
+    notebookPaperSize,
+    mathGradeMode,
     hasLoaded,
+    hasUserEditedCurrentBoard,
     needsAuth,
     autoSaveEnabled,
     activeDriveFile,
+    activeDriveFileId,
     busyAction,
     clearPendingAutoSaveTimer,
     runAutoSave,
@@ -413,8 +515,18 @@ export function useGoogleDriveWorkspace(): GoogleDriveWorkspaceState {
 
   const applyBridgeToken = useCallback(
     (tokenString: string): boolean => {
+      const trimmed = (tokenString || '').trim();
+      const now = Date.now();
+      if (
+        lastBridgeApplyRef.current &&
+        lastBridgeApplyRef.current.token === trimmed &&
+        now - lastBridgeApplyRef.current.at < 3000
+      ) {
+        return true;
+      }
       try {
-        const session = parseAuthBridgeToken(tokenString);
+        const session = parseAuthBridgeToken(trimmed);
+        lastBridgeApplyRef.current = { token: trimmed, at: now };
         setBridgeSession(session, (u) => {
           setUser(u);
           setNeedsAuth(false);
@@ -462,33 +574,69 @@ export function useGoogleDriveWorkspace(): GoogleDriveWorkspaceState {
     }
   }, [addToast, clearPendingAutoSaveTimer, setActiveDriveFile]);
 
-  const saveNewBoard = useCallback(async () => {
-    clearPendingAutoSaveTimer();
-    setBusyAction('save-new');
-    setError(null);
-    setSyncStatus('saving');
-    try {
-      const payload = buildCurrentPayload();
-      const sig = getCurrentSignature();
-      const saved = await createDriveWhiteboardFile(payload.title, payload);
-      setActiveDriveFile(saved);
-      lastSyncedSignatureRef.current = sig;
-      setLastSyncedAt(saved.modifiedTime || new Date().toISOString());
-      setSyncStatus('saved');
-      setFiles((prev) => [saved, ...prev.filter((f) => f.id !== saved.id)]);
-      addToast(`Đã lưu "${saved.name}" lên Google Drive`, 'success');
-      return saved;
-    } catch (err) {
-      handleDriveError(err, 'Không thể lưu tệp bảng trắng lên Google Drive.');
-      return null;
-    } finally {
-      setBusyAction(null);
-    }
-  }, [addToast, clearPendingAutoSaveTimer, handleDriveError, setActiveDriveFile]);
+  const saveNewBoard = useCallback(
+    async (options?: { onlyIfUnlinked?: boolean }) => {
+      clearPendingAutoSaveTimer();
+      if (inFlightAutoSaveRef.current) {
+        await inFlightAutoSaveRef.current;
+      }
+
+      if (options?.onlyIfUnlinked && activeDriveFileRef.current) {
+        const target = activeDriveFileRef.current;
+        setBusyAction(`overwrite:${target.id}`);
+        setError(null);
+        setSyncStatus('saving');
+        try {
+          const payload = buildCurrentPayload();
+          const sig = getCurrentSignature();
+          const updated = await updateDriveWhiteboardFile(target.id, payload.title, payload);
+          setActiveDriveFile(updated);
+          lastSyncedSignatureRef.current = sig;
+          setDriveSyncMeta({ driveFileId: updated.id, driveSyncedSignature: sig });
+          setLastSyncedAt(updated.modifiedTime || new Date().toISOString());
+          setSyncStatus('saved');
+          setFiles((prev) => [updated, ...prev.filter((f) => f.id !== updated.id)]);
+          addToast(`Đã cập nhật "${updated.name}" trên Google Drive`, 'success');
+          return updated;
+        } catch (err) {
+          handleDriveError(err, 'Không thể cập nhật tệp trên Google Drive.');
+          return null;
+        } finally {
+          setBusyAction(null);
+        }
+      }
+
+      setBusyAction('save-new');
+      setError(null);
+      setSyncStatus('saving');
+      try {
+        const payload = buildCurrentPayload();
+        const sig = getCurrentSignature();
+        const saved = await createDriveWhiteboardFile(payload.title, payload);
+        setActiveDriveFile(saved);
+        lastSyncedSignatureRef.current = sig;
+        setDriveSyncMeta({ driveFileId: saved.id, driveSyncedSignature: sig });
+        setLastSyncedAt(saved.modifiedTime || new Date().toISOString());
+        setSyncStatus('saved');
+        setFiles((prev) => [saved, ...prev.filter((f) => f.id !== saved.id)]);
+        addToast(`Đã lưu "${saved.name}" lên Google Drive`, 'success');
+        return saved;
+      } catch (err) {
+        handleDriveError(err, 'Không thể lưu tệp bảng trắng lên Google Drive.');
+        return null;
+      } finally {
+        setBusyAction(null);
+      }
+    },
+    [addToast, clearPendingAutoSaveTimer, handleDriveError, setActiveDriveFile, setDriveSyncMeta]
+  );
 
   const overwriteBoard = useCallback(
     async (file: DriveWhiteboardFile) => {
       clearPendingAutoSaveTimer();
+      if (inFlightAutoSaveRef.current) {
+        await inFlightAutoSaveRef.current;
+      }
       setBusyAction(`overwrite:${file.id}`);
       setError(null);
       setSyncStatus('saving');
@@ -498,6 +646,7 @@ export function useGoogleDriveWorkspace(): GoogleDriveWorkspaceState {
         const updated = await updateDriveWhiteboardFile(file.id, payload.title, payload);
         setActiveDriveFile(updated);
         lastSyncedSignatureRef.current = sig;
+        setDriveSyncMeta({ driveFileId: updated.id, driveSyncedSignature: sig });
         setLastSyncedAt(updated.modifiedTime || new Date().toISOString());
         setSyncStatus('saved');
         setFiles((prev) => [updated, ...prev.filter((f) => f.id !== updated.id)]);
@@ -510,7 +659,7 @@ export function useGoogleDriveWorkspace(): GoogleDriveWorkspaceState {
         setBusyAction(null);
       }
     },
-    [addToast, clearPendingAutoSaveTimer, handleDriveError, setActiveDriveFile]
+    [addToast, clearPendingAutoSaveTimer, handleDriveError, setActiveDriveFile, setDriveSyncMeta]
   );
 
   const savePngSnapshot = useCallback(async () => {
@@ -558,15 +707,16 @@ export function useGoogleDriveWorkspace(): GoogleDriveWorkspaceState {
           assets: payload.assets,
           boardType: payload.boardType,
           boardPattern: payload.boardPattern,
+          notebookPaperSize: payload.notebookPaperSize,
+          mathGradeMode: payload.mathGradeMode,
           resetHistory: options?.resetHistory ?? false,
+          driveFileId: file.id,
         });
         setActiveDriveFile(file);
         const nextState = useBoardStore.getState();
-        lastSyncedSignatureRef.current = computeBoardSignature(
-          nextState.title,
-          nextState.elements,
-          nextState.assets
-        );
+        const sig = getSignatureFromState(nextState);
+        lastSyncedSignatureRef.current = sig;
+        setDriveSyncMeta({ driveFileId: file.id, driveSyncedSignature: sig });
         setLastSyncedAt(file.modifiedTime || new Date().toISOString());
         setSyncStatus('saved');
         return true;
@@ -577,7 +727,7 @@ export function useGoogleDriveWorkspace(): GoogleDriveWorkspaceState {
         setBusyAction(null);
       }
     },
-    [clearPendingAutoSaveTimer, handleDriveError, importBoardData, setActiveDriveFile]
+    [clearPendingAutoSaveTimer, handleDriveError, importBoardData, setActiveDriveFile, setDriveSyncMeta]
   );
 
   const renameFile = useCallback(
@@ -592,11 +742,9 @@ export function useGoogleDriveWorkspace(): GoogleDriveWorkspaceState {
           const displayTitle = getDisplayBoardTitle(updated);
           useBoardStore.getState().setTitle(displayTitle);
           const nextState = useBoardStore.getState();
-          lastSyncedSignatureRef.current = computeBoardSignature(
-            nextState.title,
-            nextState.elements,
-            nextState.assets
-          );
+          const sig = getSignatureFromState(nextState);
+          lastSyncedSignatureRef.current = sig;
+          setDriveSyncMeta({ driveFileId: updated.id, driveSyncedSignature: sig });
         }
         addToast(`Đã đổi tên thành "${getDisplayBoardTitle(updated)}"`, 'success');
         return true;
@@ -607,7 +755,7 @@ export function useGoogleDriveWorkspace(): GoogleDriveWorkspaceState {
         setBusyAction(null);
       }
     },
-    [addToast, handleDriveError, setActiveDriveFile]
+    [addToast, handleDriveError, setActiveDriveFile, setDriveSyncMeta]
   );
 
   const deleteFile = useCallback(
@@ -617,10 +765,14 @@ export function useGoogleDriveWorkspace(): GoogleDriveWorkspaceState {
       try {
         await deleteDriveFile(file.id);
         setFiles((prev) => prev.filter((f) => f.id !== file.id));
-        if (activeDriveFileRef.current?.id === file.id) {
+        if (
+          activeDriveFileRef.current?.id === file.id ||
+          useBoardStore.getState().activeDriveFileId === file.id
+        ) {
           clearPendingAutoSaveTimer();
           setActiveDriveFile(null);
           lastSyncedSignatureRef.current = null;
+          setDriveSyncMeta({ driveFileId: null, driveSyncedSignature: null });
           setSyncStatus('idle');
           setLastSyncedAt(null);
         }
@@ -633,7 +785,7 @@ export function useGoogleDriveWorkspace(): GoogleDriveWorkspaceState {
         setBusyAction(null);
       }
     },
-    [addToast, clearPendingAutoSaveTimer, handleDriveError, setActiveDriveFile]
+    [addToast, clearPendingAutoSaveTimer, handleDriveError, setActiveDriveFile, setDriveSyncMeta]
   );
 
   const unorganizedCount = appFolder ? findUnorganizedDriveFiles(files, appFolder.id).length : 0;

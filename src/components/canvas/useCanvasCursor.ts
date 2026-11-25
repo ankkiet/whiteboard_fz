@@ -6,13 +6,17 @@ import { Point } from '../../types/board';
 interface UseCanvasCursorOptions {
   canvasRef: React.RefObject<HTMLCanvasElement | null>;
   isPanningMode: () => boolean;
+  isPanning: boolean;
   spacePressed: boolean;
+  resolveCustomScreenPos?: (clientX: number, clientY: number) => Point | undefined;
 }
 
 export function useCanvasCursor({
   canvasRef,
   isPanningMode,
+  isPanning,
   spacePressed,
+  resolveCustomScreenPos,
 }: UseCanvasCursorOptions) {
   const currentTool = useBoardStore((s) => s.currentTool);
   const strokeWidth = useBoardStore((s) => s.strokeWidth);
@@ -27,6 +31,11 @@ export function useCanvasCursor({
   const cursorOverlayRef = useRef<HTMLDivElement>(null);
   const cursorCircleRef = useRef<HTMLDivElement>(null);
   const cursorDotRef = useRef<HTMLDivElement>(null);
+  const lastPointerClientPosRef = useRef<Point | null>(null);
+  const isRingTool =
+    currentTool === 'pen' ||
+    currentTool === 'highlighter' ||
+    (currentTool === 'eraser' && eraserMode === 'area');
 
   useEffect(() => {
     if (!cursorCircleRef.current || !cursorDotRef.current) return;
@@ -83,14 +92,13 @@ export function useCanvasCursor({
 
   const updateCursorOverlayPos = useCallback(
     (clientX: number, clientY: number, customScreenPos?: Point) => {
+      lastPointerClientPosRef.current = { x: clientX, y: clientY };
       if (!cursorOverlayRef.current || !canvasRef.current) return;
-      const isRingTool =
-        currentTool === 'pen' ||
-        currentTool === 'highlighter' ||
-        (currentTool === 'eraser' && eraserMode === 'area');
 
       if (!isRingTool || isPanningMode() || spacePressed) {
-        cursorOverlayRef.current.style.display = 'none';
+        if (cursorOverlayRef.current.style.display !== 'none') {
+          cursorOverlayRef.current.style.display = 'none';
+        }
         return;
       }
 
@@ -101,14 +109,39 @@ export function useCanvasCursor({
       cursorOverlayRef.current.style.display = 'block';
       cursorOverlayRef.current.style.transform = `translate3d(${sx}px, ${sy}px, 0) translate(-50%, -50%)`;
     },
-    [canvasRef, currentTool, eraserMode, isPanningMode, spacePressed]
+    [canvasRef, isPanningMode, isRingTool, spacePressed]
   );
 
   const hideCursorOverlay = useCallback(() => {
-    if (cursorOverlayRef.current) {
+    lastPointerClientPosRef.current = null;
+    if (cursorOverlayRef.current && cursorOverlayRef.current.style.display !== 'none') {
       cursorOverlayRef.current.style.display = 'none';
     }
   }, []);
+
+  useEffect(() => {
+    if (!cursorOverlayRef.current) return;
+
+    if (!isRingTool || isPanning || isPanningMode() || spacePressed) {
+      if (cursorOverlayRef.current.style.display !== 'none') {
+        cursorOverlayRef.current.style.display = 'none';
+      }
+      return;
+    }
+
+    if (lastPointerClientPosRef.current) {
+      const { x, y } = lastPointerClientPosRef.current;
+      const customScreenPos = resolveCustomScreenPos ? resolveCustomScreenPos(x, y) : undefined;
+      updateCursorOverlayPos(x, y, customScreenPos);
+    }
+  }, [
+    isPanning,
+    isPanningMode,
+    isRingTool,
+    resolveCustomScreenPos,
+    spacePressed,
+    updateCursorOverlayPos,
+  ]);
 
   return {
     cursorOverlayRef,

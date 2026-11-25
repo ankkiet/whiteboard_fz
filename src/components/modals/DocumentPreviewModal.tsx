@@ -86,7 +86,8 @@ export const DocumentPreviewModal: React.FC = () => {
         const bytes = dataUrlToUint8Array(assetDataUrl);
         const count = Math.min(fileCard.pageCount || 1, 20);
         const pageNums = Array.from({ length: count }, (_, i) => i + 1);
-        const pages = await renderPdfPages(bytes, pageNums, 2.5);
+        const renderScale = pageNums.length >= 10 ? 1.65 : 2;
+        const pages = await renderPdfPages(bytes, pageNums, renderScale);
         insertDocumentPages(pages, fileCard.fileName, {
           layout: 'row',
           lockPages: true,

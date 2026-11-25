@@ -126,6 +126,56 @@ test('shouldTriggerDriveAutoSave creates for non-empty unlinked board and update
     }),
     'skip'
   );
+
+  // Untouched template (e.g. mindmap with starter elements) or newly opened local board -> never auto-create duplicate
+  assert.equal(
+    shouldTriggerDriveAutoSave({
+      autoSaveEnabled: true,
+      isAuthenticated: true,
+      hasLoaded: true,
+      hasActiveDriveFile: false,
+      activeDriveFileId: null,
+      hasUserEditedCurrentBoard: false,
+      elementCount: 11,
+      currentSignature: 'sig-template',
+      lastSyncedSignature: null,
+      isManualActionBusy: false,
+    }),
+    'skip'
+  );
+
+  // Persisted Drive link waiting for file list to resolve -> never auto-create duplicate
+  assert.equal(
+    shouldTriggerDriveAutoSave({
+      autoSaveEnabled: true,
+      isAuthenticated: true,
+      hasLoaded: true,
+      hasActiveDriveFile: false,
+      activeDriveFileId: 'drive_existing_123',
+      hasUserEditedCurrentBoard: true,
+      elementCount: 5,
+      currentSignature: 'sig-edited',
+      lastSyncedSignature: 'sig-old',
+      isManualActionBusy: false,
+    }),
+    'skip'
+  );
+});
+
+test('computeBoardSignature includes optional board metadata when provided', () => {
+  const sA4 = computeBoardSignature('Vở', [sampleRect], {}, {
+    boardType: 'notebook',
+    boardPattern: 'lined',
+    notebookPaperSize: 'a4',
+    mathGradeMode: 'high',
+  });
+  const sA3 = computeBoardSignature('Vở', [sampleRect], {}, {
+    boardType: 'notebook',
+    boardPattern: 'lined',
+    notebookPaperSize: 'a3',
+    mathGradeMode: 'high',
+  });
+  assert.notEqual(sA4, sA3);
 });
 
 test('getLocalDraftActionState hides save button when board is already linked and synced', () => {

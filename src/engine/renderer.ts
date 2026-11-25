@@ -133,6 +133,8 @@ export function drawBoardElement(
     dimmed?: boolean;
     editingId?: string | null;
     renderFormulasOnCanvas?: boolean;
+    displayScale?: number;
+    lowQualityImages?: boolean;
   }
 ) {
   const {
@@ -142,6 +144,8 @@ export function drawBoardElement(
     dimmed = false,
     editingId,
     renderFormulasOnCanvas = false,
+    displayScale,
+    lowQualityImages = false,
   } = options;
   const opacity = (el.opacity ?? 1) * (dimmed ? 0.25 : 1);
 
@@ -359,15 +363,23 @@ export function drawBoardElement(
     }
   } else if (el.type === 'image') {
     const dataUrl = assets[el.assetId];
+    const displayPixelWidth =
+      displayScale !== undefined ? Math.abs(el.width) * displayScale : undefined;
     const img =
-      preloadedImages?.get(el.assetId) ?? (dataUrl ? getCachedImage(el.assetId, dataUrl) : null);
+      preloadedImages?.get(el.assetId) ??
+      (dataUrl ? getCachedImage(el.assetId, dataUrl, displayPixelWidth) : null);
 
     ctx.save();
     drawRoundedRectPath(ctx, el.x, el.y, el.width, el.height, 8);
     ctx.clip();
     if (img) {
       ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = 'high';
+      ctx.imageSmoothingQuality =
+        preloadedImages !== undefined
+          ? 'high'
+          : lowQualityImages
+          ? 'low'
+          : 'medium';
       ctx.drawImage(img, el.x, el.y, el.width, el.height);
     } else {
       ctx.fillStyle = isDarkMode ? '#1e293b' : '#e2e8f0';

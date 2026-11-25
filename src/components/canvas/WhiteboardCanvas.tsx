@@ -121,6 +121,23 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
   const isInteractionIdle = useCallback(() => modeRef.current === 'idle', []);
   const isPanningMode = useCallback(() => modeRef.current === 'pan', []);
 
+  const resolveCustomScreenPos = useCallback((clientX: number, clientY: number): Point | undefined => {
+    const canvas = canvasRef.current;
+    if (!canvas) return undefined;
+    const store = useBoardStore.getState();
+    const hasVirtualEdge =
+      store.currentTool === 'pen' &&
+      (store.virtualTools.ruler.active || store.virtualTools.setSquare.active);
+    if (!hasVirtualEdge) return undefined;
+
+    const rect = canvas.getBoundingClientRect();
+    const worldPos = screenToWorld(clientX, clientY, store.camera, rect);
+    const snapThresh = 16 / store.camera.zoom;
+    const snapped = snapPointToVirtualToolEdge(worldPos, store.virtualTools, snapThresh);
+    if (!snapped.snapped) return undefined;
+    return worldToScreen(snapped.point.x, snapped.point.y, store.camera, rect);
+  }, []);
+
   // Modular hooks: keyboard shortcuts, smooth wheel zoom/scroll, hardware cursor ring
   const { spacePressed } = useCanvasKeyboard({
     viewportSize,
@@ -136,7 +153,20 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
     cursorDotRef,
     updateCursorOverlayPos,
     hideCursorOverlay,
-  } = useCanvasCursor({ canvasRef, isPanningMode, spacePressed });
+  } = useCanvasCursor({
+    canvasRef,
+    isPanningMode,
+    isPanning,
+    spacePressed,
+    resolveCustomScreenPos,
+  });
+
+  const syncIdleCursorOverlay = useCallback(
+    (clientX: number, clientY: number) => {
+      updateCursorOverlayPos(clientX, clientY, resolveCustomScreenPos(clientX, clientY));
+    },
+    [resolveCustomScreenPos, updateCursorOverlayPos]
+  );
 
   // Trigger redraw when cached images finish decoding
   useEffect(() => {
@@ -226,12 +256,27 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
     const sorted = [...state.elements].sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
     const erasingIds = erasingIdsRef.current;
 
+    const zoom = Math.max(state.camera.zoom, 0.05);
+    const cullMargin = 96 / zoom;
+    const viewMinX = -state.camera.x / zoom - cullMargin;
+    const viewMinY = -state.camera.y / zoom - cullMargin;
+    const viewMaxX = (-state.camera.x + width) / zoom + cullMargin;
+    const viewMaxY = (-state.camera.y + height) / zoom + cullMargin;
+    const displayScale = zoom * dpr;
+    const lowQualityImages = modeRef.current !== 'idle' || zoom < 0.65;
+
     for (const el of sorted) {
+      const b = getElementBounds(el);
+      if (b.maxX < viewMinX || b.minX > viewMaxX || b.maxY < viewMinY || b.minY > viewMaxY) {
+        continue;
+      }
       drawBoardElement(ctx, el, {
         isDarkMode: state.isDarkMode,
         assets: state.assets,
         dimmed: erasingIds.has(el.id),
         editingId: state.editingElementId,
+        displayScale,
+        lowQualityImages,
       });
     }
 
@@ -398,6 +443,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
     if (e.button === 2 || e.button === 1 || spacePressed || store.currentTool === 'hand') {
       modeRef.current = 'pan';
       setIsPanning(true);
+      hideCursorOverlay();
       panOriginRef.current = { x: e.clientX - store.camera.x, y: e.clientY - store.camera.y };
       return;
     }
@@ -645,23 +691,12 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
     const worldPos = screenToWorld(e.clientX, e.clientY, store.camera, rect);
 
     if (mode === 'idle') {
-      const hasVirtualEdge =
-        store.currentTool === 'pen' &&
-        (store.virtualTools.ruler.active || store.virtualTools.setSquare.active);
-      if (hasVirtualEdge) {
-        const snapThresh = 16 / store.camera.zoom;
-        const snapped = snapPointToVirtualToolEdge(worldPos, store.virtualTools, snapThresh);
-        if (snapped.snapped) {
-          const screenPos = worldToScreen(snapped.point.x, snapped.point.y, store.camera, rect);
-          updateCursorOverlayPos(e.clientX, e.clientY, screenPos);
-          return;
-        }
-      }
-      updateCursorOverlayPos(e.clientX, e.clientY);
+      syncIdleCursorOverlay(e.clientX, e.clientY);
       return;
     }
 
     if (mode === 'pan') {
+      hideCursorOverlay();
       const nextCam = {
         ...store.camera,
         x: e.clientX - panOriginRef.current.x,
@@ -904,6 +939,25 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
 
     if (mode === 'pan') {
       setIsPanning(false);
+      if (e.type !== 'pointercancel' && canvas) {
+        const rect = canvas.getBoundingClientRect();
+        const insideBounds =
+          e.clientX >= rect.left &&
+          e.clientX <= rect.right &&
+          e.clientY >= rect.top &&
+          e.clientY <= rect.bottom;
+        const hitTarget =
+          typeof document.elementFromPoint === 'function'
+            ? document.elementFromPoint(e.clientX, e.clientY)
+            : canvas;
+        if (insideBounds && (hitTarget === canvas || hitTarget === null)) {
+          syncIdleCursorOverlay(e.clientX, e.clientY);
+        } else {
+          hideCursorOverlay();
+        }
+      } else {
+        hideCursorOverlay();
+      }
       return;
     }
 

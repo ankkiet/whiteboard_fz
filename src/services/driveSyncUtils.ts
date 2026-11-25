@@ -2,6 +2,13 @@ import { BoardElement } from '../types/board';
 
 export type DriveSyncStatus = 'idle' | 'pending' | 'saving' | 'saved' | 'error';
 
+export interface BoardSignatureExtra {
+  boardType?: string;
+  boardPattern?: string;
+  notebookPaperSize?: string;
+  mathGradeMode?: string;
+}
+
 /**
  * Produces a fast, deterministic fingerprint of the board's title, elements, and assets
  * so auto-save only fires when meaningful board content actually changes.
@@ -9,7 +16,8 @@ export type DriveSyncStatus = 'idle' | 'pending' | 'saving' | 'saved' | 'error';
 export function computeBoardSignature(
   title: string,
   elements: BoardElement[],
-  assets: Record<string, string>
+  assets: Record<string, string>,
+  extra?: BoardSignatureExtra
 ): string {
   const assetEntries = Object.keys(assets)
     .sort()
@@ -18,11 +26,19 @@ export function computeBoardSignature(
       return `${key}:${val.length}:${val.slice(0, 24)}:${val.slice(-16)}`;
     });
 
-  return JSON.stringify({
+  const payload: Record<string, unknown> = {
     t: title || 'Bảng Trắng Mới',
     e: elements,
     a: assetEntries,
-  });
+  };
+  if (extra) {
+    payload.bt = extra.boardType;
+    payload.bp = extra.boardPattern;
+    payload.np = extra.notebookPaperSize;
+    payload.mg = extra.mathGradeMode;
+  }
+
+  return JSON.stringify(payload);
 }
 
 export interface AutoSaveDecisionInput {
@@ -30,6 +46,8 @@ export interface AutoSaveDecisionInput {
   isAuthenticated: boolean;
   hasLoaded: boolean;
   hasActiveDriveFile: boolean;
+  activeDriveFileId?: string | null;
+  hasUserEditedCurrentBoard?: boolean;
   elementCount: number;
   currentSignature: string;
   lastSyncedSignature: string | null;
@@ -39,7 +57,8 @@ export interface AutoSaveDecisionInput {
 /**
  * Pure decision rule for Google Drive auto-save:
  * - Never auto-saves when disabled, signed out, still loading, or during manual Drive operations.
- * - Never creates blank empty files on Drive when no Drive file is linked yet.
+ * - Never creates blank empty files or untouched starter/reopened boards on Drive when no Drive file is linked yet.
+ * - Never creates a duplicate file while a persisted activeDriveFileId is still waiting to resolve.
  * - Updates linked Drive files whenever content or title changes (even if cleared).
  */
 export function shouldTriggerDriveAutoSave(
@@ -62,7 +81,11 @@ export function shouldTriggerDriveAutoSave(
     return 'update';
   }
 
-  if (input.elementCount > 0) {
+  if (input.activeDriveFileId) {
+    return 'skip';
+  }
+
+  if (input.elementCount > 0 && input.hasUserEditedCurrentBoard !== false) {
     return 'create';
   }
 
