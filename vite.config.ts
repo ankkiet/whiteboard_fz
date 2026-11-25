@@ -64,9 +64,9 @@ export default defineConfig(() => {
                 .slice(0, 12);
 
               const versionManifest = {
-                version: 'v_fz.1.1.1.1.12',
+                version: 'v_fz.1.1.1.1.13',
                 buildId,
-                notes: 'Bản cập nhật fzInK (Nâng cấp trải nghiệm viết chữ mượt, 4 kiểu ngòi bút thật, chống rung thích ứng và chống tỳ tay thông minh)',
+                notes: 'Bản cập nhật fzInK (Nâng cấp đăng nhập Google Drive dài hạn với Refresh Token, tự động gia hạn không bị đăng xuất sau 60 phút)',
                 updateOrigin: 'https://whiteboardfz.pages.dev',
               };
 
