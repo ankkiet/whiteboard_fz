@@ -66,7 +66,7 @@ declare global {
   }
 }
 
-export const LATEST_DESKTOP_VERSION_FALLBACK = 'v_fz.1.1.1.1.11';
+export const LATEST_DESKTOP_VERSION_FALLBACK = 'v_fz.1.1.1.1.12';
 export const DESKTOP_APP_DOWNLOADED_EVENT = 'bttm:desktop-app-downloaded';
 
 const DESKTOP_APP_DOWNLOADED_KEY = 'bttm_desktop_app_downloaded_v1';

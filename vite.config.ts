@@ -64,9 +64,9 @@ export default defineConfig(() => {
                 .slice(0, 12);
 
               const versionManifest = {
-                version: 'v_fz.1.1.1.1.11',
+                version: 'v_fz.1.1.1.1.12',
                 buildId,
-                notes: 'Bản cập nhật fzInK (Thêm màn hình cập nhật chuyên biệt, chống treo mạng, hiển thị MB/tốc độ, tự thoát app khi cài)',
+                notes: 'Bản cập nhật fzInK (Nâng cấp trải nghiệm viết chữ mượt, 4 kiểu ngòi bút thật, chống rung thích ứng và chống tỳ tay thông minh)',
                 updateOrigin: 'https://whiteboardfz.pages.dev',
               };
 

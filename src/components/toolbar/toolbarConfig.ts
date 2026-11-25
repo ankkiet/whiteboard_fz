@@ -1,5 +1,5 @@
 import React from 'react';
-import { BoardPattern, NotebookPaperSize, ToolType } from '../../types/board';
+import { BoardPattern, NotebookPaperSize, PenStyle, ToolType } from '../../types/board';
 import { AppLanguage, getAppLanguage, tr } from '../../i18n';
 import {
   ArrowUpRight,
@@ -90,6 +90,33 @@ export function getStrokeWidths(lang: AppLanguage = getAppLanguage()) {
     { value: 4, label: tr('Vừa', 'Medium', lang), dot: 7 },
     { value: 7, label: tr('Đậm', 'Thick', lang), dot: 10 },
     { value: 12, label: tr('Rất đậm', 'Extra thick', lang), dot: 14 },
+  ];
+}
+
+export function getPenStyles(
+  lang: AppLanguage = getAppLanguage()
+): { id: PenStyle; label: string; desc: string }[] {
+  return [
+    {
+      id: 'ballpoint',
+      label: tr('Bút bi', 'Ballpoint', lang),
+      desc: tr('Nét gọn đều, rõ chữ nhỏ', 'Crisp uniform ink for notes', lang),
+    },
+    {
+      id: 'fountain',
+      label: tr('Bút máy', 'Fountain', lang),
+      desc: tr('Nét thanh đậm tự nhiên', 'Expressive thick & thin ink', lang),
+    },
+    {
+      id: 'pencil',
+      label: tr('Bút chì', 'Pencil', lang),
+      desc: tr('Vân chì mộc trên giấy', 'Textured graphite feel', lang),
+    },
+    {
+      id: 'brush',
+      label: tr('Bút lông', 'Brush', lang),
+      desc: tr('Cọ mềm vuốt nét đậm', 'Soft tapered brush strokes', lang),
+    },
   ];
 }
 

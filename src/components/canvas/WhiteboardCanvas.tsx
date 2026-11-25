@@ -44,6 +44,10 @@ import {
 } from '../../engine/groupUtils';
 import { subscribeImageCache } from '../../engine/imageCache';
 import { snapPointToVirtualToolEdge } from '../../engine/mathCurriculum';
+import {
+  getStabilizerConfigForPenStyle,
+  StrokeStabilizer,
+} from '../../engine/strokeStabilizer';
 import { BoardElement, LaserPoint, Point, Rect, ShapeElement } from '../../types/board';
 import { useCanvasKeyboard } from './useCanvasKeyboard';
 import { useCanvasWheel } from './useCanvasWheel';
@@ -96,6 +100,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
   const didDragMoveRef = useRef(false);
 
   const activeStrokeRef = useRef<[number, number, number][]>([]);
+  const strokeStabilizerRef = useRef<StrokeStabilizer>(new StrokeStabilizer());
   const drawStartPointRef = useRef<[number, number, number] | null>(null);
   const brushCursorWorldRef = useRef<Point | null>(null);
   const activeShapeRef = useRef<ShapeElement | null>(null);
@@ -114,8 +119,13 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
   const laserRafRef = useRef<number | null>(null);
   const rafIdRef = useRef<number | null>(null);
 
+  // Offscreen static layer cache during active stroke drawing (eliminates O(N) redraw lag)
+  const staticLayerCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const staticLayerValidRef = useRef(false);
+
   // Palm rejection & pointer lock refs (prevents jumping or zooming while writing)
   const activePointerIdRef = useRef<number | null>(null);
+  const activePointerTypeRef = useRef<string | null>(null);
   const lastPenActiveTimeRef = useRef<number>(0);
 
   const isInteractionIdle = useCallback(() => modeRef.current === 'idle', []);
@@ -153,6 +163,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
     cursorDotRef,
     updateCursorOverlayPos,
     hideCursorOverlay,
+    setCursorDrawingState,
   } = useCanvasCursor({
     canvasRef,
     isPanningMode,
@@ -202,10 +213,81 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
     }
   }, [viewportSize, boardType, notebookPaperSize]);
 
+  const renderStaticScene = useCallback(
+    (
+      targetCtx: CanvasRenderingContext2D,
+      state: ReturnType<typeof useBoardStore.getState>,
+      dpr: number,
+      width: number,
+      height: number
+    ) => {
+      targetCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      targetCtx.fillStyle = getCanvasBackgroundColor(state.isDarkMode, state.boardType);
+      targetCtx.fillRect(0, 0, width, height);
+
+      targetCtx.save();
+      targetCtx.translate(state.camera.x, state.camera.y);
+      targetCtx.scale(state.camera.zoom, state.camera.zoom);
+
+      if (state.boardType === 'notebook') {
+        drawNotebookLayout(
+          targetCtx,
+          state.camera,
+          width,
+          height,
+          state.isDarkMode,
+          state.elements,
+          state.notebookPaperSize,
+          state.title,
+          state.boardPattern
+        );
+      } else {
+        drawWorldBackgroundPattern(
+          targetCtx,
+          state.camera,
+          width,
+          height,
+          state.boardPattern,
+          state.isDarkMode
+        );
+      }
+
+      const sorted = [...state.elements].sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
+      const erasingIds = erasingIdsRef.current;
+
+      const zoom = Math.max(state.camera.zoom, 0.05);
+      const cullMargin = 96 / zoom;
+      const viewMinX = -state.camera.x / zoom - cullMargin;
+      const viewMinY = -state.camera.y / zoom - cullMargin;
+      const viewMaxX = (-state.camera.x + width) / zoom + cullMargin;
+      const viewMaxY = (-state.camera.y + height) / zoom + cullMargin;
+      const displayScale = zoom * dpr;
+      const lowQualityImages = modeRef.current !== 'idle' || zoom < 0.65;
+
+      for (const el of sorted) {
+        const b = getElementBounds(el);
+        if (b.maxX < viewMinX || b.minX > viewMaxX || b.maxY < viewMinY || b.minY > viewMaxY) {
+          continue;
+        }
+        drawBoardElement(targetCtx, el, {
+          isDarkMode: state.isDarkMode,
+          assets: state.assets,
+          dimmed: erasingIds.has(el.id),
+          editingId: state.editingElementId,
+          displayScale,
+          lowQualityImages,
+        });
+      }
+
+      targetCtx.restore();
+    },
+    []
+  );
+
   const drawFrame = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { alpha: false }) || canvas.getContext('2d');
     if (!ctx) return;
 
     const dpr = window.devicePixelRatio || 1;
@@ -218,67 +300,44 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
       canvas.height = targetH;
       canvas.style.width = `${width}px`;
       canvas.style.height = `${height}px`;
+      staticLayerValidRef.current = false;
     }
 
     const state = useBoardStore.getState();
 
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.fillStyle = getCanvasBackgroundColor(state.isDarkMode, state.boardType);
-    ctx.fillRect(0, 0, width, height);
+    if (modeRef.current === 'draw' && typeof document !== 'undefined') {
+      if (!staticLayerCanvasRef.current) {
+        staticLayerCanvasRef.current = document.createElement('canvas');
+      }
+      const staticCanvas = staticLayerCanvasRef.current;
+      if (staticCanvas.width !== targetW || staticCanvas.height !== targetH) {
+        staticCanvas.width = targetW;
+        staticCanvas.height = targetH;
+        staticLayerValidRef.current = false;
+      }
+      if (!staticLayerValidRef.current) {
+        const staticCtx =
+          staticCanvas.getContext('2d', { alpha: false }) || staticCanvas.getContext('2d');
+        if (staticCtx) {
+          renderStaticScene(staticCtx, state, dpr, width, height);
+          staticLayerValidRef.current = true;
+        }
+      }
+      if (staticLayerValidRef.current) {
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.drawImage(staticCanvas, 0, 0);
+      } else {
+        renderStaticScene(ctx, state, dpr, width, height);
+      }
+    } else {
+      staticLayerValidRef.current = false;
+      renderStaticScene(ctx, state, dpr, width, height);
+    }
 
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.save();
     ctx.translate(state.camera.x, state.camera.y);
     ctx.scale(state.camera.zoom, state.camera.zoom);
-
-    if (state.boardType === 'notebook') {
-      drawNotebookLayout(
-        ctx,
-        state.camera,
-        width,
-        height,
-        state.isDarkMode,
-        state.elements,
-        state.notebookPaperSize,
-        state.title,
-        state.boardPattern
-      );
-    } else {
-      drawWorldBackgroundPattern(
-        ctx,
-        state.camera,
-        width,
-        height,
-        state.boardPattern,
-        state.isDarkMode
-      );
-    }
-
-    const sorted = [...state.elements].sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
-    const erasingIds = erasingIdsRef.current;
-
-    const zoom = Math.max(state.camera.zoom, 0.05);
-    const cullMargin = 96 / zoom;
-    const viewMinX = -state.camera.x / zoom - cullMargin;
-    const viewMinY = -state.camera.y / zoom - cullMargin;
-    const viewMaxX = (-state.camera.x + width) / zoom + cullMargin;
-    const viewMaxY = (-state.camera.y + height) / zoom + cullMargin;
-    const displayScale = zoom * dpr;
-    const lowQualityImages = modeRef.current !== 'idle' || zoom < 0.65;
-
-    for (const el of sorted) {
-      const b = getElementBounds(el);
-      if (b.maxX < viewMinX || b.minX > viewMaxX || b.maxY < viewMinY || b.minY > viewMaxY) {
-        continue;
-      }
-      drawBoardElement(ctx, el, {
-        isDarkMode: state.isDarkMode,
-        assets: state.assets,
-        dimmed: erasingIds.has(el.id),
-        editingId: state.editingElementId,
-        displayScale,
-        lowQualityImages,
-      });
-    }
 
     if (
       activeStrokeRef.current.length > 0 &&
@@ -290,7 +349,9 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
         state.currentTool === 'highlighter' ? state.highlighterColor : state.color,
         state.strokeWidth,
         state.currentTool === 'highlighter',
-        state.isDarkMode
+        state.isDarkMode,
+        1,
+        state.currentTool === 'pen' ? state.penStyle : undefined
       );
     }
 
@@ -314,10 +375,11 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
     }
 
     ctx.restore();
-  }, [viewportSize]);
+  }, [renderStaticScene, viewportSize]);
 
   // Redraw whenever reactive state changes
   useEffect(() => {
+    staticLayerValidRef.current = false;
     drawFrame();
   }, [
     drawFrame,
@@ -420,27 +482,64 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    // Palm rejection & multi-touch isolation
+    const store = useBoardStore.getState();
+
+    // Smart palm rejection:
+    // 1. If a stylus lands shortly after an accidental palm touch started a tiny stroke, hand over to pen.
+    if (e.pointerType === 'pen') {
+      lastPenActiveTimeRef.current = Date.now();
+      if (
+        activePointerIdRef.current !== null &&
+        activePointerIdRef.current !== e.pointerId &&
+        activePointerTypeRef.current === 'touch' &&
+        modeRef.current === 'draw' &&
+        activeStrokeRef.current.length <= 8
+      ) {
+        if (canvas.hasPointerCapture(activePointerIdRef.current)) {
+          canvas.releasePointerCapture(activePointerIdRef.current);
+        }
+        activeStrokeRef.current = [];
+        drawStartPointRef.current = null;
+        strokeStabilizerRef.current.reset();
+        modeRef.current = 'idle';
+        activePointerIdRef.current = null;
+        activePointerTypeRef.current = null;
+      }
+    }
+
+    // 2. Multi-touch isolation
     if (activePointerIdRef.current !== null && activePointerIdRef.current !== e.pointerId) {
       return;
     }
 
-    if (e.pointerType === 'pen') {
-      lastPenActiveTimeRef.current = Date.now();
-    } else if (e.pointerType === 'touch' && Date.now() - lastPenActiveTimeRef.current < 600) {
+    // 3. Reject palm/touch within 550ms of stylus activity (hover continuously refreshes this)
+    if (e.pointerType === 'touch' && Date.now() - lastPenActiveTimeRef.current < 550) {
       return;
     }
 
     activePointerIdRef.current = e.pointerId;
+    activePointerTypeRef.current = e.pointerType;
 
-    const store = useBoardStore.getState();
     const rect = canvas.getBoundingClientRect();
     const worldPos = screenToWorld(e.clientX, e.clientY, store.camera, rect);
 
     canvas.setPointerCapture(e.pointerId);
 
-    // Right mouse button, Middle mouse button, Space+Drag, or Hand tool => Pan
-    if (e.button === 2 || e.button === 1 || spacePressed || store.currentTool === 'hand') {
+    const isPenOnlyTouchPan =
+      store.penOnlyMode &&
+      e.pointerType === 'touch' &&
+      (store.currentTool === 'pen' ||
+        store.currentTool === 'highlighter' ||
+        store.currentTool === 'eraser');
+
+    // Right mouse button, Middle mouse button, Space+Drag, Hand tool, or Pen-only touch pan => Pan
+    if (
+      e.button === 2 ||
+      e.button === 1 ||
+      spacePressed ||
+      store.currentTool === 'hand' ||
+      isPenOnlyTouchPan
+    ) {
       modeRef.current = 'pan';
       setIsPanning(true);
       hideCursorOverlay();
@@ -469,18 +568,33 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
 
     if (store.currentTool === 'pen' || store.currentTool === 'highlighter') {
       modeRef.current = 'draw';
-      const pressure = e.pointerType === 'pen' ? e.pressure : 0.5;
-      let snappedStart =
-        store.currentTool === 'pen' && (store.virtualTools.ruler.active || store.virtualTools.setSquare.active)
-          ? snapPointToVirtualToolEdge(worldPos, store.virtualTools, 16 / store.camera.zoom).point
-          : worldPos;
+      staticLayerValidRef.current = false;
+      const isHighlighter = store.currentTool === 'highlighter';
+      const hasVirtualEdge =
+        !isHighlighter && (store.virtualTools.ruler.active || store.virtualTools.setSquare.active);
+      let snappedStart = hasVirtualEdge
+        ? snapPointToVirtualToolEdge(worldPos, store.virtualTools, 16 / store.camera.zoom).point
+        : worldPos;
       if (store.boardType === 'notebook') {
         snappedStart = clampPointToNotebookMargins(snappedStart, getNotebookConfig(store.notebookPaperSize));
       }
-      const startPt: [number, number, number] = [snappedStart.x, snappedStart.y, pressure];
+      const baseConfig = getStabilizerConfigForPenStyle(store.penStyle, isHighlighter);
+      strokeStabilizerRef.current.reset({
+        ...baseConfig,
+        bypassSpatial: hasVirtualEdge,
+      });
+      const startPt = strokeStabilizerRef.current.process({
+        x: snappedStart.x,
+        y: snappedStart.y,
+        pressure: e.pointerType === 'pen' ? e.pressure : 0.5,
+        pointerType: e.pointerType,
+        timestampMs: e.timeStamp || performance.now(),
+        zoom: store.camera.zoom,
+      });
       drawStartPointRef.current = startPt;
       brushCursorWorldRef.current = snappedStart;
       activeStrokeRef.current = [startPt];
+      setCursorDrawingState(true);
       updateCursorOverlayPos(e.clientX, e.clientY);
       drawFrame();
       return;
@@ -681,6 +795,11 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
     const canvas = canvasRef.current;
     if (!canvas) return;
 
+    // Track stylus hover so palm touch stays rejected even before nib touches glass
+    if (e.pointerType === 'pen') {
+      lastPenActiveTimeRef.current = Date.now();
+    }
+
     if (activePointerIdRef.current !== null && e.pointerId !== activePointerIdRef.current) {
       return;
     }
@@ -755,6 +874,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
         store.currentTool === 'pen' &&
         (store.virtualTools.ruler.active || store.virtualTools.setSquare.active);
       const snapThresh = 16 / store.camera.zoom;
+      strokeStabilizerRef.current.updateConfig({ bypassSpatial: hasVirtualEdge });
 
       let rawCursorWorld = hasVirtualEdge
         ? snapPointToVirtualToolEdge(worldPos, store.virtualTools, snapThresh).point
@@ -765,7 +885,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
       brushCursorWorldRef.current = rawCursorWorld;
 
       const pts = activeStrokeRef.current;
-      const minStep = 1.2 / store.camera.zoom;
+      const minStep = 0.75 / store.camera.zoom;
       const coalesced = e.nativeEvent.getCoalescedEvents?.();
       const samples = coalesced && coalesced.length > 0 ? coalesced : [e.nativeEvent];
       let added = false;
@@ -779,14 +899,22 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
         if (notebookConfig) {
           sampleWorld = clampPointToNotebookMargins(sampleWorld, notebookConfig);
         }
-        const samplePressure = sample.pointerType === 'pen' ? sample.pressure : 0.5;
+        const stabilized = strokeStabilizerRef.current.process({
+          x: sampleWorld.x,
+          y: sampleWorld.y,
+          pressure: sample.pointerType === 'pen' ? sample.pressure : 0.5,
+          pointerType: sample.pointerType,
+          timestampMs: sample.timeStamp || performance.now(),
+          zoom: store.camera.zoom,
+        });
         const last = pts[pts.length - 1];
-        if (!last || Math.hypot(sampleWorld.x - last[0], sampleWorld.y - last[1]) >= minStep) {
-          pts.push([sampleWorld.x, sampleWorld.y, samplePressure]);
-          brushCursorWorldRef.current = sampleWorld;
+        if (!last || Math.hypot(stabilized[0] - last[0], stabilized[1] - last[1]) >= minStep) {
+          pts.push(stabilized);
+          brushCursorWorldRef.current = { x: stabilized[0], y: stabilized[1] };
           added = true;
         }
       }
+
       if (added) {
         requestRedraw();
       }
@@ -919,6 +1047,8 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
       return;
     }
     activePointerIdRef.current = null;
+    activePointerTypeRef.current = null;
+    setCursorDrawingState(false);
     if (e.pointerType === 'pen') {
       lastPenActiveTimeRef.current = Date.now();
     }
@@ -962,9 +1092,37 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
     }
 
     if (mode === 'draw') {
+      staticLayerValidRef.current = false;
       const pts = activeStrokeRef.current;
+      if (e.type === 'pointerup' && !e.shiftKey && canvas && pts.length > 0) {
+        const rect = canvas.getBoundingClientRect();
+        let endWorld = screenToWorld(e.clientX, e.clientY, store.camera, rect);
+        if (Number.isFinite(endWorld.x) && Number.isFinite(endWorld.y)) {
+          const hasVirtualEdge =
+            store.currentTool === 'pen' &&
+            (store.virtualTools.ruler.active || store.virtualTools.setSquare.active);
+          if (hasVirtualEdge) {
+            endWorld = snapPointToVirtualToolEdge(
+              endWorld,
+              store.virtualTools,
+              16 / store.camera.zoom
+            ).point;
+          }
+          if (store.boardType === 'notebook') {
+            endWorld = clampPointToNotebookMargins(
+              endWorld,
+              getNotebookConfig(store.notebookPaperSize)
+            );
+          }
+          const last = pts[pts.length - 1];
+          if (Math.hypot(endWorld.x - last[0], endWorld.y - last[1]) >= 0.4 / store.camera.zoom) {
+            pts.push([endWorld.x, endWorld.y, last[2]]);
+          }
+        }
+      }
       activeStrokeRef.current = [];
       drawStartPointRef.current = null;
+      strokeStabilizerRef.current.reset();
       if (pts.length > 0 && (store.currentTool === 'pen' || store.currentTool === 'highlighter')) {
         const tempEl: BoardElement = {
           id: `el_${Math.random().toString(36).slice(2, 10)}`,
@@ -976,6 +1134,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
           points: pts,
           color: store.currentTool === 'highlighter' ? store.highlighterColor : store.color,
           strokeWidth: store.strokeWidth,
+          ...(store.currentTool === 'pen' ? { penStyle: store.penStyle } : {}),
           zIndex: store.elements.reduce((max, el) => Math.max(max, el.zIndex || 0), 0) + 1,
         };
         const bounds = getElementBounds(tempEl);

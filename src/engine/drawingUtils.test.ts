@@ -5,10 +5,12 @@ import {
   clampEraserSize,
   clampStrokeWidth,
   computeBrushRadiusWorld,
+  getPenStrokeProfile,
   magneticSnapLineEnd,
   stepEraserSize,
   stepStrokeWidth,
 } from './drawingUtils';
+import { computeStrokeOutline } from './renderer';
 
 test('clampStrokeWidth and clampEraserSize enforce safe bounds', () => {
   assert.equal(clampStrokeWidth(0), 1);
@@ -39,6 +41,53 @@ test('computeBrushRadiusWorld matches freehand pen and highlighter sizing', () =
   assert.equal(computeBrushRadiusWorld(1, false), 2.5 / 2);
   assert.equal(computeBrushRadiusWorld(4, true), 16 / 2);
   assert.equal(computeBrushRadiusWorld(8, true), (8 * 3.5) / 2);
+
+  assert.equal(computeBrushRadiusWorld(4, false, 'ballpoint'), (4 * 1.25) / 2);
+  assert.equal(computeBrushRadiusWorld(4, false, 'fountain'), (4 * 1.55) / 2);
+  assert.equal(computeBrushRadiusWorld(4, false, 'pencil'), (4 * 1.3) / 2);
+  assert.equal(computeBrushRadiusWorld(4, false, 'brush'), (4 * 2.1) / 2);
+});
+
+test('getPenStrokeProfile differentiates ballpoint, fountain, pencil, and brush nibs', () => {
+  const ballpoint = getPenStrokeProfile(4, 'ballpoint');
+  const fountain = getPenStrokeProfile(4, 'fountain');
+  const pencil = getPenStrokeProfile(4, 'pencil');
+  const brush = getPenStrokeProfile(4, 'brush');
+
+  assert.ok(ballpoint.thinning < fountain.thinning);
+  assert.ok(fountain.thinning < brush.thinning);
+  assert.ok(pencil.smoothing < fountain.smoothing);
+  assert.ok(brush.endTaper > ballpoint.endTaper);
+});
+
+test('computeStrokeOutline renders visible dots for single-tap and micro-tap strokes across all pen styles', () => {
+  const styles = ['ballpoint', 'fountain', 'pencil', 'brush', undefined] as const;
+
+  for (const style of styles) {
+    const single = computeStrokeOutline([[120, 80, 0.5]], 4, false, style);
+    assert.equal(single.outlinePoints.length, 1);
+    assert.ok(single.dotRadius >= 1.5, `dotRadius should be visible for ${style}`);
+
+    // Short 2px tap and 8px short accent must keep full round caps (never collapse to 5-pt sliver)
+    for (const endX of [122, 128]) {
+      const micro = computeStrokeOutline(
+        [
+          [120, 80, 0.08],
+          [120 + (endX - 120) * 0.5, 80.5, 0.08],
+          [endX, 81, 0.08],
+        ],
+        4,
+        false,
+        style
+      );
+      assert.ok(micro.outlinePoints.length >= 20, `short stroke lost caps for ${style} (len=${micro.outlinePoints.length})`);
+      const xs = micro.outlinePoints.map((p) => p[0]);
+      const ys = micro.outlinePoints.map((p) => p[1]);
+      const spanX = Math.max(...xs) - Math.min(...xs);
+      const spanY = Math.max(...ys) - Math.min(...ys);
+      assert.ok(spanX > 2 && spanY > 2, `short stroke outline too thin for ${style} (${spanX}x${spanY})`);
+    }
+  }
 });
 
 test('magneticSnapLineEnd snaps near cardinal and 45-degree angles while allowing free diagonals', () => {

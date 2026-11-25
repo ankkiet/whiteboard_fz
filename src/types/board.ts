@@ -12,6 +12,8 @@ export type ToolType =
   | 'image'
   | 'laser';
 
+export type PenStyle = 'ballpoint' | 'fountain' | 'pencil' | 'brush';
+
 export type EraserMode = 'stroke' | 'area';
 
 export type BoardType = 'basic' | 'math' | 'notebook' | 'mindmap';
@@ -78,6 +80,7 @@ export interface StrokeElement extends BaseElement {
   points: [number, number, number][]; // world [x, y, pressure]
   color: string;
   strokeWidth: number;
+  penStyle?: PenStyle;
 }
 
 export interface ShapeElement extends BaseElement {

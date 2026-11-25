@@ -16,7 +16,7 @@ import {
   Group,
   Ungroup,
 } from 'lucide-react';
-import { BoardElement, ShapeElement } from '../../types/board';
+import { BoardElement, PenStyle, ShapeElement, StrokeElement } from '../../types/board';
 import { getSelectedGroupSummary } from '../../engine/groupUtils';
 import {
   clampEraserSize,
@@ -30,6 +30,7 @@ import {
   getEraserSizes,
   getHighlighterColors,
   getInkColors,
+  getPenStyles,
   getStickyColors,
   getStrokeWidths,
 } from './toolbarConfig';
@@ -98,6 +99,7 @@ export const ContextualToolbar: React.FC = () => {
   const highlighterColors = getHighlighterColors(language);
   const stickyColors = getStickyColors(language);
   const strokeWidths = getStrokeWidths(language);
+  const penStyles = getPenStyles(language);
   const eraserSizes = getEraserSizes(language);
 
   const colorableElements = selectedElements.filter(
@@ -105,6 +107,9 @@ export const ContextualToolbar: React.FC = () => {
   );
   const strokeableElements = selectedElements.filter(
     (el): el is Extract<BoardElement, { strokeWidth: number }> => 'strokeWidth' in el
+  );
+  const penStrokeElements = selectedElements.filter(
+    (el): el is StrokeElement => el.type === 'stroke'
   );
   const fillableElements = selectedElements.filter(
     (el): el is ShapeElement =>
@@ -210,6 +215,15 @@ export const ContextualToolbar: React.FC = () => {
       setStrokeWidth(w);
     }
   };
+
+  const handlePenStylePick = (style: PenStyle) => {
+    updateSelectedElements(
+      (el) => (el.type === 'stroke' ? { ...el, penStyle: style } : el),
+      true
+    );
+  };
+
+  const activePenStyle = penStrokeElements[0]?.penStyle;
 
   const handleFontSizePick = (size: number) => {
     if (hasSelection) {
@@ -451,6 +465,37 @@ export const ContextualToolbar: React.FC = () => {
             >
               {activeStrokeWidth}px
             </span>
+          </div>
+        </>
+      )}
+
+      {penStrokeElements.length > 0 && (
+        <>
+          <div className="h-5 w-px bg-slate-200 dark:bg-slate-800 shrink-0" />
+          <div
+            className="flex items-center gap-1 p-0.5 rounded-xl bg-slate-100 dark:bg-slate-800/90 shrink-0"
+            role="group"
+            aria-label={t('Kiểu ngòi bút', 'Pen nib style')}
+          >
+            {penStyles.map((ps) => {
+              const isSelected = activePenStyle === ps.id;
+              return (
+                <button
+                  type="button"
+                  key={ps.id}
+                  onClick={() => handlePenStylePick(ps.id)}
+                  title={ps.desc}
+                  aria-pressed={isSelected}
+                  className={`px-2 py-1 rounded-lg text-xs font-medium transition-colors whitespace-nowrap cursor-pointer ${
+                    isSelected
+                      ? 'bg-indigo-600 text-white'
+                      : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  {ps.label}
+                </button>
+              );
+            })}
           </div>
         </>
       )}

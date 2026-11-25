@@ -1,10 +1,73 @@
-import { Point } from '../types/board';
+import { PenStyle, Point } from '../types/board';
 
 export const MIN_STROKE_WIDTH = 1;
 export const MAX_STROKE_WIDTH = 20;
 
 export const MIN_ERASER_SIZE = 10;
 export const MAX_ERASER_SIZE = 96;
+
+export interface PenStrokeProfile {
+  size: number;
+  thinning: number;
+  smoothing: number;
+  streamline: number;
+  startTaper: number;
+  endTaper: number;
+}
+
+/**
+ * Returns perfect-freehand stroke physics parameters tailored to each pen nib style.
+ * Legacy strokes with undefined `penStyle` keep the original balanced profile.
+ */
+export function getPenStrokeProfile(strokeWidth: number, penStyle?: PenStyle): PenStrokeProfile {
+  switch (penStyle) {
+    case 'ballpoint':
+      return {
+        size: Math.max(strokeWidth * 1.25, 2.2),
+        thinning: 0.16,
+        smoothing: 0.42,
+        streamline: 0.24,
+        startTaper: 0,
+        endTaper: 2,
+      };
+    case 'fountain':
+      return {
+        size: Math.max(strokeWidth * 1.55, 2.8),
+        thinning: 0.68,
+        smoothing: 0.55,
+        streamline: 0.35,
+        startTaper: 4,
+        endTaper: 10,
+      };
+    case 'pencil':
+      return {
+        size: Math.max(strokeWidth * 1.3, 2.2),
+        thinning: 0.28,
+        smoothing: 0.32,
+        streamline: 0.18,
+        startTaper: 2,
+        endTaper: 4,
+      };
+    case 'brush':
+      return {
+        size: Math.max(strokeWidth * 2.1, 4),
+        thinning: 0.82,
+        smoothing: 0.6,
+        streamline: 0.42,
+        startTaper: 8,
+        endTaper: 16,
+      };
+    default:
+      return {
+        size: Math.max(strokeWidth * 1.45, 2.5),
+        thinning: 0.55,
+        smoothing: 0.55,
+        streamline: 0.5,
+        startTaper: 0,
+        endTaper: 0,
+      };
+  }
+}
 
 /**
  * Clamps stroke width to safe integer bounds for pen, highlighter, and shapes.
@@ -42,11 +105,15 @@ export function stepEraserSize(current: number, direction: -1 | 1): number {
  * Computes the world-space radius of the live nib cursor so it matches the actual
  * rendered stroke diameter from perfect-freehand.
  */
-export function computeBrushRadiusWorld(strokeWidth: number, isHighlighter: boolean): number {
+export function computeBrushRadiusWorld(
+  strokeWidth: number,
+  isHighlighter: boolean,
+  penStyle?: PenStyle
+): number {
   if (isHighlighter) {
     return Math.max(strokeWidth * 3.5, 16) / 2;
   }
-  return Math.max(strokeWidth * 1.45, 2.5) / 2;
+  return getPenStrokeProfile(strokeWidth, penStyle).size / 2;
 }
 
 /**

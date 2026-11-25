@@ -13,6 +13,8 @@ export const useBoardStore = create<BoardState>()((set, get, api) => ({
   // Core board metadata, tools, camera, theme & toasts
   title: tr('Bảng trắng mới', 'Untitled board'),
   currentTool: 'pen',
+  penStyle: 'ballpoint',
+  penOnlyMode: false,
   color: '#1e293b',
   highlighterColor: '#fde047',
   fillColor: 'transparent',
@@ -43,6 +45,8 @@ export const useBoardStore = create<BoardState>()((set, get, api) => ({
       selectedIds: currentTool === 'select' ? state.selectedIds : [],
     })),
 
+  setPenStyle: (penStyle) => set({ penStyle }),
+  setPenOnlyMode: (penOnlyMode) => set({ penOnlyMode }),
   setColor: (color) => set({ color }),
   setHighlighterColor: (highlighterColor) => set({ highlighterColor }),
   setFillColor: (fillColor) => set({ fillColor }),

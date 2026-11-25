@@ -11,6 +11,7 @@ import {
   ImageElement,
   MathGradeMode,
   NotebookPaperSize,
+  PenStyle,
   ToastMessage,
   ToolType,
 } from '../types/board';
@@ -129,6 +130,8 @@ export interface BoardState {
   editingElementId: string | null;
   previewFileCardId: string | null;
   currentTool: ToolType;
+  penStyle: PenStyle;
+  penOnlyMode: boolean;
   color: string;
   highlighterColor: string;
   fillColor: string;
@@ -172,6 +175,8 @@ export interface BoardState {
   setEditingElementId: (id: string | null) => void;
   setPreviewFileCardId: (id: string | null) => void;
   setCurrentTool: (tool: ToolType) => void;
+  setPenStyle: (penStyle: PenStyle) => void;
+  setPenOnlyMode: (penOnlyMode: boolean) => void;
   setColor: (color: string) => void;
   setHighlighterColor: (color: string) => void;
   setFillColor: (fillColor: string) => void;

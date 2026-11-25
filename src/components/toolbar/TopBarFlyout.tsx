@@ -21,6 +21,7 @@ import {
   getInkColors,
   getNotebookPaperOptions,
   getPatterns,
+  getPenStyles,
   getStickyColors,
   getStrokeWidths,
   getTools,
@@ -37,6 +38,7 @@ import {
   Loader2,
   Maximize2,
   Moon,
+  PenTool,
   Pin,
   PinOff,
   Pipette,
@@ -91,6 +93,10 @@ export const TopBarFlyout: React.FC<TopBarFlyoutProps> = ({
   const clearBoard = useBoardStore((s) => s.clearBoard);
   const elementCount = useBoardStore((s) => s.elements.length);
   const currentTool = useBoardStore((s) => s.currentTool);
+  const penStyle = useBoardStore((s) => s.penStyle);
+  const setPenStyle = useBoardStore((s) => s.setPenStyle);
+  const penOnlyMode = useBoardStore((s) => s.penOnlyMode);
+  const setPenOnlyMode = useBoardStore((s) => s.setPenOnlyMode);
   const color = useBoardStore((s) => s.color);
   const setColor = useBoardStore((s) => s.setColor);
   const highlighterColor = useBoardStore((s) => s.highlighterColor);
@@ -150,6 +156,7 @@ export const TopBarFlyout: React.FC<TopBarFlyoutProps> = ({
   const stickyColors = getStickyColors(language);
   const eraserSizes = getEraserSizes(language);
   const strokeWidths = getStrokeWidths(language);
+  const penStyles = getPenStyles(language);
   const patterns = getPatterns(language);
   const notebookPaperStyles = getNotebookPaperStyles(language);
   const notebookPaperOptions = getNotebookPaperOptions(language);
@@ -259,10 +266,58 @@ export const TopBarFlyout: React.FC<TopBarFlyoutProps> = ({
 
       {/* Hàng 2: Màu sắc & nét vẽ */}
       <div className="border-t border-slate-100 dark:border-slate-800 pt-3">
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center justify-between gap-2 flex-wrap mb-2">
           <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
             {t('Màu sắc & thuộc tính nét', 'Colors & stroke properties')}
           </span>
+          {(currentTool === 'pen' || currentTool === 'highlighter') && (
+            <div className="flex items-center gap-2 flex-wrap">
+              {currentTool === 'pen' && (
+                <div
+                  className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg"
+                  role="group"
+                  aria-label={t('Kiểu ngòi bút', 'Pen nib style')}
+                >
+                  {penStyles.map((ps) => {
+                    const active = penStyle === ps.id;
+                    return (
+                      <button
+                        key={ps.id}
+                        type="button"
+                        onClick={() => setPenStyle(ps.id)}
+                        title={ps.desc}
+                        aria-pressed={active}
+                        className={`px-2 py-0.5 rounded-md text-xs font-medium transition-colors duration-150 cursor-pointer ${
+                          active
+                            ? 'bg-indigo-600 text-white'
+                            : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+                        }`}
+                      >
+                        {ps.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => setPenOnlyMode(!penOnlyMode)}
+                aria-pressed={penOnlyMode}
+                title={t(
+                  'Chống tỳ tay: khi bật, chạm ngón tay chỉ để kéo bảng, chỉ vẽ bằng bút cảm ứng hoặc chuột',
+                  'Palm rejection: when enabled, finger touch pans the board instead of drawing'
+                )}
+                className={`h-7 flex items-center gap-1.5 px-2 rounded-lg text-xs font-medium transition-colors duration-150 cursor-pointer ${
+                  penOnlyMode
+                    ? 'bg-indigo-50 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <PenTool className="w-3.5 h-3.5" strokeWidth={1.75} />
+                <span>{t('Chỉ viết bằng bút', 'Pen-only')}</span>
+              </button>
+            </div>
+          )}
           {currentTool === 'eraser' && (
             <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg">
               <button

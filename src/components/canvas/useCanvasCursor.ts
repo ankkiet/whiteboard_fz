@@ -19,6 +19,7 @@ export function useCanvasCursor({
   resolveCustomScreenPos,
 }: UseCanvasCursorOptions) {
   const currentTool = useBoardStore((s) => s.currentTool);
+  const penStyle = useBoardStore((s) => s.penStyle);
   const strokeWidth = useBoardStore((s) => s.strokeWidth);
   const eraserSize = useBoardStore((s) => s.eraserSize);
   const color = useBoardStore((s) => s.color);
@@ -43,7 +44,7 @@ export function useCanvasCursor({
     const dot = cursorDotRef.current;
 
     if (currentTool === 'pen') {
-      const worldRadius = computeBrushRadiusWorld(strokeWidth, false);
+      const worldRadius = computeBrushRadiusWorld(strokeWidth, false, penStyle);
       const screenRadius = Math.max(worldRadius * zoom, 3);
       const size = Math.round(screenRadius * 2);
       circle.style.width = `${size}px`;
@@ -53,6 +54,7 @@ export function useCanvasCursor({
       circle.style.boxShadow = isDarkMode
         ? '0 0 0 1px rgba(255, 255, 255, 0.4)'
         : '0 0 0 1px rgba(0, 0, 0, 0.25)';
+      circle.style.opacity = '1';
       dot.style.display = 'block';
       dot.style.backgroundColor = color;
     } else if (currentTool === 'highlighter') {
@@ -66,6 +68,7 @@ export function useCanvasCursor({
       circle.style.boxShadow = isDarkMode
         ? '0 0 0 1px rgba(255, 255, 255, 0.4)'
         : '0 0 0 1px rgba(0, 0, 0, 0.25)';
+      circle.style.opacity = '1';
       dot.style.display = 'none';
     } else if (currentTool === 'eraser' && eraserMode === 'area') {
       const size = Math.max(14, Math.round(eraserSize * zoom));
@@ -76,11 +79,13 @@ export function useCanvasCursor({
       circle.style.boxShadow = isDarkMode
         ? '0 0 0 1px rgba(255, 255, 255, 0.25)'
         : '0 0 0 1px rgba(0, 0, 0, 0.25)';
+      circle.style.opacity = '1';
       dot.style.display = 'block';
       dot.style.backgroundColor = '#ef4444';
     }
   }, [
     currentTool,
+    penStyle,
     strokeWidth,
     eraserSize,
     color,
@@ -119,6 +124,18 @@ export function useCanvasCursor({
     }
   }, []);
 
+  const setCursorDrawingState = useCallback(
+    (isDrawing: boolean) => {
+      if (!cursorCircleRef.current) return;
+      if (isDrawing && currentTool === 'pen') {
+        cursorCircleRef.current.style.opacity = '0.28';
+      } else {
+        cursorCircleRef.current.style.opacity = '1';
+      }
+    },
+    [currentTool]
+  );
+
   useEffect(() => {
     if (!cursorOverlayRef.current) return;
 
@@ -149,5 +166,6 @@ export function useCanvasCursor({
     cursorDotRef,
     updateCursorOverlayPos,
     hideCursorOverlay,
+    setCursorDrawingState,
   };
 }
