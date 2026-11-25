@@ -1,5 +1,6 @@
 import { StateCreator } from 'zustand';
 import { get as idbGet, set as idbSet } from 'idb-keyval';
+import { tr } from '../../i18n';
 import {
   LocalBoardPayload,
   deleteLocalBoard,
@@ -264,7 +265,7 @@ export const createPersistenceSlice: StateCreator<BoardState, [], [], Persistenc
       });
       get().commitHistory();
     }
-    get().addToast('Đã mở bảng trắng thành công', 'success');
+    get().addToast(tr('Đã mở bảng trắng thành công', 'Board opened successfully'), 'success');
   },
 
   startNewBoard: (options) => {
@@ -342,8 +343,8 @@ export const createPersistenceSlice: StateCreator<BoardState, [], [], Persistenc
       if (!payload) {
         get().addToast(
           isDesktopRuntime()
-            ? 'Không tìm thấy dữ liệu bảng trên máy.'
-            : 'Không tìm thấy dữ liệu bảng trên trình duyệt.',
+            ? tr('Không tìm thấy dữ liệu bảng trên máy.', 'Board data not found on this device.')
+            : tr('Không tìm thấy dữ liệu bảng trên trình duyệt.', 'Board data not found in browser storage.'),
           'error'
         );
         return false;
@@ -404,8 +405,8 @@ export const createPersistenceSlice: StateCreator<BoardState, [], [], Persistenc
       console.error('Failed to open local board', e);
       get().addToast(
         isDesktopRuntime()
-          ? 'Không thể mở bảng từ bộ nhớ máy.'
-          : 'Không thể mở bảng từ bộ nhớ trình duyệt.',
+          ? tr('Không thể mở bảng từ bộ nhớ máy.', 'Unable to open board from local storage.')
+          : tr('Không thể mở bảng từ bộ nhớ trình duyệt.', 'Unable to open board from browser storage.'),
         'error'
       );
       return false;
@@ -422,7 +423,10 @@ export const createPersistenceSlice: StateCreator<BoardState, [], [], Persistenc
     if (get().activeLocalBoardId === id) {
       await get().saveToStorageNow();
     }
-    get().addToast(`Đã đổi tên thành "${res.meta.title}"`, 'success');
+    get().addToast(
+      tr(`Đã đổi tên thành "${res.meta.title}"`, `Renamed to "${res.meta.title}"`),
+      'success'
+    );
     return true;
   },
 
@@ -432,11 +436,14 @@ export const createPersistenceSlice: StateCreator<BoardState, [], [], Persistenc
     }
     const res = await duplicateLocalBoard(id);
     if (!res) {
-      get().addToast('Không thể nhân bản bảng này.', 'error');
+      get().addToast(tr('Không thể nhân bản bảng này.', 'Unable to duplicate this board.'), 'error');
       return null;
     }
     set({ localBoards: res.list });
-    get().addToast(`Đã tạo bản sao "${res.meta.title}"`, 'success');
+    get().addToast(
+      tr(`Đã tạo bản sao "${res.meta.title}"`, `Created copy "${res.meta.title}"`),
+      'success'
+    );
     return res.meta;
   },
 
@@ -451,12 +458,13 @@ export const createPersistenceSlice: StateCreator<BoardState, [], [], Persistenc
       if (nextList.length > 0) {
         await get().openLocalBoard(nextList[0].id);
       } else {
+        const defaultTitle = tr('Bảng trắng mới', 'Untitled board');
         set({
           activeLocalBoardId: null,
           activeDriveFileId: null,
           driveSyncedSignature: null,
           hasUserEditedCurrentBoard: false,
-          title: 'Bảng trắng mới',
+          title: defaultTitle,
           boardType: 'basic',
           boardPattern: 'grid',
           notebookPaperSize: 'a4',
@@ -476,7 +484,7 @@ export const createPersistenceSlice: StateCreator<BoardState, [], [], Persistenc
             activeDriveFileId: null,
             driveSyncedSignature: null,
             elements: [],
-            title: 'Bảng trắng mới',
+            title: defaultTitle,
             theme: get().theme,
             boardType: 'basic',
             boardPattern: 'grid',
@@ -488,7 +496,9 @@ export const createPersistenceSlice: StateCreator<BoardState, [], [], Persistenc
       }
     }
     get().addToast(
-      isDesktopRuntime() ? 'Đã xóa bảng khỏi bộ nhớ máy' : 'Đã xóa bảng khỏi bộ nhớ trình duyệt',
+      isDesktopRuntime()
+        ? tr('Đã xóa bảng khỏi bộ nhớ máy', 'Deleted board from device storage')
+        : tr('Đã xóa bảng khỏi bộ nhớ trình duyệt', 'Deleted board from browser storage'),
       'info'
     );
   },
@@ -520,7 +530,7 @@ export const createPersistenceSlice: StateCreator<BoardState, [], [], Persistenc
         const safePattern = normalizeBoardPattern(boardPattern || getBoardTemplate(safeType).pattern);
         const safePaperSize = normalizeNotebookPaperSize(notebookPaperSize);
         const safeGradeMode = normalizeMathGradeMode(mathGradeMode);
-        const safeTitle = title || 'Bảng trắng mới';
+        const safeTitle = title || tr('Bảng trắng mới', 'Untitled board');
         let safeAssets: Record<string, string> = {};
         if (savedData.hasSeparateAssets) {
           const separateAssets = await idbGet<Record<string, string>>(STORAGE_ASSETS_KEY);

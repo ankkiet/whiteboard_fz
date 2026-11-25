@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 import { normalizeNotebookPaperSize } from '../engine/notebookEngine';
+import { getBoardTemplate, isDefaultBoardTitle } from '../engine/boardTemplates';
+import { getAppLanguage, setAppLanguageState, tr } from '../i18n';
 import { BoardState, uid } from './boardStoreTypes';
 import { createElementsSlice } from './slices/elementsSlice';
 import { createMathToolsSlice } from './slices/mathToolsSlice';
@@ -9,7 +11,7 @@ export type { BoardState, PinnedProblemState } from './boardStoreTypes';
 
 export const useBoardStore = create<BoardState>()((set, get, api) => ({
   // Core board metadata, tools, camera, theme & toasts
-  title: 'Bảng trắng mới',
+  title: tr('Bảng trắng mới', 'Untitled board'),
   currentTool: 'pen',
   color: '#1e293b',
   highlighterColor: '#fde047',
@@ -22,6 +24,7 @@ export const useBoardStore = create<BoardState>()((set, get, api) => ({
   camera: { x: 0, y: 0, zoom: 1 },
   theme: 'light',
   isDarkMode: false,
+  language: getAppLanguage(),
   boardType: 'basic',
   boardPattern: 'grid',
   notebookPaperSize: 'a4',
@@ -61,6 +64,23 @@ export const useBoardStore = create<BoardState>()((set, get, api) => ({
     }
     set({ theme, isDarkMode: isDark });
     get().scheduleSave();
+  },
+
+  setLanguage: (language) => {
+    setAppLanguageState(language);
+    const state = get();
+    const shouldSyncDefaultTitle =
+      !state.hasUserEditedCurrentBoard &&
+      state.elements.length === 0 &&
+      !state.activeLocalBoardId &&
+      !state.activeDriveFileId &&
+      isDefaultBoardTitle(state.title);
+    set({
+      language,
+      ...(shouldSyncDefaultTitle
+        ? { title: getBoardTemplate(state.boardType, language).defaultTitle }
+        : {}),
+    });
   },
 
   setBoardType: (boardType) => {

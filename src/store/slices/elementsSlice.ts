@@ -1,6 +1,7 @@
 import { StateCreator } from 'zustand';
 import { BoardElement, FileCardElement, ImageElement } from '../../types/board';
 import { translateElement } from '../../engine/geometry';
+import { tr } from '../../i18n';
 import {
   cleanupOrphanGroups,
   duplicateElementsPreservingGroups,
@@ -192,7 +193,10 @@ export const createElementsSlice: StateCreator<BoardState, [], [], ElementsSlice
       return el && !el.isLocked;
     });
     if (removableIds.length === 0) {
-      get().addToast('Đối tượng đang bị khóa. Mở khóa trước khi xóa.', 'info');
+      get().addToast(
+        tr('Đối tượng đang bị khóa. Mở khóa trước khi xóa.', 'Selected items are locked. Unlock before deleting.'),
+        'info'
+      );
       return;
     }
     get().deleteElementsByIds(removableIds);
@@ -217,7 +221,7 @@ export const createElementsSlice: StateCreator<BoardState, [], [], ElementsSlice
       editingGroupId: null,
     });
     get().commitHistory();
-    get().addToast('Đã nhân bản đối tượng', 'success');
+    get().addToast(tr('Đã nhân bản đối tượng', 'Duplicated selection'), 'success');
   },
 
   groupSelected: () => {
@@ -230,7 +234,10 @@ export const createElementsSlice: StateCreator<BoardState, [], [], ElementsSlice
       selectedIds: res.selectedIds,
     });
     get().commitHistory();
-    get().addToast(`Đã nhóm ${res.selectedIds.length} đối tượng`, 'success');
+    get().addToast(
+      tr(`Đã nhóm ${res.selectedIds.length} đối tượng`, `Grouped ${res.selectedIds.length} items`),
+      'success'
+    );
   },
 
   ungroupSelected: () => {
@@ -244,7 +251,7 @@ export const createElementsSlice: StateCreator<BoardState, [], [], ElementsSlice
       editingGroupId: null,
     });
     get().commitHistory();
-    get().addToast('Đã bỏ nhóm đối tượng', 'info');
+    get().addToast(tr('Đã bỏ nhóm đối tượng', 'Ungrouped selection'), 'info');
   },
 
   nudgeSelected: (dx, dy) => {
@@ -297,7 +304,12 @@ export const createElementsSlice: StateCreator<BoardState, [], [], ElementsSlice
     const allLocked = selectedEls.every((el) => el.isLocked);
     const nextLocked = !allLocked;
     get().updateSelectedElements((el) => ({ ...el, isLocked: nextLocked }), true);
-    get().addToast(nextLocked ? 'Đã khóa đối tượng' : 'Đã mở khóa đối tượng', 'info');
+    get().addToast(
+      nextLocked
+        ? tr('Đã khóa đối tượng', 'Locked selection')
+        : tr('Đã mở khóa đối tượng', 'Unlocked selection'),
+      'info'
+    );
   },
 
   insertImageFromDataUrl: async (dataUrl, fileName, worldDropPoint) => {
@@ -342,11 +354,11 @@ export const createElementsSlice: StateCreator<BoardState, [], [], ElementsSlice
           currentTool: 'select',
         });
         get().commitHistory();
-        get().addToast('Đã chèn hình ảnh vào bảng', 'success');
+        get().addToast(tr('Đã chèn hình ảnh vào bảng', 'Image inserted onto board'), 'success');
         resolve();
       };
       img.onerror = () => {
-        get().addToast('Không thể đọc tệp hình ảnh này.', 'error');
+        get().addToast(tr('Không thể đọc tệp hình ảnh này.', 'Unable to read this image file.'), 'error');
         resolve();
       };
       img.src = dataUrl;
@@ -455,12 +467,18 @@ export const createElementsSlice: StateCreator<BoardState, [], [], ElementsSlice
       currentTool: 'select',
     });
     get().commitHistory();
-    get().addToast(`Đã đính kèm thẻ tài liệu "${payload.fileName}"`, 'success');
+    get().addToast(
+      tr(
+        `Đã đính kèm thẻ tài liệu "${payload.fileName}"`,
+        `Attached document card "${payload.fileName}"`
+      ),
+      'success'
+    );
   },
 
   clearBoard: () => {
     set({ elements: [], selectedIds: [], editingGroupId: null, editingElementId: null });
     get().commitHistory();
-    get().addToast('Đã xóa toàn bộ nội dung bảng', 'info');
+    get().addToast(tr('Đã xóa toàn bộ nội dung bảng', 'Cleared board contents'), 'info');
   },
 });

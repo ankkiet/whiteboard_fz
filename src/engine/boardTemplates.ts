@@ -1,3 +1,4 @@
+import { AppLanguage, getAppLanguage, tr } from '../i18n';
 import { BoardElement, BoardPattern, BoardType, ToolType } from '../types/board';
 
 export interface BoardTemplateConfig {
@@ -11,55 +12,107 @@ export interface BoardTemplateConfig {
   centerOriginCamera: boolean;
 }
 
-export const BOARD_TEMPLATES: BoardTemplateConfig[] = [
+interface BoardTemplateLocalizedDef {
+  id: BoardType;
+  name: { vi: string; en: string };
+  shortName: { vi: string; en: string };
+  defaultTitle: { vi: string; en: string };
+  description: { vi: string; en: string };
+  pattern: BoardPattern;
+  defaultTool: ToolType;
+  centerOriginCamera: boolean;
+}
+
+const BOARD_TEMPLATE_DEFS: BoardTemplateLocalizedDef[] = [
   {
     id: 'basic',
-    name: 'Bảng trắng cơ bản',
-    shortName: 'Cơ bản',
-    defaultTitle: 'Bảng trắng mới',
-    description: 'Khung vẽ vô tận nền ô ly nhẹ để viết tay, vẽ hình và ghi chú tự do',
+    name: { vi: 'Bảng trắng cơ bản', en: 'Basic whiteboard' },
+    shortName: { vi: 'Cơ bản', en: 'Basic' },
+    defaultTitle: { vi: 'Bảng trắng mới', en: 'Untitled board' },
+    description: {
+      vi: 'Khung vẽ vô tận nền ô ly nhẹ để viết tay, vẽ hình và ghi chú tự do',
+      en: 'Infinite grid canvas for handwriting, sketching shapes, and freeform notes',
+    },
     pattern: 'grid',
     defaultTool: 'pen',
     centerOriginCamera: false,
   },
   {
     id: 'math',
-    name: 'Bảng trắng toán học',
-    shortName: 'Toán học',
-    defaultTitle: 'Bảng toán học mới',
-    description: 'Nền ô ly gọn gàng kèm công cụ soạn công thức, dựng hình học và vẽ đồ thị',
+    name: { vi: 'Bảng trắng toán học', en: 'Math whiteboard' },
+    shortName: { vi: 'Toán học', en: 'Math' },
+    defaultTitle: { vi: 'Bảng toán học mới', en: 'Untitled math board' },
+    description: {
+      vi: 'Nền ô ly gọn gàng kèm công cụ soạn công thức, dựng hình học và vẽ đồ thị',
+      en: 'Clean grid canvas with formula editor, geometry tools, and function graphing',
+    },
     pattern: 'grid',
     defaultTool: 'pen',
     centerOriginCamera: true,
   },
   {
     id: 'notebook',
-    name: 'Vở ghi chú dòng kẻ',
-    shortName: 'Ghi chú',
-    defaultTitle: 'Ghi chú mới',
-    description: 'Nền dòng kẻ ngay ngắn, tối ưu cho ghi chép bài giảng và tóm tắt nội dung',
+    name: { vi: 'Vở ghi chú dòng kẻ', en: 'Ruled notebook' },
+    shortName: { vi: 'Ghi chú', en: 'Notebook' },
+    defaultTitle: { vi: 'Ghi chú mới', en: 'Untitled notebook' },
+    description: {
+      vi: 'Nền dòng kẻ ngay ngắn, tối ưu cho ghi chép bài giảng và tóm tắt nội dung',
+      en: 'Structured lined pages optimized for lecture notes and study summaries',
+    },
     pattern: 'lined',
     defaultTool: 'pen',
     centerOriginCamera: false,
   },
   {
     id: 'mindmap',
-    name: 'Sơ đồ tư duy',
-    shortName: 'Sơ đồ tư duy',
-    defaultTitle: 'Sơ đồ tư duy mới',
-    description: 'Nền chấm bi kèm khung chủ đề trung tâm và các nhánh gợi ý sẵn',
+    name: { vi: 'Sơ đồ tư duy', en: 'Mind map' },
+    shortName: { vi: 'Sơ đồ tư duy', en: 'Mind map' },
+    defaultTitle: { vi: 'Sơ đồ tư duy mới', en: 'Untitled mind map' },
+    description: {
+      vi: 'Nền chấm bi kèm khung chủ đề trung tâm và các nhánh gợi ý sẵn',
+      en: 'Dotted canvas with a central topic node and starter branches ready to edit',
+    },
     pattern: 'dots',
     defaultTool: 'select',
     centerOriginCamera: true,
   },
 ];
 
-export function getBoardTemplate(type: BoardType): BoardTemplateConfig {
-  return BOARD_TEMPLATES.find((t) => t.id === type) || BOARD_TEMPLATES[0];
+export function getBoardTemplates(lang: AppLanguage = getAppLanguage()): BoardTemplateConfig[] {
+  return BOARD_TEMPLATE_DEFS.map((def) => ({
+    id: def.id,
+    name: def.name[lang],
+    shortName: def.shortName[lang],
+    defaultTitle: def.defaultTitle[lang],
+    description: def.description[lang],
+    pattern: def.pattern,
+    defaultTool: def.defaultTool,
+    centerOriginCamera: def.centerOriginCamera,
+  }));
 }
 
-export function getBoardTypeLabel(type: BoardType): string {
-  return getBoardTemplate(type).shortName;
+export const BOARD_TEMPLATES: BoardTemplateConfig[] = getBoardTemplates('vi');
+
+export function getBoardTemplate(
+  type: BoardType,
+  lang: AppLanguage = getAppLanguage()
+): BoardTemplateConfig {
+  const templates = getBoardTemplates(lang);
+  return templates.find((t) => t.id === type) || templates[0];
+}
+
+export function getBoardTypeLabel(
+  type: BoardType,
+  lang: AppLanguage = getAppLanguage()
+): string {
+  return getBoardTemplate(type, lang).shortName;
+}
+
+export function isDefaultBoardTitle(title: string): boolean {
+  const trimmed = title.trim();
+  return BOARD_TEMPLATE_DEFS.some(
+    (def) => def.defaultTitle.vi === trimmed || def.defaultTitle.en === trimmed
+  );
 }
 
 export function normalizeBoardType(raw: unknown): BoardType {
@@ -97,7 +150,8 @@ export function normalizeBoardPattern(raw: unknown): BoardPattern {
  */
 export function buildStarterElementsForTemplate(
   type: BoardType,
-  createId: (prefix: string) => string
+  createId: (prefix: string) => string,
+  lang: AppLanguage = getAppLanguage()
 ): BoardElement[] {
   if (type !== 'mindmap') {
     return [];
@@ -118,7 +172,7 @@ export function buildStarterElementsForTemplate(
       x: 240,
       y: -150,
       color: '#2563eb',
-      title: 'Ý tưởng chính 1',
+      title: tr('Ý tưởng chính 1', 'Main idea 1', lang),
       anchorStart: { x: 110, y: -22 },
       anchorEnd: { x: 236, y: -116 },
     },
@@ -126,7 +180,7 @@ export function buildStarterElementsForTemplate(
       x: 240,
       y: 78,
       color: '#059669',
-      title: 'Ý tưởng chính 2',
+      title: tr('Ý tưởng chính 2', 'Main idea 2', lang),
       anchorStart: { x: 110, y: 22 },
       anchorEnd: { x: 236, y: 112 },
     },
@@ -134,7 +188,7 @@ export function buildStarterElementsForTemplate(
       x: -420,
       y: -36,
       color: '#d97706',
-      title: 'Ghi chú & bước làm',
+      title: tr('Ghi chú & bước làm', 'Notes & next steps', lang),
       anchorStart: { x: -110, y: 0 },
       anchorEnd: { x: -236, y: 0 },
     },
@@ -161,7 +215,7 @@ export function buildStarterElementsForTemplate(
       y: -16,
       width: 176,
       height: 36,
-      text: 'Chủ đề trung tâm',
+      text: tr('Chủ đề trung tâm', 'Central topic', lang),
       color: '#4f46e5',
       fontSize: 20,
       groupIds: [centerGroupId],

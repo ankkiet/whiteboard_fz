@@ -1,6 +1,8 @@
 import React, { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useBoardStore } from './store/useBoardStore';
+import { applyDocumentLanguage } from './i18n';
+import { useI18n } from './i18n/useI18n';
 import { useGoogleDriveWorkspace } from './hooks/useGoogleDriveWorkspace';
 import { HomePage } from './pages/HomePage';
 import { DesktopAppModal } from './components/modals/DesktopAppModal';
@@ -33,18 +35,26 @@ function shouldAutoOpenAuthBridge(): boolean {
   return params.get('auth_bridge') === '1' || window.location.hash.includes('auth_bridge');
 }
 
-const EditorLoadingFallback: React.FC = () => (
-  <div className="w-full h-full flex items-center justify-center bg-slate-50 dark:bg-slate-950 text-slate-500 dark:text-slate-400">
-    <div className="flex items-center gap-2.5 text-sm font-medium">
-      <Loader2 className="w-4 h-4 animate-spin text-indigo-600 dark:text-indigo-400" />
-      <span>Đang mở bảng viết...</span>
+const EditorLoadingFallback: React.FC = () => {
+  const { t } = useI18n();
+  return (
+    <div className="w-full h-full flex items-center justify-center bg-slate-50 dark:bg-slate-950 text-slate-500 dark:text-slate-400">
+      <div className="flex items-center gap-2.5 text-sm font-medium">
+        <Loader2 className="w-4 h-4 animate-spin text-indigo-600 dark:text-indigo-400" />
+        <span>{t('Đang mở bảng viết...', 'Opening whiteboard...')}</span>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 export default function App() {
   const loadFromStorage = useBoardStore((s) => s.loadFromStorage);
   const saveToStorageNow = useBoardStore((s) => s.saveToStorageNow);
+  const language = useBoardStore((s) => s.language);
+
+  useEffect(() => {
+    applyDocumentLanguage(language);
+  }, [language]);
 
   const drive = useGoogleDriveWorkspace();
 

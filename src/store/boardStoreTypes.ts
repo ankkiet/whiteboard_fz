@@ -1,4 +1,5 @@
 import { LocalBoardMeta } from '../services/localBoardLibrary';
+import { AppLanguage } from '../i18n';
 import {
   BoardElement,
   BoardPattern,
@@ -139,6 +140,7 @@ export interface BoardState {
   camera: Camera;
   theme: 'light' | 'dark';
   isDarkMode: boolean;
+  language: AppLanguage;
   boardType: BoardType;
   boardPattern: BoardPattern;
   notebookPaperSize: NotebookPaperSize;
@@ -180,6 +182,7 @@ export interface BoardState {
   setEraserSize: (size: number) => void;
   setCamera: (camera: Camera | ((prev: Camera) => Camera)) => void;
   setTheme: (theme: 'light' | 'dark') => void;
+  setLanguage: (language: AppLanguage) => void;
   setBoardType: (boardType: BoardType) => void;
   setBoardPattern: (pattern: BoardPattern) => void;
   setNotebookPaperSize: (size: NotebookPaperSize) => void;

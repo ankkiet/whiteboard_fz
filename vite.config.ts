@@ -64,9 +64,9 @@ export default defineConfig(() => {
                 .slice(0, 12);
 
               const versionManifest = {
-                version: 'v_fz.1.1.1.1.9',
+                version: 'v_fz.1.1.1.1.10',
                 buildId,
-                notes: 'Bản cập nhật fzInK (Sửa lỗi báo cập nhật giả giữa CI Windows/Linux, thêm nút Cập nhật ngay 1 chạm có thanh tiến trình)',
+                notes: 'Bản cập nhật fzInK (Sửa lỗi chèn PDF trên app desktop và tối ưu mượt khi chèn nhiều trang PDF)',
                 updateOrigin: 'https://whiteboardfz.pages.dev',
               };
 
