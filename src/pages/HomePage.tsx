@@ -1,8 +1,10 @@
 import React, { useMemo, useState } from 'react';
 import { useBoardStore } from '../store/useBoardStore';
 import { GoogleDriveWorkspaceState } from '../hooks/useGoogleDriveWorkspace';
+import { StartDesktopUpdateParams } from '../hooks/useDesktopUpdate';
 import { isWhiteboardProjectFile } from '../services/googleDriveUtils';
-import { BOARD_TEMPLATES } from '../engine/boardTemplates';
+import { getBoardTemplates } from '../engine/boardTemplates';
+import { useI18n } from '../i18n/useI18n';
 import { BoardPattern, BoardType, NotebookPaperSize } from '../types/board';
 import { BoardTemplatePreview } from '../components/home/BoardTemplatePreview';
 import { HomeHeader } from '../components/home/HomeHeader';
@@ -16,6 +18,7 @@ interface HomePageProps {
   onEnterEditor: () => void;
   onOpenDesktopAppClick: () => void;
   onOpenAuthBridgeClick?: () => void;
+  onStartDesktopUpdate?: (params: StartDesktopUpdateParams) => void;
 }
 
 export const HomePage: React.FC<HomePageProps> = ({
@@ -23,6 +26,7 @@ export const HomePage: React.FC<HomePageProps> = ({
   onEnterEditor,
   onOpenDesktopAppClick,
   onOpenAuthBridgeClick,
+  onStartDesktopUpdate,
 }) => {
   const localTitle = useBoardStore((s) => s.title);
   const localBoardType = useBoardStore((s) => s.boardType);
@@ -30,6 +34,7 @@ export const HomePage: React.FC<HomePageProps> = ({
   const theme = useBoardStore((s) => s.theme);
   const setTheme = useBoardStore((s) => s.setTheme);
   const startNewBoard = useBoardStore((s) => s.startNewBoard);
+  const { language, t } = useI18n();
 
   const isFileProtocol = typeof window !== 'undefined' && window.location.protocol === 'file:';
 
@@ -37,6 +42,8 @@ export const HomePage: React.FC<HomePageProps> = ({
     open: boolean;
     initialType: BoardType;
   }>({ open: false, initialType: 'basic' });
+
+  const templates = useMemo(() => getBoardTemplates(language), [language]);
 
   const boardCount = useMemo(
     () => drive.files.filter((f) => isWhiteboardProjectFile(f)).length,
@@ -83,6 +90,7 @@ export const HomePage: React.FC<HomePageProps> = ({
         onCreateNewClick={() => handleOpenCreateModal('basic')}
         onOpenDesktopAppClick={onOpenDesktopAppClick}
         onOpenAuthBridgeClick={onOpenAuthBridgeClick}
+        onStartDesktopUpdate={onStartDesktopUpdate}
       />
 
       {/* Main Content */}
@@ -108,15 +116,18 @@ export const HomePage: React.FC<HomePageProps> = ({
               id="board-templates-heading"
               className="text-base font-medium text-slate-900 dark:text-slate-100"
             >
-              Tạo nhanh theo mẫu
+              {t('Tạo nhanh theo mẫu', 'Quick-start templates')}
             </h2>
             <span className="text-xs text-slate-500 dark:text-slate-400 hidden sm:inline">
-              Chọn mẫu bảng phù hợp để bắt đầu ngay
+              {t(
+                'Chọn mẫu bảng phù hợp để bắt đầu ngay',
+                'Pick a board template to start right away'
+              )}
             </span>
           </div>
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {BOARD_TEMPLATES.map((tpl) => (
+            {templates.map((tpl) => (
               <button
                 key={tpl.id}
                 type="button"

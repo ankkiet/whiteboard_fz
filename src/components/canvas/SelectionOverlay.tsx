@@ -14,6 +14,7 @@ import {
   getSelectedGroupSummary,
 } from '../../engine/groupUtils';
 import { BoardElement, Point, Rect, ResizeHandle, ShapeElement } from '../../types/board';
+import { useI18n } from '../../i18n/useI18n';
 import { Group, Lock } from 'lucide-react';
 
 const HANDLE_CONFIGS: { id: ResizeHandle; style: React.CSSProperties; cursor: string }[] = [
@@ -28,6 +29,7 @@ const HANDLE_CONFIGS: { id: ResizeHandle; style: React.CSSProperties; cursor: st
 ];
 
 export const SelectionOverlay: React.FC = () => {
+  const { t } = useI18n();
   const elements = useBoardStore((s) => s.elements);
   const selectedIds = useBoardStore((s) => s.selectedIds);
   const editingGroupId = useBoardStore((s) => s.editingGroupId);
@@ -244,7 +246,7 @@ export const SelectionOverlay: React.FC = () => {
         >
           <div className="absolute -top-6 left-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-800/90 dark:bg-slate-200/90 text-white dark:text-slate-900 text-[10px] font-medium whitespace-nowrap shadow-xs">
             <Group className="w-3 h-3" />
-            <span>Đang sửa trong nhóm · Esc để thoát</span>
+            <span>{t('Đang sửa trong nhóm · Esc để thoát', 'Editing inside group · Esc to exit')}</span>
           </div>
         </div>
       )}
@@ -310,7 +312,14 @@ export const SelectionOverlay: React.FC = () => {
           {isLockedSelection ? (
             <div className="absolute -top-7 left-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500 text-white text-[11px] font-medium shadow-sm whitespace-nowrap">
               <Lock className="w-3 h-3" />
-              <span>{groupSummary.isSingleGroup ? `Đã khóa · Nhóm (${selectedElements.length})` : 'Đã khóa'}</span>
+              <span>
+                {groupSummary.isSingleGroup
+                  ? t(
+                      `Đã khóa · Nhóm (${selectedElements.length})`,
+                      `Locked · Group (${selectedElements.length})`
+                    )
+                  : t('Đã khóa', 'Locked')}
+              </span>
             </div>
           ) : (
             <>
@@ -320,7 +329,12 @@ export const SelectionOverlay: React.FC = () => {
                   className="absolute -top-7 left-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-indigo-600 text-white text-[11px] font-medium shadow-sm whitespace-nowrap tabular-nums"
                 >
                   <Group className="w-3 h-3" />
-                  <span>Nhóm · {selectedElements.length} mục</span>
+                  <span>
+                    {t(
+                      `Nhóm · ${selectedElements.length} mục`,
+                      `Group · ${selectedElements.length} items`
+                    )}
+                  </span>
                 </div>
               )}
               {HANDLE_CONFIGS.map((h) => (
@@ -351,10 +365,16 @@ export const SelectionOverlay: React.FC = () => {
           <textarea
             ref={textareaRef}
             data-testid="inline-text-editor"
-            aria-label={editingElement.type === 'sticky' ? 'Nội dung ghi chú dán' : 'Nội dung văn bản'}
+            aria-label={
+              editingElement.type === 'sticky'
+                ? t('Nội dung ghi chú dán', 'Sticky note content')
+                : t('Nội dung văn bản', 'Text content')
+            }
             value={editingElement.text}
             placeholder={
-              editingElement.type === 'sticky' ? 'Nhập ghi chú...' : 'Nhập văn bản...'
+              editingElement.type === 'sticky'
+                ? t('Nhập ghi chú...', 'Enter note...')
+                : t('Nhập văn bản...', 'Enter text...')
             }
             onChange={(e) => handleTextChange(editingElement, e.target.value)}
             onBlur={() => {
@@ -388,7 +408,7 @@ export const SelectionOverlay: React.FC = () => {
             }}
           />
           <div className="pointer-events-none mt-1.5 text-[11px] font-medium text-slate-500 dark:text-slate-400 whitespace-nowrap select-none">
-            Nhấn Esc hoặc Ctrl+Enter để xong
+            {t('Nhấn Esc hoặc Ctrl+Enter để xong', 'Press Esc or Ctrl+Enter when done')}
           </div>
         </div>
       )}

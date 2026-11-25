@@ -1,4 +1,5 @@
 import React from 'react';
+import { useI18n } from '../../i18n/useI18n';
 
 export type AppLogoConcept = 'infinite' | 'monogram' | 'easel';
 
@@ -68,6 +69,7 @@ export const AppLogo: React.FC<AppLogoProps> = ({
   className = '',
   showSubtitle = false,
 }) => {
+  const { t } = useI18n();
   const renderSvg = () => {
     switch (concept) {
       case 'monogram':
@@ -105,7 +107,7 @@ export const AppLogo: React.FC<AppLogoProps> = ({
         </span>
         {showSubtitle && (
           <span className="text-xs font-normal text-slate-500 dark:text-slate-400 mt-1 truncate">
-            Bảng trắng tương tác
+            {t('Bảng trắng tương tác', 'Interactive whiteboard')}
           </span>
         )}
       </div>

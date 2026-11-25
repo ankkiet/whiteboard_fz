@@ -4,8 +4,10 @@ import { useBoardStore } from './store/useBoardStore';
 import { applyDocumentLanguage } from './i18n';
 import { useI18n } from './i18n/useI18n';
 import { useGoogleDriveWorkspace } from './hooks/useGoogleDriveWorkspace';
+import { useDesktopUpdate } from './hooks/useDesktopUpdate';
 import { HomePage } from './pages/HomePage';
 import { DesktopAppModal } from './components/modals/DesktopAppModal';
+import { DesktopUpdateModal } from './components/modals/DesktopUpdateModal';
 import { AuthBridgeModal } from './components/modals/AuthBridgeModal';
 import { OfflineIndicator } from './components/ui/OfflineIndicator';
 import { ToastContainer } from './components/ui/ToastContainer';
@@ -64,6 +66,17 @@ export default function App() {
   const [isAuthBridgeOpen, setIsAuthBridgeOpen] = useState<boolean>(shouldAutoOpenAuthBridge);
   const isAuthBridgeOpenRef = useRef(isAuthBridgeOpen);
   const [authBridgeVersion, setAuthBridgeVersion] = useState(0);
+
+  const {
+    updateSession,
+    startDesktopUpdate,
+    cancelDesktopUpdate,
+    retryDesktopUpdate,
+    dismissDesktopUpdate,
+  } = useDesktopUpdate({
+    drive,
+    onFallbackOpenDesktopModal: () => setIsDesktopAppOpen(true),
+  });
 
   useEffect(() => {
     isAuthBridgeOpenRef.current = isAuthBridgeOpen;
@@ -168,6 +181,7 @@ export default function App() {
           onEnterEditor={handleEnterEditor}
           onOpenDesktopAppClick={() => setIsDesktopAppOpen(true)}
           onOpenAuthBridgeClick={() => setIsAuthBridgeOpen(true)}
+          onStartDesktopUpdate={startDesktopUpdate}
         />
       ) : (
         <Suspense fallback={<EditorLoadingFallback />}>
@@ -183,6 +197,12 @@ export default function App() {
       <DesktopAppModal
         isOpen={isDesktopAppOpen}
         onClose={() => setIsDesktopAppOpen(false)}
+      />
+      <DesktopUpdateModal
+        session={updateSession}
+        onCancel={() => void cancelDesktopUpdate()}
+        onRetry={retryDesktopUpdate}
+        onClose={dismissDesktopUpdate}
       />
       <AuthBridgeModal
         isOpen={isAuthBridgeOpen}

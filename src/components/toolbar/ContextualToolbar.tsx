@@ -26,42 +26,14 @@ import {
   MIN_ERASER_SIZE,
   MIN_STROKE_WIDTH,
 } from '../../engine/drawingUtils';
-
-const INK_COLORS = [
-  { hex: '#1e293b', label: 'Mực chuẩn' },
-  { hex: '#4f46e5', label: 'Chàm' },
-  { hex: '#2563eb', label: 'Xanh dương' },
-  { hex: '#059669', label: 'Xanh lá' },
-  { hex: '#d97706', label: 'Hổ phách' },
-  { hex: '#e11d48', label: 'Đỏ hồng' },
-  { hex: '#7c3aed', label: 'Tím' },
-  { hex: '#64748b', label: 'Xám đá' },
-];
-
-const HIGHLIGHTER_COLORS = [
-  { hex: '#fde047', label: 'Vàng chanh' },
-  { hex: '#86efac', label: 'Xanh bạc hà' },
-  { hex: '#7dd3fc', label: 'Xanh trời' },
-  { hex: '#f9a8d4', label: 'Hồng phấn' },
-  { hex: '#fdba74', label: 'Cam nhạt' },
-  { hex: '#c4b5fd', label: 'Tím nhạt' },
-];
-
-const STICKY_COLORS = [
-  { hex: '#fef08a', label: 'Vàng nhạt' },
-  { hex: '#bbf7d0', label: 'Xanh lá nhạt' },
-  { hex: '#bae6fd', label: 'Xanh dương nhạt' },
-  { hex: '#fbcfe8', label: 'Hồng nhạt' },
-  { hex: '#fed7aa', label: 'Cam đào' },
-  { hex: '#e9d5ff', label: 'Tím oải hương' },
-];
-
-const STROKE_WIDTHS = [
-  { value: 2, label: 'Mảnh', dot: 4 },
-  { value: 4, label: 'Vừa', dot: 7 },
-  { value: 7, label: 'Đậm', dot: 10 },
-  { value: 12, label: 'Rất đậm', dot: 14 },
-];
+import {
+  getEraserSizes,
+  getHighlighterColors,
+  getInkColors,
+  getStickyColors,
+  getStrokeWidths,
+} from './toolbarConfig';
+import { useI18n } from '../../i18n/useI18n';
 
 const FONT_SIZES = [
   { value: 14, label: 'S' },
@@ -70,14 +42,8 @@ const FONT_SIZES = [
   { value: 32, label: 'XL' },
 ];
 
-const ERASER_SIZES = [
-  { value: 14, label: 'Nhỏ', dot: 6 },
-  { value: 24, label: 'Vừa', dot: 10 },
-  { value: 40, label: 'Lớn', dot: 14 },
-  { value: 64, label: 'Rất lớn', dot: 18 },
-];
-
 export const ContextualToolbar: React.FC = () => {
+  const { language, t } = useI18n();
   const color = useBoardStore((s) => s.color);
   const setColor = useBoardStore((s) => s.setColor);
   const highlighterColor = useBoardStore((s) => s.highlighterColor);
@@ -128,6 +94,12 @@ export const ContextualToolbar: React.FC = () => {
     return null;
   }
 
+  const inkColors = getInkColors(language);
+  const highlighterColors = getHighlighterColors(language);
+  const stickyColors = getStickyColors(language);
+  const strokeWidths = getStrokeWidths(language);
+  const eraserSizes = getEraserSizes(language);
+
   const colorableElements = selectedElements.filter(
     (el): el is Extract<BoardElement, { color: string }> => 'color' in el
   );
@@ -162,10 +134,10 @@ export const ContextualToolbar: React.FC = () => {
     selectedElements.length === 1 && primarySelected?.type === 'reveal';
 
   const palette = showStickyPalette
-    ? STICKY_COLORS
+    ? stickyColors
     : showHighlighterPalette
-    ? HIGHLIGHTER_COLORS
-    : INK_COLORS;
+    ? highlighterColors
+    : inkColors;
 
   const showStrokeWidths =
     (!hasSelection && (isStrokeTool || isShapeTool)) ||
@@ -272,7 +244,7 @@ export const ContextualToolbar: React.FC = () => {
   return (
     <div
       role="toolbar"
-      aria-label="Thanh công cụ đối tượng được chọn"
+      aria-label={t('Thanh công cụ đối tượng được chọn', 'Selected object toolbar')}
       data-testid="contextual-toolbar"
       className="absolute bottom-4 left-1/2 -translate-x-1/2 z-25 max-w-[calc(100vw-24px)] flex items-center gap-2 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-3 py-2 rounded-2xl shadow-lg dark:shadow-none border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 overflow-x-auto scrollbar-none"
     >
@@ -283,7 +255,7 @@ export const ContextualToolbar: React.FC = () => {
               type="button"
               onClick={() => setEraserMode('stroke')}
               aria-pressed={eraserMode === 'stroke'}
-              title="Quẹt qua để xóa trọn cả nét vẽ hoặc đối tượng"
+              title={t('Quẹt qua để xóa trọn cả nét vẽ hoặc đối tượng', 'Swipe across to erase an entire stroke or object')}
               className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap ${
                 eraserMode === 'stroke'
                   ? 'bg-indigo-600 text-white shadow-xs'
@@ -291,13 +263,13 @@ export const ContextualToolbar: React.FC = () => {
               }`}
             >
               <Eraser className="w-3.5 h-3.5" />
-              <span>Xóa nét</span>
+              <span>{t('Xóa nét', 'Stroke eraser')}</span>
             </button>
             <button
               type="button"
               onClick={() => setEraserMode('area')}
               aria-pressed={eraserMode === 'area'}
-              title="Tẩy hình vuông theo vùng bôi — lắc càng mạnh đầu tẩy càng to"
+              title={t('Tẩy hình vuông theo vùng bôi — lắc càng mạnh đầu tẩy càng to', 'Square area eraser — faster movement enlarges tip')}
               className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap ${
                 eraserMode === 'area'
                   ? 'bg-indigo-600 text-white shadow-xs'
@@ -305,23 +277,30 @@ export const ContextualToolbar: React.FC = () => {
               }`}
             >
               <SquareDashed className="w-3.5 h-3.5" />
-              <span>Xóa vùng bôi</span>
+              <span>{t('Xóa vùng bôi', 'Area eraser')}</span>
             </button>
           </div>
 
           {eraserMode === 'area' && (
             <>
               <div className="h-5 w-px bg-slate-200 dark:bg-slate-800 shrink-0" />
-              <div className="flex items-center gap-1 shrink-0" role="group" aria-label="Kích cỡ đầu tẩy">
-                {ERASER_SIZES.map((sz) => {
+              <div
+                className="flex items-center gap-1 shrink-0"
+                role="group"
+                aria-label={t('Kích cỡ đầu tẩy', 'Eraser size')}
+              >
+                {eraserSizes.map((sz) => {
                   const active = eraserSize === sz.value;
                   return (
                     <button
                       type="button"
                       key={sz.value}
                       onClick={() => setEraserSize(sz.value)}
-                      title={`Cỡ tẩy cơ bản: ${sz.label} (${sz.value}px · lắc mạnh để phóng to)`}
-                      aria-label={`Cỡ tẩy ${sz.label}`}
+                      title={t(
+                        `Cỡ tẩy cơ bản: ${sz.label} (${sz.value}px · lắc mạnh để phóng to)`,
+                        `Base eraser size: ${sz.label} (${sz.value}px · shake to enlarge)`
+                      )}
+                      aria-label={t(`Cỡ tẩy ${sz.label}`, `Eraser size ${sz.label}`)}
                       aria-pressed={active}
                       className={`w-8 h-8 rounded-xl flex items-center justify-center transition-colors ${
                         active
@@ -345,7 +324,7 @@ export const ContextualToolbar: React.FC = () => {
                   step={2}
                   value={eraserSize}
                   onChange={(e) => setEraserSize(clampEraserSize(Number(e.target.value)))}
-                  aria-label="Thanh trượt kích cỡ đầu tẩy"
+                  aria-label={t('Thanh trượt kích cỡ đầu tẩy', 'Eraser size slider')}
                   className="w-20 h-1.5 accent-indigo-600 cursor-pointer"
                 />
                 <span className="text-[11px] font-mono font-medium tabular-nums text-slate-500 dark:text-slate-400 w-9 text-right whitespace-nowrap shrink-0">
@@ -358,7 +337,11 @@ export const ContextualToolbar: React.FC = () => {
       )}
 
       {showColorPalette && (
-        <div className="flex items-center gap-1.5 shrink-0" role="group" aria-label="Bảng màu">
+        <div
+          className="flex items-center gap-1.5 shrink-0"
+          role="group"
+          aria-label={t('Bảng màu', 'Color palette')}
+        >
           {palette.map((item) => {
             const swatchBg =
               isDarkMode && item.hex === '#1e293b' ? '#f1f5f9' : item.hex;
@@ -369,7 +352,7 @@ export const ContextualToolbar: React.FC = () => {
                 key={item.hex}
                 onClick={() => handleColorPick(item.hex)}
                 title={item.label}
-                aria-label={`Màu ${item.label}`}
+                aria-label={t(`Màu ${item.label}`, `Color ${item.label}`)}
                 aria-pressed={isSelected}
                 style={{ backgroundColor: swatchBg }}
                 className={`w-6 h-6 rounded-full border border-black/15 dark:border-white/15 transition-shadow duration-150 shrink-0 cursor-pointer ${
@@ -383,7 +366,7 @@ export const ContextualToolbar: React.FC = () => {
 
           {/* Custom Color Picker */}
           <label
-            title="Chọn màu tùy chỉnh"
+            title={t('Chọn màu tùy chỉnh', 'Choose custom color')}
             className={`relative w-6 h-6 rounded-full flex items-center justify-center cursor-pointer border border-slate-300 dark:border-slate-600 transition-shadow duration-150 shrink-0 ${
               !isPresetColor
                 ? 'ring-2 ring-slate-900 dark:ring-slate-100 ring-offset-2 dark:ring-offset-slate-900'
@@ -395,7 +378,7 @@ export const ContextualToolbar: React.FC = () => {
               type="color"
               value={/^#[0-9a-f]{6}$/i.test(activeColor) ? activeColor : '#4f46e5'}
               onChange={(e) => handleColorPick(e.target.value)}
-              aria-label="Chọn màu tùy chỉnh"
+              aria-label={t('Chọn màu tùy chỉnh', 'Choose custom color')}
               className="sr-only"
             />
             {isPresetColor && <Pipette className="w-3 h-3" aria-hidden="true" />}
@@ -406,16 +389,20 @@ export const ContextualToolbar: React.FC = () => {
       {showStrokeWidths && (
         <>
           {showColorPalette && <div className="h-5 w-px bg-slate-200 dark:bg-slate-800 shrink-0" />}
-          <div className="flex items-center gap-1 shrink-0" role="group" aria-label="Độ dày nét nhanh">
-            {STROKE_WIDTHS.map((w) => {
+          <div
+            className="flex items-center gap-1 shrink-0"
+            role="group"
+            aria-label={t('Độ dày nét nhanh', 'Quick stroke widths')}
+          >
+            {strokeWidths.map((w) => {
               const isSelected = activeStrokeWidth === w.value;
               return (
                 <button
                   type="button"
                   key={w.value}
                   onClick={() => handleStrokePick(w.value)}
-                  title={`Độ dày nét: ${w.label} (${w.value}px)`}
-                  aria-label={`Độ dày nét ${w.label}`}
+                  title={t(`Độ dày nét: ${w.label} (${w.value}px)`, `Stroke width: ${w.label} (${w.value}px)`)}
+                  aria-label={t(`Độ dày nét ${w.label}`, `Stroke width ${w.label}`)}
                   aria-pressed={isSelected}
                   className={`w-7 h-7 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center transition-colors shrink-0 ${
                     isSelected
@@ -436,7 +423,7 @@ export const ContextualToolbar: React.FC = () => {
             <span
               aria-hidden="true"
               className="w-5 h-5 flex items-center justify-center shrink-0"
-              title={`Xem trước đầu bút ${activeStrokeWidth}px`}
+              title={t(`Xem trước đầu bút ${activeStrokeWidth}px`, `Nib preview ${activeStrokeWidth}px`)}
             >
               <span
                 className="rounded-full block transition-opacity duration-150"
@@ -455,7 +442,7 @@ export const ContextualToolbar: React.FC = () => {
               step={1}
               value={activeStrokeWidth}
               onChange={(e) => handleStrokePick(clampStrokeWidth(Number(e.target.value)))}
-              aria-label="Thanh trượt độ dày nét"
+              aria-label={t('Thanh trượt độ dày nét', 'Stroke width slider')}
               className="w-20 h-1.5 accent-indigo-600 cursor-pointer"
             />
             <span
@@ -474,8 +461,10 @@ export const ContextualToolbar: React.FC = () => {
           <button
             type="button"
             onClick={handleToggleFill}
-            title={activeFill === 'transparent' ? 'Tô nền nhạt' : 'Bỏ màu nền'}
-            aria-label={activeFill === 'transparent' ? 'Tô nền nhạt' : 'Bỏ màu nền'}
+            title={activeFill === 'transparent' ? t('Tô nền nhạt', 'Add light fill') : t('Bỏ màu nền', 'Remove fill')}
+            aria-label={
+              activeFill === 'transparent' ? t('Tô nền nhạt', 'Add light fill') : t('Bỏ màu nền', 'Remove fill')
+            }
             aria-pressed={activeFill !== 'transparent'}
             className={`p-2 rounded-xl transition-colors shrink-0 ${
               activeFill !== 'transparent'
@@ -499,8 +488,8 @@ export const ContextualToolbar: React.FC = () => {
                   type="button"
                   key={fs.value}
                   onClick={() => handleFontSizePick(fs.value)}
-                  title={`Cỡ chữ ${fs.label}`}
-                  aria-label={`Cỡ chữ ${fs.label}`}
+                  title={t(`Cỡ chữ ${fs.label}`, `Font size ${fs.label}`)}
+                  aria-label={t(`Cỡ chữ ${fs.label}`, `Font size ${fs.label}`)}
                   aria-pressed={isSelected}
                   className={`px-2 py-1 text-xs font-semibold rounded-lg transition-colors ${
                     isSelected
@@ -523,7 +512,7 @@ export const ContextualToolbar: React.FC = () => {
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold transition-colors whitespace-nowrap shrink-0"
         >
           <Eye className="w-3.5 h-3.5" />
-          <span>Xem / Tải tệp</span>
+          <span>{t('Xem / Tải tệp', 'View / Download file')}</span>
         </button>
       )}
 
@@ -542,12 +531,12 @@ export const ContextualToolbar: React.FC = () => {
           {primarySelected.revealed ? (
             <>
               <EyeOff className="w-3.5 h-3.5" />
-              <span>Che lại</span>
+              <span>{t('Che lại', 'Hide solution')}</span>
             </>
           ) : (
             <>
               <Eye className="w-3.5 h-3.5" />
-              <span>Mở lời giải</span>
+              <span>{t('Mở lời giải', 'Reveal solution')}</span>
             </>
           )}
         </button>
@@ -573,8 +562,8 @@ export const ContextualToolbar: React.FC = () => {
               }`}
             >
               {groupSummary.isSingleGroup
-                ? `Nhóm (${selectedElements.length})`
-                : `${selectedElements.length} mục`}
+                ? t(`Nhóm (${selectedElements.length})`, `Group (${selectedElements.length})`)
+                : t(`${selectedElements.length} mục`, `${selectedElements.length} items`)}
             </span>
           )}
           {(groupSummary.canGroup || groupSummary.canUngroup) && (
@@ -584,12 +573,12 @@ export const ContextualToolbar: React.FC = () => {
                   type="button"
                   data-testid="group-selected-button"
                   onClick={groupSelected}
-                  title="Nhóm các đối tượng (Ctrl+G)"
-                  aria-label="Nhóm đối tượng"
+                  title={t('Nhóm các đối tượng (Ctrl+G)', 'Group objects (Ctrl+G)')}
+                  aria-label={t('Nhóm đối tượng', 'Group objects')}
                   className="h-8 inline-flex items-center gap-1.5 px-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/70 hover:bg-indigo-100 dark:hover:bg-indigo-900/70 text-indigo-700 dark:text-indigo-300 text-xs font-semibold transition-colors whitespace-nowrap shrink-0 cursor-pointer"
                 >
                   <Group className="w-3.5 h-3.5" />
-                  <span>Nhóm</span>
+                  <span>{t('Nhóm', 'Group')}</span>
                 </button>
               )}
               {groupSummary.canUngroup && (
@@ -597,12 +586,12 @@ export const ContextualToolbar: React.FC = () => {
                   type="button"
                   data-testid="ungroup-selected-button"
                   onClick={ungroupSelected}
-                  title="Bỏ nhóm đối tượng (Ctrl+Shift+G)"
-                  aria-label="Bỏ nhóm đối tượng"
+                  title={t('Bỏ nhóm đối tượng (Ctrl+Shift+G)', 'Ungroup objects (Ctrl+Shift+G)')}
+                  aria-label={t('Bỏ nhóm đối tượng', 'Ungroup objects')}
                   className="h-8 inline-flex items-center gap-1.5 px-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold transition-colors whitespace-nowrap shrink-0 cursor-pointer"
                 >
                   <Ungroup className="w-3.5 h-3.5" />
-                  <span>Bỏ nhóm</span>
+                  <span>{t('Bỏ nhóm', 'Ungroup')}</span>
                 </button>
               )}
             </div>
@@ -611,8 +600,8 @@ export const ContextualToolbar: React.FC = () => {
             <button
               type="button"
               onClick={bringSelectedForward}
-              title="Đưa lên trên cùng"
-              aria-label="Đưa lên trên cùng"
+              title={t('Đưa lên trên cùng', 'Bring to front')}
+              aria-label={t('Đưa lên trên cùng', 'Bring to front')}
               className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
             >
               <ArrowUpToLine className="w-4 h-4" />
@@ -620,8 +609,8 @@ export const ContextualToolbar: React.FC = () => {
             <button
               type="button"
               onClick={sendSelectedBackward}
-              title="Đưa xuống dưới cùng"
-              aria-label="Đưa xuống dưới cùng"
+              title={t('Đưa xuống dưới cùng', 'Send to back')}
+              aria-label={t('Đưa xuống dưới cùng', 'Send to back')}
               className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
             >
               <ArrowDownToLine className="w-4 h-4" />
@@ -629,8 +618,10 @@ export const ContextualToolbar: React.FC = () => {
             <button
               type="button"
               onClick={toggleLockSelected}
-              title={allLocked ? 'Mở khóa vị trí' : 'Khóa vị trí'}
-              aria-label={allLocked ? 'Mở khóa vị trí' : 'Khóa vị trí'}
+              title={allLocked ? t('Mở khóa vị trí', 'Unlock position') : t('Khóa vị trí', 'Lock position')}
+              aria-label={
+                allLocked ? t('Mở khóa vị trí', 'Unlock position') : t('Khóa vị trí', 'Lock position')
+              }
               className={`p-2 rounded-xl transition-colors cursor-pointer ${
                 allLocked
                   ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400'
@@ -642,8 +633,8 @@ export const ContextualToolbar: React.FC = () => {
             <button
               type="button"
               onClick={duplicateSelected}
-              title="Nhân bản (Ctrl+D)"
-              aria-label="Nhân bản"
+              title={t('Nhân bản (Ctrl+D)', 'Duplicate (Ctrl+D)')}
+              aria-label={t('Nhân bản', 'Duplicate')}
               className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
             >
               <Copy className="w-4 h-4" />
@@ -651,8 +642,8 @@ export const ContextualToolbar: React.FC = () => {
             <button
               type="button"
               onClick={deleteSelected}
-              title="Xóa (Delete)"
-              aria-label="Xóa đối tượng"
+              title={t('Xóa (Delete)', 'Delete (Delete)')}
+              aria-label={t('Xóa đối tượng', 'Delete object')}
               className="p-2 rounded-xl hover:bg-red-50 dark:hover:bg-red-950/50 text-red-600 dark:text-red-400 transition-colors cursor-pointer"
             >
               <Trash2 className="w-4 h-4" />

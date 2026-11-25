@@ -11,6 +11,7 @@ import {
 import { formatSyncTime } from '../../services/driveSyncUtils';
 import { getWebPortalOrigin } from '../../services/authBridge';
 import { GoogleSignInButton } from '../home/GoogleSignInButton';
+import { useI18n } from '../../i18n/useI18n';
 import {
   X,
   Cloud,
@@ -47,6 +48,7 @@ export const GoogleDriveModal: React.FC<GoogleDriveModalProps> = ({
   drive,
   onOpenAuthBridgeClick,
 }) => {
+  const { language, t } = useI18n();
   const elements = useBoardStore((s) => s.elements);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const isFileProtocol = typeof window !== 'undefined' && window.location.protocol === 'file:';
@@ -131,10 +133,13 @@ export const GoogleDriveModal: React.FC<GoogleDriveModalProps> = ({
             </div>
             <div className="min-w-0">
               <h2 id="drive-modal-title" className="text-base font-medium truncate">
-                Lưu trữ Google Drive
+                {t('Lưu trữ Google Drive', 'Google Drive storage')}
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                Tự động lưu gọn vào thư mục &ldquo;{APP_DRIVE_FOLDER_NAME}&rdquo; trên Drive
+                {t(
+                  `Tự động lưu gọn vào thư mục "${APP_DRIVE_FOLDER_NAME}" trên Drive`,
+                  `Auto-saved neatly to the "${APP_DRIVE_FOLDER_NAME}" folder on Drive`
+                )}
               </p>
             </div>
           </div>
@@ -143,7 +148,7 @@ export const GoogleDriveModal: React.FC<GoogleDriveModalProps> = ({
             type="button"
             onClick={onClose}
             disabled={Boolean(drive.busyAction)}
-            aria-label="Đóng hộp thoại Google Drive"
+            aria-label={t('Đóng hộp thoại Google Drive', 'Close Google Drive dialog')}
             className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-500 dark:text-slate-400 shrink-0 cursor-pointer"
           >
             <X className="w-4 h-4" />
@@ -165,7 +170,7 @@ export const GoogleDriveModal: React.FC<GoogleDriveModalProps> = ({
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white font-semibold transition-colors"
                 >
-                  <span>{drive.error.actionLabel || 'Mở bảng điều khiển'}</span>
+                  <span>{drive.error.actionLabel || t('Mở bảng điều khiển', 'Open console')}</span>
                   <ExternalLink className="w-3.5 h-3.5" />
                 </a>
               )}
@@ -180,13 +185,19 @@ export const GoogleDriveModal: React.FC<GoogleDriveModalProps> = ({
                 </div>
                 <div className="max-w-md space-y-1.5">
                   <h3 className="text-sm font-medium text-slate-900 dark:text-slate-100">
-                    Bản cài đặt tệp cục bộ hoạt động ngoại tuyến
+                    {t('Bản cài đặt tệp cục bộ hoạt động ngoại tuyến', 'Local desktop build works offline')}
                   </h3>
                   <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                    Theo quy định an toàn bảo mật của Google OAuth, giao thức tệp cục bộ (file://) không được phép thực hiện đăng nhập Google. Bảng vẽ của bạn vẫn được lưu trữ tự động trên ổ cứng máy tính.
+                    {t(
+                      'Theo quy định an toàn bảo mật của Google OAuth, giao thức tệp cục bộ (file://) không được phép thực hiện đăng nhập Google. Bảng vẽ của bạn vẫn được lưu trữ tự động trên ổ cứng máy tính.',
+                      'Per Google OAuth security policy, the local file:// protocol cannot perform direct Google sign-in. Your boards are still automatically saved on your local drive.'
+                    )}
                   </p>
                   <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                    Để đồng bộ dữ liệu lên Google Drive, bạn hãy bấm nút bên dưới để mở trình duyệt lấy mã kết nối an toàn về máy.
+                    {t(
+                      'Để đồng bộ dữ liệu lên Google Drive, bạn hãy bấm nút bên dưới để mở trình duyệt lấy mã kết nối an toàn về máy.',
+                      'To sync your data to Google Drive, click the button below to open your browser and get a secure connection code.'
+                    )}
                   </p>
                 </div>
 
@@ -206,7 +217,7 @@ export const GoogleDriveModal: React.FC<GoogleDriveModalProps> = ({
                     className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs transition-colors duration-150 cursor-pointer"
                   >
                     <KeyRound className="w-4 h-4" strokeWidth={1.75} />
-                    <span>Đăng nhập qua trình duyệt</span>
+                    <span>{t('Đăng nhập qua trình duyệt', 'Sign in via browser')}</span>
                   </button>
                 </div>
               </div>
@@ -216,9 +227,14 @@ export const GoogleDriveModal: React.FC<GoogleDriveModalProps> = ({
                   <CloudUpload className="w-6 h-6" strokeWidth={1.75} />
                 </div>
                 <div className="max-w-sm space-y-1.5">
-                  <h3 className="text-sm font-medium">Kết nối tài khoản Google của bạn</h3>
+                  <h3 className="text-sm font-medium">
+                    {t('Kết nối tài khoản Google của bạn', 'Connect your Google account')}
+                  </h3>
                   <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                    Ứng dụng chỉ truy cập các tệp bảng trắng do chính bạn tạo và lưu qua ứng dụng này trên Google Drive.
+                    {t(
+                      'Ứng dụng chỉ truy cập các tệp bảng trắng do chính bạn tạo và lưu qua ứng dụng này trên Google Drive.',
+                      'This app only accesses whiteboard files created and saved by you through this app on Google Drive.'
+                    )}
                   </p>
                 </div>
 
@@ -248,10 +264,10 @@ export const GoogleDriveModal: React.FC<GoogleDriveModalProps> = ({
                   )}
                   <div className="min-w-0">
                     <div className="text-xs font-semibold truncate">
-                      {drive.user?.displayName || 'Tài khoản Google'}
+                      {drive.user?.displayName || t('Tài khoản Google', 'Google account')}
                     </div>
                     <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
-                      {drive.user?.email || 'Đã kết nối Google Drive'}
+                      {drive.user?.email || t('Đã kết nối Google Drive', 'Connected to Google Drive')}
                     </div>
                   </div>
                 </div>
@@ -263,7 +279,7 @@ export const GoogleDriveModal: React.FC<GoogleDriveModalProps> = ({
                   className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-200/70 dark:hover:bg-slate-700/70 transition-colors shrink-0 cursor-pointer"
                 >
                   <LogOut className="w-3.5 h-3.5" />
-                  <span>Đăng xuất</span>
+                  <span>{t('Đăng xuất', 'Sign out')}</span>
                 </button>
               </div>
 
@@ -271,20 +287,26 @@ export const GoogleDriveModal: React.FC<GoogleDriveModalProps> = ({
               <div className="flex items-center justify-between gap-3 p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
                 <div className="min-w-0 space-y-0.5">
                   <div className="text-xs font-semibold text-slate-900 dark:text-slate-100">
-                    Tự động lưu lên Google Drive
+                    {t('Tự động lưu lên Google Drive', 'Auto-save to Google Drive')}
                   </div>
                   <div className="text-[11px] text-slate-500 dark:text-slate-400 tabular-nums">
                     {!drive.autoSaveEnabled
-                      ? 'Đang tắt · Bấm nút bên dưới để lưu thủ công'
+                      ? t('Đang tắt · Bấm nút bên dưới để lưu thủ công', 'Off · Use the buttons below to save manually')
                       : drive.syncStatus === 'saving'
-                      ? 'Đang đồng bộ lên Google Drive...'
+                      ? t('Đang đồng bộ lên Google Drive...', 'Syncing to Google Drive...')
                       : drive.syncStatus === 'pending'
-                      ? 'Phát hiện thay đổi · Tự động lưu sau 2,5 giây...'
+                      ? t('Phát hiện thay đổi · Tự động lưu sau 2,5 giây...', 'Changes detected · Auto-saving in 2.5s...')
                       : drive.syncStatus === 'saved' && drive.lastSyncedAt
-                      ? `Đã tự động lưu lúc ${formatSyncTime(drive.lastSyncedAt)}`
+                      ? t(
+                          `Đã tự động lưu lúc ${formatSyncTime(drive.lastSyncedAt, language)}`,
+                          `Auto-saved at ${formatSyncTime(drive.lastSyncedAt, language)}`
+                        )
                       : drive.syncStatus === 'error'
-                      ? 'Tự động lưu gặp lỗi · Hãy kiểm tra kết nối và thử lại'
-                      : 'Tự động đồng bộ sau 2,5 giây ngừng chỉnh sửa'}
+                      ? t(
+                          'Tự động lưu gặp lỗi · Hãy kiểm tra kết nối và thử lại',
+                          'Auto-save failed · Check your connection and retry'
+                        )
+                      : t('Tự động đồng bộ sau 2,5 giây ngừng chỉnh sửa', 'Auto-syncs 2.5s after you stop editing')}
                   </div>
                 </div>
 
@@ -297,7 +319,7 @@ export const GoogleDriveModal: React.FC<GoogleDriveModalProps> = ({
                         onClick={() => void drive.flushAutoSaveNow()}
                         className="px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 text-[11px] font-semibold transition-colors whitespace-nowrap shrink-0 cursor-pointer"
                       >
-                        Lưu ngay
+                        {t('Lưu ngay', 'Save now')}
                       </button>
                     )}
 
@@ -306,7 +328,7 @@ export const GoogleDriveModal: React.FC<GoogleDriveModalProps> = ({
                     role="switch"
                     data-testid="drive-autosave-toggle"
                     aria-checked={drive.autoSaveEnabled}
-                    aria-label="Bật hoặc tắt tự động lưu lên Google Drive"
+                    aria-label={t('Bật hoặc tắt tự động lưu lên Google Drive', 'Toggle auto-save to Google Drive')}
                     onClick={() => drive.setAutoSaveEnabled(!drive.autoSaveEnabled)}
                     className={`relative inline-flex h-6 w-10 items-center rounded-full transition-colors cursor-pointer shrink-0 ${
                       drive.autoSaveEnabled
@@ -328,7 +350,7 @@ export const GoogleDriveModal: React.FC<GoogleDriveModalProps> = ({
                 <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300 min-w-0">
                   <Folder className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
                   <span className="truncate">
-                    Thư mục lưu:{' '}
+                    {t('Thư mục lưu:', 'Storage folder:')}{' '}
                     <strong className="font-semibold text-slate-900 dark:text-slate-100">
                       {drive.appFolder?.name || APP_DRIVE_FOLDER_NAME}
                     </strong>
@@ -346,7 +368,9 @@ export const GoogleDriveModal: React.FC<GoogleDriveModalProps> = ({
                       {drive.busyAction === 'organize' && (
                         <Loader2 className="w-3 h-3 animate-spin" />
                       )}
-                      <span>Gom {drive.unorganizedCount} tệp cũ</span>
+                      <span>
+                        {t(`Gom ${drive.unorganizedCount} tệp cũ`, `Move ${drive.unorganizedCount} old files`)}
+                      </span>
                     </button>
                   )}
                   {drive.appFolder?.webViewLink && (
@@ -356,7 +380,7 @@ export const GoogleDriveModal: React.FC<GoogleDriveModalProps> = ({
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1 text-[11px] font-medium text-indigo-600 dark:text-indigo-400 hover:underline"
                     >
-                      <span>Mở thư mục</span>
+                      <span>{t('Mở thư mục', 'Open folder')}</span>
                       <ExternalLink className="w-3 h-3" />
                     </a>
                   )}
@@ -384,10 +408,16 @@ export const GoogleDriveModal: React.FC<GoogleDriveModalProps> = ({
                       </div>
                       <div className="min-w-0">
                         <div className="text-xs font-semibold truncate">
-                          Cập nhật tệp đang mở: {drive.activeDriveFile.name}
+                          {t(
+                            `Cập nhật tệp đang mở: ${drive.activeDriveFile.name}`,
+                            `Update open file: ${drive.activeDriveFile.name}`
+                          )}
                         </div>
                         <div className="text-[11px] text-emerald-100">
-                          Ghi đè phiên bản mới nhất của bảng lên tệp hiện có trên Drive
+                          {t(
+                            'Ghi đè phiên bản mới nhất của bảng lên tệp hiện có trên Drive',
+                            'Overwrite the existing Drive file with the latest version of this board'
+                          )}
                         </div>
                       </div>
                     </div>
@@ -410,10 +440,15 @@ export const GoogleDriveModal: React.FC<GoogleDriveModalProps> = ({
                     </div>
                     <div className="min-w-0">
                       <div className="text-xs font-semibold">
-                        {drive.busyAction === 'save-new' ? 'Đang lưu...' : 'Lưu bản dự án mới'}
+                        {drive.busyAction === 'save-new'
+                          ? t('Đang lưu...', 'Saving...')
+                          : t('Lưu bản dự án mới', 'Save as new project')}
                       </div>
                       <div className="text-[11px] text-indigo-100 truncate tabular-nums">
-                        .whiteboard.json ({elements.length} đối tượng)
+                        {t(
+                          `.whiteboard.json (${elements.length} đối tượng)`,
+                          `.whiteboard.json (${elements.length} items)`
+                        )}
                       </div>
                     </div>
                   </button>
@@ -433,10 +468,12 @@ export const GoogleDriveModal: React.FC<GoogleDriveModalProps> = ({
                     </div>
                     <div className="min-w-0">
                       <div className="text-xs font-semibold">
-                        {drive.busyAction === 'save-png' ? 'Đang xuất 4×...' : 'Lưu ảnh PNG 4×'}
+                        {drive.busyAction === 'save-png'
+                          ? t('Đang xuất 4×...', 'Exporting 4×...')
+                          : t('Lưu ảnh PNG 4×', 'Save 4× PNG snapshot')}
                       </div>
                       <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
-                        Ảnh chất lượng cao nhất lên Drive
+                        {t('Ảnh chất lượng cao nhất lên Drive', 'Highest-quality image to Drive')}
                       </div>
                     </div>
                   </button>
@@ -447,7 +484,10 @@ export const GoogleDriveModal: React.FC<GoogleDriveModalProps> = ({
               <div className="space-y-2.5">
                 <div className="flex items-center justify-between">
                   <h3 className="text-xs font-semibold text-slate-700 dark:text-slate-300 tabular-nums">
-                    Tệp bảng trắng của bạn trên Google Drive ({drive.files.length})
+                    {t(
+                      `Tệp bảng trắng của bạn trên Google Drive (${drive.files.length})`,
+                      `Your whiteboard files on Google Drive (${drive.files.length})`
+                    )}
                   </h3>
                   <button
                     type="button"
@@ -456,19 +496,22 @@ export const GoogleDriveModal: React.FC<GoogleDriveModalProps> = ({
                     className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
                   >
                     <RefreshCw className={`w-3 h-3 ${drive.isLoadingFiles ? 'animate-spin' : ''}`} />
-                    <span>Làm mới</span>
+                    <span>{t('Làm mới', 'Refresh')}</span>
                   </button>
                 </div>
 
                 {drive.isLoadingFiles && drive.files.length === 0 ? (
                   <div className="py-8 flex flex-col items-center justify-center gap-2 text-slate-500 dark:text-slate-400">
                     <Loader2 className="w-5 h-5 animate-spin text-indigo-600" />
-                    <span className="text-xs">Đang tải danh sách tệp từ Google Drive...</span>
+                    <span className="text-xs">
+                      {t('Đang tải danh sách tệp từ Google Drive...', 'Loading files from Google Drive...')}
+                    </span>
                   </div>
                 ) : drive.files.length === 0 ? (
                   <div className="py-7 px-4 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 text-center text-xs text-slate-500 dark:text-slate-400">
-                    Chưa có tệp bảng trắng nào trên Google Drive. Bấm{' '}
-                    <strong>Lưu bản dự án mới</strong> ở trên để lưu bảng hiện tại.
+                    {t('Chưa có tệp bảng trắng nào trên Google Drive. Bấm ', 'No whiteboard files on Google Drive yet. Click ')}
+                    <strong>{t('Lưu bản dự án mới', 'Save as new project')}</strong>
+                    {t(' ở trên để lưu bảng hiện tại.', ' above to save the current board.')}
                   </div>
                 ) : (
                   <div className="divide-y divide-slate-200/80 dark:divide-slate-800 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
@@ -503,7 +546,7 @@ export const GoogleDriveModal: React.FC<GoogleDriveModalProps> = ({
                             <div className="min-w-0">
                               <div className="text-xs font-semibold truncate">{file.name}</div>
                               <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate tabular-nums">
-                                {formatDriveModifiedTime(file.modifiedTime)}
+                                {formatDriveModifiedTime(file.modifiedTime, language)}
                                 {sizeNum > 0 ? ` · ${formatFileSize(sizeNum)}` : ''}
                               </div>
                             </div>
@@ -516,7 +559,7 @@ export const GoogleDriveModal: React.FC<GoogleDriveModalProps> = ({
                                   type="button"
                                   disabled={Boolean(drive.busyAction)}
                                   onClick={() => handleRequestOpen(file)}
-                                  title="Mở bảng này từ Google Drive"
+                                  title={t('Mở bảng này từ Google Drive', 'Open this board from Google Drive')}
                                   className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/70 hover:bg-indigo-100 dark:hover:bg-indigo-900/70 text-indigo-700 dark:text-indigo-300 text-xs font-medium transition-colors cursor-pointer"
                                 >
                                   {drive.busyAction === `open:${file.id}` ? (
@@ -524,14 +567,14 @@ export const GoogleDriveModal: React.FC<GoogleDriveModalProps> = ({
                                   ) : (
                                     <FolderOpen className="w-3.5 h-3.5" />
                                   )}
-                                  <span>Mở</span>
+                                  <span>{t('Mở', 'Open')}</span>
                                 </button>
                                 <button
                                   type="button"
                                   disabled={Boolean(drive.busyAction)}
                                   onClick={() => setConfirmAction({ type: 'overwrite', file })}
-                                  title="Ghi đè bảng hiện tại lên tệp này"
-                                  aria-label={`Ghi đè ${file.name}`}
+                                  title={t('Ghi đè bảng hiện tại lên tệp này', 'Overwrite this file with current board')}
+                                  aria-label={t(`Ghi đè ${file.name}`, `Overwrite ${file.name}`)}
                                   className="p-1.5 rounded-lg hover:bg-slate-200/70 dark:hover:bg-slate-700/70 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer"
                                 >
                                   <Save className="w-3.5 h-3.5" />
@@ -543,11 +586,11 @@ export const GoogleDriveModal: React.FC<GoogleDriveModalProps> = ({
                                   href={file.webViewLink}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  title="Xem ảnh trên Google Drive"
+                                  title={t('Xem ảnh trên Google Drive', 'View image on Google Drive')}
                                   className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium transition-colors"
                                 >
                                   <ExternalLink className="w-3.5 h-3.5" />
-                                  <span>Xem</span>
+                                  <span>{t('Xem', 'View')}</span>
                                 </a>
                               )
                             )}
@@ -556,8 +599,8 @@ export const GoogleDriveModal: React.FC<GoogleDriveModalProps> = ({
                               type="button"
                               disabled={Boolean(drive.busyAction)}
                               onClick={() => setConfirmAction({ type: 'delete', file })}
-                              title="Xóa tệp khỏi Google Drive"
-                              aria-label={`Xóa ${file.name}`}
+                              title={t('Xóa tệp khỏi Google Drive', 'Delete file from Google Drive')}
+                              aria-label={t(`Xóa ${file.name}`, `Delete ${file.name}`)}
                               className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/50 text-red-600 dark:text-red-400 transition-colors cursor-pointer"
                             >
                               {drive.busyAction === `delete:${file.id}` ? (
@@ -594,17 +637,26 @@ export const GoogleDriveModal: React.FC<GoogleDriveModalProps> = ({
                 <div className="min-w-0">
                   <h4 className="text-sm font-bold">
                     {confirmAction.type === 'delete'
-                      ? 'Xóa tệp khỏi Google Drive?'
+                      ? t('Xóa tệp khỏi Google Drive?', 'Delete file from Google Drive?')
                       : confirmAction.type === 'overwrite'
-                      ? 'Ghi đè tệp trên Google Drive?'
-                      : 'Mở bảng từ Google Drive?'}
+                      ? t('Ghi đè tệp trên Google Drive?', 'Overwrite file on Google Drive?')
+                      : t('Mở bảng từ Google Drive?', 'Open board from Google Drive?')}
                   </h4>
                   <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 leading-relaxed break-words">
                     {confirmAction.type === 'delete'
-                      ? `Bạn có chắc muốn xóa vĩnh viễn "${confirmAction.file.name}" khỏi Google Drive? Thao tác này không thể hoàn tác.`
+                      ? t(
+                          `Bạn có chắc muốn xóa vĩnh viễn "${confirmAction.file.name}" khỏi Google Drive? Thao tác này không thể hoàn tác.`,
+                          `Are you sure you want to permanently delete "${confirmAction.file.name}" from Google Drive? This action cannot be undone.`
+                        )
                       : confirmAction.type === 'overwrite'
-                      ? `Nội dung cũ của tệp "${confirmAction.file.name}" trên Google Drive sẽ bị thay thế bằng bảng trắng hiện tại (${elements.length} đối tượng).`
-                      : `Tệp "${confirmAction.file.name}" sẽ thay thế nội dung bảng hiện tại (bạn vẫn có thể nhấn Hoàn tác Ctrl+Z nếu cần).`}
+                      ? t(
+                          `Nội dung cũ của tệp "${confirmAction.file.name}" trên Google Drive sẽ bị thay thế bằng bảng trắng hiện tại (${elements.length} đối tượng).`,
+                          `The previous content of "${confirmAction.file.name}" on Google Drive will be replaced with the current board (${elements.length} items).`
+                        )
+                      : t(
+                          `Tệp "${confirmAction.file.name}" sẽ thay thế nội dung bảng hiện tại (bạn vẫn có thể nhấn Hoàn tác Ctrl+Z nếu cần).`,
+                          `Opening "${confirmAction.file.name}" will replace the current board content (you can still press Undo Ctrl+Z if needed).`
+                        )}
                   </p>
                 </div>
               </div>
@@ -615,7 +667,7 @@ export const GoogleDriveModal: React.FC<GoogleDriveModalProps> = ({
                   onClick={() => setConfirmAction(null)}
                   className="px-3.5 py-2 rounded-xl text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
                 >
-                  Hủy
+                  {t('Hủy', 'Cancel')}
                 </button>
                 <button
                   type="button"
@@ -627,10 +679,10 @@ export const GoogleDriveModal: React.FC<GoogleDriveModalProps> = ({
                   }`}
                 >
                   {confirmAction.type === 'delete'
-                    ? 'Xác nhận xóa'
+                    ? t('Xác nhận xóa', 'Confirm delete')
                     : confirmAction.type === 'overwrite'
-                    ? 'Xác nhận ghi đè'
-                    : 'Mở bảng'}
+                    ? t('Xác nhận ghi đè', 'Confirm overwrite')
+                    : t('Mở bảng', 'Open board')}
                 </button>
               </div>
             </div>

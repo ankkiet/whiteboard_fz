@@ -30,6 +30,8 @@ import {
   transposeMatrix,
 } from '../../engine/casio580Engine';
 import { compileMathExpression } from '../../engine/mathUtils';
+import { getCasioConstants, getCasioConversions } from '../../engine/casio580Engine';
+import { useI18n } from '../../i18n/useI18n';
 import { MathTex } from './MathTex';
 
 export type CasioMainMode =
@@ -238,22 +240,25 @@ export interface CasioLcdModesProps {
 }
 
 export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
+  const { language, t } = useI18n();
   const { mode, setMode, overlay, setOverlay } = props;
+  const casioConstants = getCasioConstants(language);
+  const casioConversions = getCasioConversions(language);
 
   // Overlays inside the LCD (SETUP, CONST, CONV, RECALL, OPTN, CALC prompt, HELP)
   if (overlay === 'setup') {
     const angleOrder: CasioAngleUnit[] = ['D', 'R', 'G'];
     const angleLabel: Record<CasioAngleUnit, string> = {
-      D: 'DEG (Độ)',
+      D: t('DEG (Độ)', 'DEG (Deg)'),
       R: 'RAD',
       G: 'GRAD',
     };
     return (
       <div className="p-2 min-h-[120px] space-y-1.5 text-[#1e345a]">
         <div className="flex items-center justify-between text-[10px] font-bold">
-          <span>Cài đặt máy tính (SETUP)</span>
+          <span>{t('Cài đặt máy tính (SETUP)', 'Calculator settings (SETUP)')}</span>
           <button type="button" onClick={() => setOverlay(null)} className="underline cursor-pointer">
-            Đóng
+            {t('Đóng', 'Close')}
           </button>
         </div>
         <div className="grid grid-cols-2 gap-1 text-[10px]">
@@ -265,7 +270,7 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
             }}
             className="px-2 py-1 rounded bg-[#e5eee0] border border-[#96a68f] font-semibold cursor-pointer text-left"
           >
-            Đơn vị góc: <b>{angleLabel[props.angleUnit]}</b>
+            {t('Đơn vị góc:', 'Angle unit:')} <b>{angleLabel[props.angleUnit]}</b>
           </button>
           <button
             type="button"
@@ -276,12 +281,12 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
             }}
             className="px-2 py-1 rounded bg-[#e5eee0] border border-[#96a68f] font-semibold cursor-pointer text-left"
           >
-            Làm tròn: <b>{props.normMode}</b>
+            {t('Làm tròn:', 'Rounding:')} <b>{props.normMode}</b>
           </button>
         </div>
         {props.normMode !== 'NORM' && (
           <div className="flex items-center justify-between bg-[#e5eee0] rounded px-2 py-1 border border-[#96a68f] text-[10px]">
-            <span>Số chữ số ({props.normMode}):</span>
+            <span>{t(`Số chữ số (${props.normMode}):`, `Digits (${props.normMode}):`)}</span>
             <div className="flex items-center gap-1">
               {[2, 3, 4, 6, 8].map((d) => (
                 <button
@@ -299,24 +304,24 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
           </div>
         )}
         <div className="flex items-center justify-between bg-[#e5eee0] rounded px-2 py-1 border border-[#96a68f] text-[10px]">
-          <span>Vỏ máy:</span>
+          <span>{t('Vỏ máy:', 'Body theme:')}</span>
           <div className="flex items-center gap-1">
             {(
               [
-                { id: 'carbon', label: 'Đen' },
-                { id: 'navy', label: 'Xanh' },
-                { id: 'silver', label: 'Bạc' },
+                { id: 'carbon', label: t('Đen', 'Black') },
+                { id: 'navy', label: t('Xanh', 'Navy') },
+                { id: 'silver', label: t('Bạc', 'Silver') },
               ] as const
-            ).map((t) => (
+            ).map((item) => (
               <button
-                key={t.id}
+                key={item.id}
                 type="button"
-                onClick={() => props.setChassisTheme(t.id)}
+                onClick={() => props.setChassisTheme(item.id)}
                 className={`px-1.5 py-0.5 rounded font-semibold cursor-pointer ${
-                  props.chassisTheme === t.id ? 'bg-[#1e345a] text-[#e6f0e1]' : 'bg-white/70'
+                  props.chassisTheme === item.id ? 'bg-[#1e345a] text-[#e6f0e1]' : 'bg-white/70'
                 }`}
               >
-                {t.label}
+                {item.label}
               </button>
             ))}
           </div>
@@ -329,13 +334,13 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
     return (
       <div className="p-2 min-h-[120px] space-y-1 text-[#1e345a]">
         <div className="flex items-center justify-between text-[10px] font-bold">
-          <span>Hằng số vật lý & hóa học (CONST)</span>
+          <span>{t('Hằng số vật lý & hóa học (CONST)', 'Scientific constants (CONST)')}</span>
           <button type="button" onClick={() => setOverlay(null)} className="underline cursor-pointer">
-            Đóng
+            {t('Đóng', 'Close')}
           </button>
         </div>
         <div className="max-h-[96px] overflow-y-auto casio-lcd-no-scrollbar grid grid-cols-2 gap-1">
-          {CASIO_CONSTANTS.map((c) => (
+          {casioConstants.map((c) => (
             <button
               key={c.id}
               type="button"
@@ -361,13 +366,13 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
     return (
       <div className="p-2 min-h-[120px] space-y-1 text-[#1e345a]">
         <div className="flex items-center justify-between text-[10px] font-bold">
-          <span>Chuyển đổi đơn vị (CONV · Ans = {Number(props.ansVal.toFixed(4))})</span>
+          <span>{t(`Chuyển đổi đơn vị (CONV · Ans = ${Number(props.ansVal.toFixed(4))})`, `Unit conversion (CONV · Ans = ${Number(props.ansVal.toFixed(4))})`)}</span>
           <button type="button" onClick={() => setOverlay(null)} className="underline cursor-pointer">
-            Đóng
+            {t('Đóng', 'Close')}
           </button>
         </div>
         <div className="max-h-[96px] overflow-y-auto casio-lcd-no-scrollbar grid grid-cols-2 gap-1">
-          {CASIO_CONVERSIONS.map((conv) => {
+          {casioConversions.map((conv) => {
             const converted = conv.convert(props.ansVal);
             return (
               <button
@@ -396,9 +401,9 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
     return (
       <div className="p-2 min-h-[120px] space-y-1 text-[#1e345a]">
         <div className="flex items-center justify-between text-[10px] font-bold">
-          <span>Biến nhớ (RECALL · bấm để chèn)</span>
+          <span>{t('Biến nhớ (RECALL · bấm để chèn)', 'Memory variables (RECALL · click to insert)')}</span>
           <button type="button" onClick={() => setOverlay(null)} className="underline cursor-pointer">
-            Đóng
+            {t('Đóng', 'Close')}
           </button>
         </div>
         <div className="grid grid-cols-5 gap-1">
@@ -427,21 +432,21 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
 
   if (overlay === 'optn') {
     const actions: { id: 'fact' | 'divR' | 'pol' | 'rec' | 'gcd' | 'lcm' | 'dms' | 'eng'; label: string }[] = [
-      { id: 'fact', label: 'FACT (Thừa số NT)' },
-      { id: 'divR', label: 'a ÷R b (Chia có dư)' },
+      { id: 'fact', label: t('FACT (Thừa số NT)', 'FACT (Prime factors)') },
+      { id: 'divR', label: t('a ÷R b (Chia có dư)', 'a ÷R b (Remainder)') },
       { id: 'pol', label: 'Pol(x; y)' },
       { id: 'rec', label: 'Rec(r; θ)' },
       { id: 'gcd', label: 'GCD(a; b)' },
       { id: 'lcm', label: 'LCM(a; b)' },
-      { id: 'dms', label: `Đổi ° ' " (DMS)` },
-      { id: 'eng', label: 'Đổi ENG (×10³ⁿ)' },
+      { id: 'dms', label: t(`Đổi ° ' " (DMS)`, `Convert ° ' " (DMS)`) },
+      { id: 'eng', label: t('Đổi ENG (×10³ⁿ)', 'Format ENG (×10³ⁿ)') },
     ];
     return (
       <div className="p-2 min-h-[120px] space-y-1 text-[#1e345a]">
         <div className="flex items-center justify-between text-[10px] font-bold">
-          <span>Tùy chọn nhanh (OPTN)</span>
+          <span>{t('Tùy chọn nhanh (OPTN)', 'Quick options (OPTN)')}</span>
           <button type="button" onClick={() => setOverlay(null)} className="underline cursor-pointer">
-            Đóng
+            {t('Đóng', 'Close')}
           </button>
         </div>
         <div className="grid grid-cols-2 gap-1">
@@ -467,9 +472,9 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
     return (
       <div className="p-2 min-h-[120px] space-y-1.5 text-[#1e345a]">
         <div className="flex items-center justify-between text-[10px] font-bold">
-          <span>CALC · nhập giá trị biến (bấm phím Casio hoặc gõ)</span>
+          <span>{t('CALC · nhập giá trị biến (bấm phím Casio hoặc gõ)', 'CALC · enter variable values')}</span>
           <button type="button" onClick={() => setOverlay(null)} className="underline cursor-pointer">
-            Hủy
+            {t('Hủy', 'Cancel')}
           </button>
         </div>
         <div className="grid grid-cols-3 gap-1 max-h-[68px] overflow-y-auto casio-lcd-no-scrollbar">
@@ -499,7 +504,7 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
           onClick={props.onEvalCalcPrompt}
           className="w-full h-6 rounded bg-[#1e345a] text-[#e6f0e1] text-[10.5px] font-bold cursor-pointer"
         >
-          Tính giá trị biểu thức (=)
+          {t('Tính giá trị biểu thức (=)', 'Evaluate expression (=)')}
         </button>
       </div>
     );
@@ -509,14 +514,29 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
     return (
       <div className="p-2 min-h-[120px] space-y-1 text-[#1e345a] text-[9.5px] leading-snug">
         <div className="flex items-center justify-between font-bold text-[10px]">
-          <span>Hướng dẫn Casio fx-580VN X</span>
+          <span>{t('Hướng dẫn Casio fx-580VN X', 'Casio fx-580VN X Guide')}</span>
           <button type="button" onClick={() => setOverlay(null)} className="underline cursor-pointer">
-            Đóng
+            {t('Đóng', 'Close')}
           </button>
         </div>
-        <p>• <b>MENU + 1..9, (−), ° ' ", x⁻¹</b>: Mở nhanh đúng 12 chế độ chuẩn fx-580VN X.</p>
-        <p>• <b>Mode 9, 6, 7, A, C</b>: Bấm trực tiếp phím số theo menu từng bước giống máy thật; bấm <b>=</b> để sang ô / giải; <b>AC</b> quay lại sửa.</p>
-        <p>• <b>Mode 3 (Cơ số n)</b>: Phím <b>x²</b>(DEC), <b>x^□</b>(HEX), <b>log□</b>(BIN), <b>ln</b>(OCT); <b>SHIFT+OPTN</b> dán LaTeX lên bảng.</p>
+        <p>
+          • <b>MENU + 1..9, (−), ° ' ", x⁻¹</b>:{' '}
+          {t('Mở nhanh đúng 12 chế độ chuẩn fx-580VN X.', 'Quickly open all 12 fx-580VN X modes.')}
+        </p>
+        <p>
+          • <b>Mode 9, 6, 7, A, C</b>:{' '}
+          {t(
+            'Bấm trực tiếp phím số theo menu từng bước giống máy thật; bấm = để sang ô / giải; AC quay lại sửa.',
+            'Press number keys step-by-step like the real calculator; press = to advance/solve; AC to edit.'
+          )}
+        </p>
+        <p>
+          • <b>{t('Mode 3 (Cơ số n)', 'Mode 3 (Base-N)')}</b>:{' '}
+          {t(
+            'Phím x²(DEC), x^□(HEX), log□(BIN), ln(OCT); SHIFT+OPTN dán LaTeX lên bảng.',
+            'Keys x²(DEC), x^□(HEX), log□(BIN), ln(OCT); SHIFT+OPTN stamps LaTeX to board.'
+          )}
+        </p>
       </div>
     );
   }
@@ -524,18 +544,18 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
   // MENU Grid — Authentic 12 Casio fx-580VN X modes (1..9, A, B, C)
   if (mode === 'menu') {
     const items: { id: CasioMainMode; num: string; title: string }[] = [
-      { id: 'calc', num: '1', title: 'Tính toán' },
-      { id: 'complex', num: '2', title: 'Số phức' },
-      { id: 'basen', num: '3', title: 'Cơ số n' },
-      { id: 'matrix', num: '4', title: 'Ma trận' },
-      { id: 'vector', num: '5', title: 'Vectơ' },
-      { id: 'stats', num: '6', title: 'Thống kê' },
-      { id: 'dist', num: '7', title: 'Phân phối' },
-      { id: 'table', num: '8', title: 'Bảng f(x)' },
-      { id: 'equation', num: '9', title: 'Phương trình' },
-      { id: 'ineq', num: 'A', title: 'Bất PT' },
-      { id: 'verify', num: 'B', title: 'Đúng / Sai' },
-      { id: 'ratio', num: 'C', title: 'Tỉ lệ thức' },
+      { id: 'calc', num: '1', title: t('Tính toán', 'Calculate') },
+      { id: 'complex', num: '2', title: t('Số phức', 'Complex') },
+      { id: 'basen', num: '3', title: t('Cơ số n', 'Base-N') },
+      { id: 'matrix', num: '4', title: t('Ma trận', 'Matrix') },
+      { id: 'vector', num: '5', title: t('Vectơ', 'Vector') },
+      { id: 'stats', num: '6', title: t('Thống kê', 'Statistics') },
+      { id: 'dist', num: '7', title: t('Phân phối', 'Distribution') },
+      { id: 'table', num: '8', title: t('Bảng f(x)', 'Table') },
+      { id: 'equation', num: '9', title: t('Phương trình', 'Equation/Func') },
+      { id: 'ineq', num: 'A', title: t('Bất PT', 'Inequality') },
+      { id: 'verify', num: 'B', title: t('Đúng / Sai', 'Verify') },
+      { id: 'ratio', num: 'C', title: t('Tỉ lệ thức', 'Ratio') },
     ];
     return (
       <div className="p-1.5 min-h-[120px] grid grid-cols-3 gap-1 text-[#1e345a]">
@@ -585,7 +605,7 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
           <button
             type="button"
             onClick={() => props.setComplexPolar(!props.complexPolar)}
-            title="Đổi dạng đại số a+bi ↔ lượng giác r∠θ"
+            title={t('Đổi dạng đại số a+bi ↔ lượng giác r∠θ', 'Toggle rectangular a+bi ↔ polar r∠θ')}
             className="px-1.5 py-0.5 rounded bg-[#1e345a] text-[#e6f0e1] text-[8.5px] font-mono font-bold cursor-pointer shrink-0"
           >
             {props.complexPolar ? 'r∠θ' : 'a+bi'}
@@ -595,7 +615,7 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
         <input
           type="text"
           data-casio-field="complex-expr"
-          aria-label="Biểu thức số phức"
+          aria-label={t('Biểu thức số phức', 'Complex expression')}
           autoFocus
           value={props.complexExpr}
           onChange={(e) => props.setComplexExpr(e.target.value)}
@@ -686,7 +706,7 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
         <input
           type="text"
           data-casio-field="basen-expr"
-          aria-label="Biểu thức cơ số n"
+          aria-label={t('Biểu thức cơ số n', 'Base-N expression')}
           value={props.baseExpr}
           onChange={(e) => props.setBaseExpr(e.target.value)}
           className="w-full h-6 px-1.5 rounded bg-[#e5eee0] focus:ring-1 focus:ring-indigo-600 border border-[#96a68f] text-[12px] font-mono font-bold outline-none"
@@ -780,7 +800,7 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
             <button
               type="button"
               onClick={() => resizeMat(nextSize)}
-              title="Đổi kích thước 2×2 / 3×3 / 4×4"
+              title={t('Đổi kích thước 2×2 / 3×3 / 4×4', 'Resize 2×2 / 3×3 / 4×4')}
               className="px-1 rounded bg-[#1e345a] text-[#e6f0e1] cursor-pointer"
             >
               {matSize}×{matSize}
@@ -907,7 +927,7 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
     } else if (vecOp === 'angle') {
       vecResultLatex = Number.isFinite(res.angle)
         ? `\\angle(\\vec{u},\\vec{v}) = ${Number(res.angle.toFixed(3))}${unitTxt}`
-        : '\\text{Chưa xác định}';
+        : `\\text{${t('Chưa xác định', 'Undefined')}}`;
     } else if (vecOp === 'mag') {
       const ru = formatCasioExact(res.magU);
       const rv = formatCasioExact(res.magV);
@@ -1033,9 +1053,9 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
       return (
         <div className="p-2 min-h-[120px] flex flex-col justify-between text-[#1e345a]">
           <div className="flex items-center justify-between text-[9.5px] font-bold border-b border-[#adbd9f] pb-0.5">
-            <span>6: Thống kê (Statistics)</span>
+            <span>{t('6: Thống kê (Statistics)', '6: Statistics')}</span>
             <button type="button" onClick={() => setMode('calc')} className="underline cursor-pointer">
-              Thoát
+              {t('Thoát', 'Exit')}
             </button>
           </div>
           <div className="space-y-1.5 my-1">
@@ -1050,7 +1070,7 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
               <span className="w-4 h-4 rounded-sm bg-[#1e345a] text-[#e6f0e1] text-[9.5px] font-mono flex items-center justify-center shrink-0">
                 1
               </span>
-              <span>1-Variable (Thống kê 1 biến)</span>
+              <span>{t('1-Variable (Thống kê 1 biến)', '1-Variable statistics')}</span>
             </button>
             <button
               type="button"
@@ -1063,10 +1083,10 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
               <span className="w-4 h-4 rounded-sm bg-[#1e345a] text-[#e6f0e1] text-[9.5px] font-mono flex items-center justify-center shrink-0">
                 2
               </span>
-              <span>y = a + bx (Hồi quy tuyến tính)</span>
+              <span>{t('y = a + bx (Hồi quy tuyến tính)', 'y = a + bx (Linear regression)')}</span>
             </button>
           </div>
-          <div className="text-[8.5px] font-mono opacity-75">Bấm phím 1 hoặc 2</div>
+          <div className="text-[8.5px] font-mono opacity-75">{t('Bấm phím 1 hoặc 2', 'Press key 1 or 2')}</div>
         </div>
       );
     }
@@ -1075,17 +1095,21 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
       return (
         <div className="p-2 min-h-[120px] flex flex-col justify-between gap-1 text-[#1e345a]">
           <div className="flex items-center justify-between text-[9px] font-bold border-b border-[#adbd9f] pb-0.5">
-            <span>{statsSubMode === '1var' ? 'Kết quả 1-Variable' : 'Kết quả hồi quy y = a + bx'}</span>
+            <span>
+              {statsSubMode === '1var'
+                ? t('Kết quả 1-Variable', '1-Variable results')
+                : t('Kết quả hồi quy y = a + bx', 'Regression y = a + bx')}
+            </span>
             <div className="flex items-center gap-1.5">
               <button
                 type="button"
                 onClick={() => setStatsScreen('input')}
                 className="px-1.5 py-0.5 rounded bg-[#e5eee0] border border-[#96a68f] text-[8.5px] cursor-pointer"
               >
-                Sửa (AC)
+                {t('Sửa (AC)', 'Edit (AC)')}
               </button>
               <button type="button" onClick={() => setStatsScreen('selectType')} className="underline cursor-pointer">
-                Đổi loại
+                {t('Đổi loại', 'Change type')}
               </button>
             </div>
           </div>
@@ -1108,7 +1132,7 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
               </div>
             ) : (
               <div className="text-center text-rose-700 text-[10.5px] font-bold py-4">
-                Chưa có dữ liệu hợp lệ
+                {t('Chưa có dữ liệu hợp lệ', 'No valid data')}
               </div>
             )
           ) : props.linRegResult ? (
@@ -1125,7 +1149,7 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
             </div>
           ) : (
             <div className="text-center text-rose-700 text-[10.5px] font-bold py-4">
-              Cần tối thiểu 2 cặp (x, y) có x khác nhau
+              {t('Cần tối thiểu 2 cặp (x, y) có x khác nhau', 'Need at least 2 (x, y) pairs with distinct x')}
             </div>
           )}
         </div>
@@ -1144,7 +1168,7 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
                 onClick={() => setStatsScreen('selectType')}
                 className="px-1 py-0.5 rounded bg-[#c6d4bf] border border-[#96a68f] text-[8px] cursor-pointer"
               >
-                Đổi loại
+                {t('Đổi loại', 'Change type')}
               </button>
             </div>
             <div className="flex items-center gap-1">
@@ -1153,21 +1177,21 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
                 onClick={() => props.onInsertToken(', ')}
                 className="px-1.5 py-0.5 rounded bg-[#e5eee0] border border-[#96a68f] text-[8.5px] cursor-pointer"
               >
-                + Số (,)
+                {t('+ Số (,)', '+ Num (,)')}
               </button>
               <button
                 type="button"
                 onClick={() => setStatsScreen('result')}
                 className="px-2 py-0.5 rounded bg-[#1e345a] text-[#e6f0e1] text-[8.5px] cursor-pointer"
               >
-                Tính (=)
+                {t('Tính (=)', 'Calc (=)')}
               </button>
             </div>
           </div>
           <input
             type="text"
             data-casio-field="stats-raw"
-            aria-label="Dãy số thống kê"
+            aria-label={t('Dãy số thống kê', 'Statistics data list')}
             value={props.statsRaw}
             onChange={(e) => props.setStatsRaw(e.target.value)}
             onKeyDown={(e) => {
@@ -1176,12 +1200,12 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
                 setStatsScreen('result');
               }
             }}
-            placeholder="Nhập các số cách nhau bằng dấu phẩy..."
+            placeholder={t('Nhập các số cách nhau bằng dấu phẩy...', 'Enter comma-separated numbers...')}
             className="w-full h-7 px-1.5 rounded bg-[#e5eee0] focus:ring-2 focus:ring-indigo-600 border border-[#9eb096] text-[11px] font-mono outline-none"
           />
           <div className="text-[8.5px] font-mono opacity-75 flex justify-between">
-            <span>Đã nhập: <b>{props.statsResult?.n ?? 0}</b> giá trị</span>
-            <span>Bấm Tính (=) để xem x̄, σ, Q₁..Q₃</span>
+            <span>{t('Đã nhập:', 'Entered:')} <b>{props.statsResult?.n ?? 0}</b> {t('giá trị', 'values')}</span>
+            <span>{t('Bấm Tính (=) để xem x̄, σ, Q₁..Q₃', 'Press Calc (=) for x̄, σ, Q₁..Q₃')}</span>
           </div>
         </div>
       );
@@ -1198,7 +1222,7 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
               onClick={() => setStatsScreen('selectType')}
               className="px-1 py-0.5 rounded bg-[#c6d4bf] border border-[#96a68f] text-[8px] cursor-pointer"
             >
-              Đổi loại
+              {t('Đổi loại', 'Change type')}
             </button>
           </div>
           <div className="flex items-center gap-1">
@@ -1207,14 +1231,14 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
               onClick={() => props.setStatsPairs([...props.statsPairs, { x: '', y: '' }])}
               className="px-1.5 py-0.5 rounded bg-[#e5eee0] border border-[#96a68f] text-[8.5px] cursor-pointer"
             >
-              + Dòng
+              {t('+ Dòng', '+ Row')}
             </button>
             <button
               type="button"
               onClick={() => setStatsScreen('result')}
               className="px-2 py-0.5 rounded bg-[#1e345a] text-[#e6f0e1] text-[8.5px] cursor-pointer"
             >
-              Tính (=)
+              {t('Tính (=)', 'Calc (=)')}
             </button>
           </div>
         </div>
@@ -1274,8 +1298,8 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
       return (
         <div className="p-1.5 min-h-[120px] flex flex-col justify-between text-[#1e345a]">
           <div className="flex items-center justify-between text-[9px] font-bold border-b border-[#adbd9f] pb-0.5">
-            <span>7: Phân phối xác suất</span>
-            <span className="font-mono text-[8px] opacity-75">Bấm 1–7</span>
+            <span>{t('7: Phân phối xác suất', '7: Probability distributions')}</span>
+            <span className="font-mono text-[8px] opacity-75">{t('Bấm 1–7', 'Press 1–7')}</span>
           </div>
           <div className="grid grid-cols-2 gap-1 my-1">
             {distMenu.map((item) => (
@@ -1311,7 +1335,7 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
       p: parseCasioCoeff(props.distP),
       lambda: parseCasioCoeff(props.distLambda),
     });
-    const curDistLabel = distMenu.find((d) => d.id === props.distKind)?.label ?? 'Phân phối';
+    const curDistLabel = distMenu.find((d) => d.id === props.distKind)?.label ?? t('Phân phối', 'Distribution');
 
     if (distScreen === 'result') {
       return (
@@ -1324,10 +1348,10 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
                 onClick={() => setDistScreen('input')}
                 className="px-1.5 py-0.5 rounded bg-[#e5eee0] border border-[#96a68f] text-[8.5px] cursor-pointer"
               >
-                Sửa (AC)
+                {t('Sửa (AC)', 'Edit (AC)')}
               </button>
               <button type="button" onClick={() => setDistScreen('selectKind')} className="underline cursor-pointer">
-                Đổi loại
+                {t('Đổi loại', 'Change type')}
               </button>
             </div>
           </div>
@@ -1338,10 +1362,14 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
             {distRes ? (
               <MathTex latex={distRes.summaryLatex} className="text-[14.5px] font-bold" />
             ) : (
-              <span className="text-rose-700 font-mono font-bold text-[11px]">Math ERROR (Tham số sai)</span>
+              <span className="text-rose-700 font-mono font-bold text-[11px]">
+                {t('Math ERROR (Tham số sai)', 'Math ERROR (Invalid parameters)')}
+              </span>
             )}
           </div>
-          <div className="text-[8px] font-mono opacity-75 text-right">Bấm AC hoặc = để sửa tham số</div>
+          <div className="text-[8px] font-mono opacity-75 text-right">
+            {t('Bấm AC hoặc = để sửa tham số', 'Press AC or = to edit parameters')}
+          </div>
         </div>
       );
     }
@@ -1387,7 +1415,7 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
               onClick={() => setDistScreen('selectKind')}
               className="px-1 py-0.5 rounded bg-[#c6d4bf] border border-[#96a68f] text-[8px] cursor-pointer"
             >
-              Đổi loại
+              {t('Đổi loại', 'Change type')}
             </button>
           </div>
           <button
@@ -1395,7 +1423,7 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
             onClick={() => setDistScreen('result')}
             className="px-2 py-0.5 rounded bg-[#1e345a] text-[#e6f0e1] text-[8.5px] cursor-pointer"
           >
-            Tính (=)
+            {t('Tính (=)', 'Calc (=)')}
           </button>
         </div>
 
@@ -1423,7 +1451,9 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
             </label>
           ))}
         </div>
-        <div className="text-[8px] font-mono opacity-75 text-right">Bấm = để chuyển ô / tính kết quả</div>
+        <div className="text-[8px] font-mono opacity-75 text-right">
+          {t('Bấm = để chuyển ô / tính kết quả', 'Press = to advance / calculate')}
+        </div>
       </div>
     );
   }
@@ -1463,7 +1493,7 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
               onClick={() => setTableScreen('input')}
               className="px-1.5 py-0.5 rounded bg-[#1e345a] text-[#e6f0e1] text-[8.5px] cursor-pointer shrink-0"
             >
-              Sửa (AC)
+              {t('Sửa (AC)', 'Edit (AC)')}
             </button>
           </div>
           <div
@@ -1495,7 +1525,7 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
               </table>
             ) : (
               <div className="p-3 text-center text-[10px] font-bold text-rose-700">
-                Nhập hàm f(x) và Step &gt; 0 hợp lệ
+                {t('Nhập hàm f(x) và Step > 0 hợp lệ', 'Enter valid f(x) and Step > 0')}
               </div>
             )}
           </div>
@@ -1506,13 +1536,13 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
     return (
       <div className="p-2 min-h-[120px] flex flex-col justify-between gap-1 text-[#1e345a]">
         <div className="flex items-center justify-between text-[9px] font-bold">
-          <span>8: Bảng giá trị (Table)</span>
+          <span>{t('8: Bảng giá trị (Table)', '8: Function table')}</span>
           <button
             type="button"
             onClick={() => setTableScreen('result')}
             className="px-2 py-0.5 rounded bg-[#1e345a] text-[#e6f0e1] text-[8.5px] cursor-pointer"
           >
-            Lập bảng (=)
+            {t('Lập bảng (=)', 'Table (=)')}
           </button>
         </div>
 
@@ -1522,7 +1552,7 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
             <input
               type="text"
               data-casio-field="table-expr"
-              aria-label="Hàm f(x)"
+              aria-label={t('Hàm f(x)', 'Function f(x)')}
               value={props.tableExpr}
               onChange={(e) => props.setTableExpr(e.target.value)}
               onKeyDown={(e) => {
@@ -1539,10 +1569,10 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
             <input
               type="text"
               data-casio-field="table-gexpr"
-              aria-label="Hàm g(x) tùy chọn"
+              aria-label={t('Hàm g(x) tùy chọn', 'Optional function g(x)')}
               value={props.tableGExpr}
               onChange={(e) => props.setTableGExpr(e.target.value)}
-              placeholder="(Bỏ trống nếu không dùng)"
+              placeholder={t('(Bỏ trống nếu không dùng)', '(Leave blank if unused)')}
               className="w-full min-w-0 bg-transparent text-[10px] font-mono outline-none placeholder:font-sans placeholder:text-[8.5px]"
             />
           </div>
@@ -1587,9 +1617,9 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
       return (
         <div className="p-2 min-h-[120px] flex flex-col justify-between text-[#1e345a]">
           <div className="flex items-center justify-between text-[9.5px] font-bold border-b border-[#adbd9f] pb-0.5">
-            <span>9: Phương trình / Hệ PT</span>
+            <span>{t('9: Phương trình / Hệ PT', '9: Equation / System')}</span>
             <button type="button" onClick={() => setMode('calc')} className="underline cursor-pointer">
-              Thoát
+              {t('Thoát', 'Exit')}
             </button>
           </div>
           <div className="space-y-1.5 my-1">
@@ -1601,7 +1631,7 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
               <span className="w-4 h-4 rounded-sm bg-[#1e345a] text-[#e6f0e1] text-[9.5px] font-mono flex items-center justify-center shrink-0">
                 1
               </span>
-              <span>Hệ phương trình</span>
+              <span>{t('Hệ phương trình', 'Simultaneous equation')}</span>
             </button>
             <button
               type="button"
@@ -1611,29 +1641,33 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
               <span className="w-4 h-4 rounded-sm bg-[#1e345a] text-[#e6f0e1] text-[9.5px] font-mono flex items-center justify-center shrink-0">
                 2
               </span>
-              <span>Phương trình</span>
+              <span>{t('Phương trình', 'Polynomial')}</span>
             </button>
           </div>
-          <div className="text-[8.5px] font-mono opacity-75">Bấm phím 1 hoặc 2 trên máy tính Casio</div>
+          <div className="text-[8.5px] font-mono opacity-75">
+            {t('Bấm phím 1 hoặc 2 trên máy tính Casio', 'Press key 1 or 2 on the calculator')}
+          </div>
         </div>
       );
     }
 
     if (eqScreen === 'selectSimulDeg') {
       const options: { deg: '2' | '3' | '4'; sub: CasioEqSubMode; label: string }[] = [
-        { deg: '2', sub: 'sys2', label: '2 ẩn (x, y)' },
-        { deg: '3', sub: 'sys3', label: '3 ẩn (x, y, z)' },
-        { deg: '4', sub: 'sys4', label: '4 ẩn (x, y, z, t)' },
+        { deg: '2', sub: 'sys2', label: t('2 ẩn (x, y)', '2 unknowns') },
+        { deg: '3', sub: 'sys3', label: t('3 ẩn (x, y, z)', '3 unknowns') },
+        { deg: '4', sub: 'sys4', label: t('4 ẩn (x, y, z, t)', '4 unknowns') },
       ];
       return (
         <div className="p-2 min-h-[120px] flex flex-col justify-between text-[#1e345a]">
           <div className="flex items-center justify-between text-[9.5px] font-bold border-b border-[#adbd9f] pb-0.5">
-            <span>Hệ phương trình · Số ẩn?</span>
+            <span>{t('Hệ phương trình · Số ẩn?', 'Simultaneous · Unknowns?')}</span>
             <button type="button" onClick={() => setEqScreen('selectType')} className="underline cursor-pointer">
-              Quay lại
+              {t('Quay lại', 'Back')}
             </button>
           </div>
-          <div className="text-[10.5px] font-semibold">Chọn số ẩn từ 2 đến 4:</div>
+          <div className="text-[10.5px] font-semibold">
+            {t('Chọn số ẩn từ 2 đến 4:', 'Select unknowns (2 to 4):')}
+          </div>
           <div className="grid grid-cols-3 gap-1.5 my-1">
             {options.map((opt) => (
               <button
@@ -1650,7 +1684,9 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
               </button>
             ))}
           </div>
-          <div className="text-[8.5px] font-mono opacity-75">Bấm phím 2, 3 hoặc 4</div>
+          <div className="text-[8.5px] font-mono opacity-75">
+            {t('Bấm phím 2, 3 hoặc 4', 'Press key 2, 3, or 4')}
+          </div>
         </div>
       );
     }
@@ -1664,12 +1700,14 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
       return (
         <div className="p-2 min-h-[120px] flex flex-col justify-between text-[#1e345a]">
           <div className="flex items-center justify-between text-[9.5px] font-bold border-b border-[#adbd9f] pb-0.5">
-            <span>Phương trình · Bậc?</span>
+            <span>{t('Phương trình · Bậc?', 'Polynomial · Degree?')}</span>
             <button type="button" onClick={() => setEqScreen('selectType')} className="underline cursor-pointer">
-              Quay lại
+              {t('Quay lại', 'Back')}
             </button>
           </div>
-          <div className="text-[10.5px] font-semibold">Chọn bậc phương trình từ 2 đến 4:</div>
+          <div className="text-[10.5px] font-semibold">
+            {t('Chọn bậc phương trình từ 2 đến 4:', 'Select polynomial degree (2 to 4):')}
+          </div>
           <div className="grid grid-cols-3 gap-1.5 my-1">
             {options.map((opt) => (
               <button
@@ -1686,7 +1724,9 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
               </button>
             ))}
           </div>
-          <div className="text-[8.5px] font-mono opacity-75">Bấm phím 2, 3 hoặc 4</div>
+          <div className="text-[8.5px] font-mono opacity-75">
+            {t('Bấm phím 2, 3 hoặc 4', 'Press key 2, 3, or 4')}
+          </div>
         </div>
       );
     }
@@ -1702,7 +1742,7 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
             <span>
               {eqResult.kind === 'ok' && curStep
                 ? `${curStep.label} (${safeIdx + 1}/${steps.length})`
-                : 'Kết quả Mode 9'}
+                : t('Kết quả Mode 9', 'Mode 9 results')}
             </span>
             <div className="flex items-center gap-1.5">
               <button
@@ -1710,14 +1750,14 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
                 onClick={() => setEqScreen('input')}
                 className="px-1.5 py-0.5 rounded bg-[#e5eee0] border border-[#96a68f] text-[8.5px] cursor-pointer"
               >
-                Sửa (AC)
+                {t('Sửa (AC)', 'Edit (AC)')}
               </button>
               <button
                 type="button"
                 onClick={() => setEqScreen('selectType')}
                 className="underline cursor-pointer"
               >
-                Đổi loại
+                {t('Đổi loại', 'Change type')}
               </button>
             </div>
           </div>
@@ -1736,7 +1776,7 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
               </>
             ) : (
               <div className="w-full text-center font-bold text-[13px] text-rose-700">
-                {eqResult.message ?? 'Vô nghiệm'}
+                {eqResult.message ?? t('Vô nghiệm', 'No solution')}
               </div>
             )}
           </div>
@@ -1755,7 +1795,7 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
                         : 'bg-[#c6d4bf] text-[#1e345a] hover:bg-[#b5c7ad]'
                     }`}
                   >
-                    {st.label.replace(' =', '').replace(' của y', '')}
+                    {st.label.replace(' =', '').replace(' của y', '').replace(' of y', '')}
                   </button>
                 ))}
               </div>
@@ -1763,7 +1803,7 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
             </div>
           ) : (
             <div className="text-[8.5px] font-mono opacity-75 text-right">
-              Bấm AC hoặc = để quay lại sửa hệ số
+              {t('Bấm AC hoặc = để quay lại sửa hệ số', 'Press AC or = to edit coefficients')}
             </div>
           )}
         </div>
@@ -1799,12 +1839,12 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
             ];
 
     const modeTitleMap: Record<CasioEqSubMode, string> = {
-      quad: 'PT bậc 2',
-      cubic: 'PT bậc 3',
-      quartic: 'PT bậc 4',
-      sys2: 'Hệ 2 ẩn',
-      sys3: 'Hệ 3 ẩn',
-      sys4: 'Hệ 4 ẩn',
+      quad: t('PT bậc 2', 'Quadratic eq'),
+      cubic: t('PT bậc 3', 'Cubic eq'),
+      quartic: t('PT bậc 4', 'Quartic eq'),
+      sys2: t('Hệ 2 ẩn', '2-var system'),
+      sys3: t('Hệ 3 ẩn', '3-var system'),
+      sys4: t('Hệ 4 ẩn', '4-var system'),
     };
 
     return (
@@ -1817,7 +1857,7 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
               onClick={() => setEqScreen('selectType')}
               className="px-1 py-0.5 rounded bg-[#c6d4bf] hover:bg-[#1e345a] hover:text-[#e6f0e1] border border-[#96a68f] text-[8px] cursor-pointer"
             >
-              Đổi loại
+              {t('Đổi loại', 'Change type')}
             </button>
           </div>
           <button
@@ -1825,7 +1865,7 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
             onClick={props.onSolveEquationMode}
             className="px-2 py-0.5 rounded bg-[#1e345a] hover:bg-indigo-700 text-[#e6f0e1] text-[8.5px] font-bold cursor-pointer"
           >
-            Giải (=)
+            {t('Giải (=)', 'Solve (=)')}
           </button>
         </div>
 
@@ -1850,7 +1890,7 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
                   <input
                     type="text"
                     data-casio-field={`eq-${f.lbl}`}
-                    aria-label={`Hệ số ${f.lbl}`}
+                    aria-label={t(`Hệ số ${f.lbl}`, `Coefficient ${f.lbl}`)}
                     value={f.val}
                     onChange={(e) => f.set(e.target.value)}
                     onKeyDown={(e) => {
@@ -1915,7 +1955,7 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
                     key={`s3-${ri}-${ci}`}
                     type="text"
                     data-casio-field={`sys3-${ri}-${ci}`}
-                    aria-label={`Hệ 3 ẩn (${ri + 1},${ci + 1})`}
+                    aria-label={t(`Hệ 3 ẩn (${ri + 1},${ci + 1})`, `3-var system (${ri + 1},${ci + 1})`)}
                     value={val}
                     onChange={(e) => {
                       const next = props.sys3.map((r, rIdx) =>
@@ -1953,7 +1993,7 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
                     key={`s4-${ri}-${ci}`}
                     type="text"
                     data-casio-field={`sys4-${ri}-${ci}`}
-                    aria-label={`Hệ 4 ẩn (${ri + 1},${ci + 1})`}
+                    aria-label={t(`Hệ 4 ẩn (${ri + 1},${ci + 1})`, `4-var system (${ri + 1},${ci + 1})`)}
                     value={val}
                     onChange={(e) => {
                       const next = props.sys4.map((r, rIdx) =>
@@ -1976,8 +2016,8 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
         )}
 
         <div className="text-[8px] font-mono opacity-75 flex items-center justify-between">
-          <span>Nhập hệ số (hỗ trợ 1/2, √2)</span>
-          <span>Bấm = để tiếp / giải</span>
+          <span>{t('Nhập hệ số (hỗ trợ 1/2, √2)', 'Enter coefficients (supports 1/2, √2)')}</span>
+          <span>{t('Bấm = để tiếp / giải', 'Press = to advance / solve')}</span>
         </div>
       </div>
     );
@@ -1991,12 +2031,14 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
       return (
         <div className="p-2 min-h-[120px] flex flex-col justify-between text-[#1e345a]">
           <div className="flex items-center justify-between text-[9.5px] font-bold border-b border-[#adbd9f] pb-0.5">
-            <span>A: Bất phương trình · Bậc?</span>
+            <span>{t('A: Bất phương trình · Bậc?', 'A: Inequality · Degree?')}</span>
             <button type="button" onClick={() => setMode('calc')} className="underline cursor-pointer">
-              Thoát
+              {t('Thoát', 'Exit')}
             </button>
           </div>
-          <div className="text-[10.5px] font-semibold">Chọn bậc bất phương trình (2 hoặc 3):</div>
+          <div className="text-[10.5px] font-semibold">
+            {t('Chọn bậc bất phương trình (2 hoặc 3):', 'Select polynomial degree (2 or 3):')}
+          </div>
           <div className="grid grid-cols-2 gap-1.5 my-1">
             {([2, 3] as const).map((deg) => (
               <button
@@ -2015,7 +2057,9 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
               </button>
             ))}
           </div>
-          <div className="text-[8.5px] font-mono opacity-75">Bấm phím 2 hoặc 3</div>
+          <div className="text-[8.5px] font-mono opacity-75">
+            {t('Bấm phím 2 hoặc 3', 'Press key 2 or 3')}
+          </div>
         </div>
       );
     }
@@ -2031,9 +2075,9 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
       return (
         <div className="p-2 min-h-[120px] flex flex-col justify-between text-[#1e345a]">
           <div className="flex items-center justify-between text-[9.5px] font-bold border-b border-[#adbd9f] pb-0.5">
-            <span>Chọn dạng bất phương trình</span>
+            <span>{t('Chọn dạng bất phương trình', 'Select inequality form')}</span>
             <button type="button" onClick={() => setIneqScreen('selectDeg')} className="underline cursor-pointer">
-              Quay lại
+              {t('Quay lại', 'Back')}
             </button>
           </div>
           <div className="grid grid-cols-2 gap-1 my-1">
@@ -2054,7 +2098,9 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
               </button>
             ))}
           </div>
-          <div className="text-[8.5px] font-mono opacity-75">Bấm phím 1, 2, 3 hoặc 4</div>
+          <div className="text-[8.5px] font-mono opacity-75">
+            {t('Bấm phím 1, 2, 3 hoặc 4', 'Press key 1, 2, 3, or 4')}
+          </div>
         </div>
       );
     }
@@ -2080,17 +2126,17 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
       return (
         <div className="p-2 min-h-[120px] flex flex-col justify-between gap-1 text-[#1e345a]">
           <div className="flex items-center justify-between text-[9px] font-bold border-b border-[#adbd9f] pb-0.5">
-            <span>Tập nghiệm BPT bậc {ineqDegree}</span>
+            <span>{t(`Tập nghiệm BPT bậc ${ineqDegree}`, `Degree-${ineqDegree} inequality solution`)}</span>
             <div className="flex items-center gap-1.5">
               <button
                 type="button"
                 onClick={() => setIneqScreen('input')}
                 className="px-1.5 py-0.5 rounded bg-[#e5eee0] border border-[#96a68f] text-[8.5px] cursor-pointer"
               >
-                Sửa (AC)
+                {t('Sửa (AC)', 'Edit (AC)')}
               </button>
               <button type="button" onClick={() => setIneqScreen('selectDeg')} className="underline cursor-pointer">
-                Đổi loại
+                {t('Đổi loại', 'Change type')}
               </button>
             </div>
           </div>
@@ -2100,7 +2146,9 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
           >
             <MathTex latex={res.summaryLatex} className="text-[14px] font-bold" />
           </div>
-          <div className="text-[8px] font-mono opacity-75 text-right">Bấm AC hoặc = để sửa hệ số</div>
+          <div className="text-[8px] font-mono opacity-75 text-right">
+            {t('Bấm AC hoặc = để sửa hệ số', 'Press AC or = to edit coefficients')}
+          </div>
         </div>
       );
     }
@@ -2120,13 +2168,13 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
       <div className="p-2 min-h-[120px] flex flex-col justify-between gap-1 text-[#1e345a]">
         <div className="flex items-center justify-between text-[9px] font-bold">
           <div className="flex items-center gap-1">
-            <span>A: Bất PT bậc {ineqDegree}</span>
+            <span>{t(`A: Bất PT bậc ${ineqDegree}`, `A: Degree-${ineqDegree} ineq`)}</span>
             <button
               type="button"
               onClick={() => setIneqScreen('selectDeg')}
               className="px-1 py-0.5 rounded bg-[#c6d4bf] border border-[#96a68f] text-[8px] cursor-pointer"
             >
-              Đổi loại
+              {t('Đổi loại', 'Change type')}
             </button>
           </div>
           <button
@@ -2134,7 +2182,7 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
             onClick={() => setIneqScreen('result')}
             className="px-2 py-0.5 rounded bg-[#1e345a] text-[#e6f0e1] text-[8.5px] cursor-pointer"
           >
-            Giải (=)
+            {t('Giải (=)', 'Solve (=)')}
           </button>
         </div>
 
@@ -2152,7 +2200,7 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
               <input
                 type="text"
                 data-casio-field={`ineq-${f.lbl}`}
-                aria-label={`Bất PT ${f.lbl}`}
+                aria-label={t(`Bất PT ${f.lbl}`, `Inequality ${f.lbl}`)}
                 value={f.val}
                 onChange={(e) => f.set(e.target.value)}
                 onKeyDown={(e) => {
@@ -2166,7 +2214,9 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
             </label>
           ))}
         </div>
-        <div className="text-[8px] font-mono opacity-75 text-right">Bấm = để chuyển ô / giải</div>
+        <div className="text-[8px] font-mono opacity-75 text-right">
+          {t('Bấm = để chuyển ô / giải', 'Press = to advance / solve')}
+        </div>
       </div>
     );
   }
@@ -2194,7 +2244,7 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
     return (
       <div className="p-2 min-h-[120px] flex flex-col justify-between gap-1 text-[#1e345a]">
         <div className="flex items-center justify-between text-[9px] font-bold">
-          <span>B: Kiểm tra đúng / sai</span>
+          <span>{t('B: Kiểm tra đúng / sai', 'B: Verify equality/inequality')}</span>
           <div className="flex items-center gap-0.5">
             {ops.map((o) => (
               <button
@@ -2218,7 +2268,7 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
           <input
             type="text"
             data-casio-field="verify-lhs"
-            aria-label="Vế trái"
+            aria-label={t('Vế trái', 'Left-hand side')}
             value={props.verifyLhs}
             onChange={(e) => {
               props.setVerifyLhs(e.target.value);
@@ -2238,7 +2288,7 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
           <input
             type="text"
             data-casio-field="verify-rhs"
-            aria-label="Vế phải"
+            aria-label={t('Vế phải', 'Right-hand side')}
             value={props.verifyRhs}
             onChange={(e) => {
               props.setVerifyRhs(e.target.value);
@@ -2281,7 +2331,7 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
               onClick={() => props.setVerifyEvaluated(true)}
               className="ml-auto px-2 py-0.5 rounded bg-[#1e345a] text-[#e6f0e1] text-[8.5px] font-bold cursor-pointer"
             >
-              Kiểm tra (=)
+              {t('Kiểm tra (=)', 'Verify (=)')}
             </button>
           )}
         </div>
@@ -2296,9 +2346,9 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
     return (
       <div className="p-2 min-h-[120px] flex flex-col justify-between text-[#1e345a]">
         <div className="flex items-center justify-between text-[9.5px] font-bold border-b border-[#adbd9f] pb-0.5">
-          <span>C: Tỉ lệ thức (Ratio)</span>
+          <span>{t('C: Tỉ lệ thức (Ratio)', 'C: Ratio')}</span>
           <button type="button" onClick={() => setMode('calc')} className="underline cursor-pointer">
-            Thoát
+            {t('Thoát', 'Exit')}
           </button>
         </div>
         <div className="space-y-1.5 my-1">
@@ -2329,7 +2379,9 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
             <span className="font-mono">A : B = C : X</span>
           </button>
         </div>
-        <div className="text-[8.5px] font-mono opacity-75">Bấm phím 1 hoặc 2</div>
+        <div className="text-[8.5px] font-mono opacity-75">
+          {t('Bấm phím 1 hoặc 2', 'Press key 1 or 2')}
+        </div>
       </div>
     );
   }
@@ -2361,10 +2413,10 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
               onClick={() => setRatioScreen('input')}
               className="px-1.5 py-0.5 rounded bg-[#e5eee0] border border-[#96a68f] text-[8.5px] cursor-pointer"
             >
-              Sửa (AC)
+              {t('Sửa (AC)', 'Edit (AC)')}
             </button>
             <button type="button" onClick={() => setRatioScreen('selectForm')} className="underline cursor-pointer">
-              Đổi dạng
+              {t('Đổi dạng', 'Change form')}
             </button>
           </div>
         </div>
@@ -2374,7 +2426,9 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
         >
           <MathTex latex={valLatex} className="text-[16px] font-bold" />
         </div>
-        <div className="text-[8px] font-mono opacity-75 text-right">Bấm S⇔D đổi thập phân · AC sửa hệ số</div>
+        <div className="text-[8px] font-mono opacity-75 text-right">
+          {t('Bấm S⇔D đổi thập phân · AC sửa hệ số', 'Press S⇔D for decimal · AC to edit')}
+        </div>
       </div>
     );
   }
@@ -2389,7 +2443,7 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
             onClick={() => setRatioScreen('selectForm')}
             className="px-1 py-0.5 rounded bg-[#c6d4bf] border border-[#96a68f] text-[8px] cursor-pointer"
           >
-            Đổi dạng
+            {t('Đổi dạng', 'Change form')}
           </button>
         </div>
         <button
@@ -2397,7 +2451,7 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
           onClick={() => setRatioScreen('result')}
           className="px-2 py-0.5 rounded bg-[#1e345a] text-[#e6f0e1] text-[8.5px] cursor-pointer"
         >
-          Giải (=)
+          {t('Giải (=)', 'Solve (=)')}
         </button>
       </div>
       <div className="grid grid-cols-[1fr_auto_1fr_auto_1fr_auto_1fr] items-center gap-1 font-mono text-[10px]">
@@ -2485,7 +2539,9 @@ export const CasioLcdModes: React.FC<CasioLcdModesProps> = (props) => {
           </label>
         )}
       </div>
-      <div className="text-[8px] font-mono opacity-75 text-right">Bấm = để chuyển ô / giải X</div>
+      <div className="text-[8px] font-mono opacity-75 text-right">
+        {t('Bấm = để chuyển ô / giải X', 'Press = to advance / solve for X')}
+      </div>
     </div>
   );
 };

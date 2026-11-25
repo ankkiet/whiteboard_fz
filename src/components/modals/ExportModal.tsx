@@ -7,6 +7,7 @@ import {
   ExportQualityScale,
 } from '../../engine/exportUtils';
 import { getNotebookConfig, getNotebookContentPageIndices } from '../../engine/notebookEngine';
+import { useI18n } from '../../i18n/useI18n';
 import {
   X,
   Upload,
@@ -27,18 +28,6 @@ interface ExportModalProps {
 
 type ExportFormat = 'png' | 'pdf';
 
-const QUALITY_OPTIONS: { scale: ExportQualityScale; label: string; sub: string }[] = [
-  { scale: 2, label: '2×', sub: 'HD' },
-  { scale: 3, label: '3×', sub: '4K' },
-  { scale: 4, label: '4×', sub: 'Tối đa' },
-];
-
-const PDF_LAYOUT_OPTIONS: { id: PdfPageLayout; label: string }[] = [
-  { id: 'fit', label: 'Vừa vặn' },
-  { id: 'a4-landscape', label: 'A4 ngang' },
-  { id: 'a4-portrait', label: 'A4 dọc' },
-];
-
 export const ExportModal: React.FC<ExportModalProps> = ({
   isOpen,
   onClose,
@@ -53,6 +42,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
   const notebookPaperSize = useBoardStore((s) => s.notebookPaperSize);
   const importBoardData = useBoardStore((s) => s.importBoardData);
   const addToast = useBoardStore((s) => s.addToast);
+  const { language, t } = useI18n();
 
   const [exportFormat, setExportFormat] = useState<ExportFormat>(
     boardType === 'notebook' ? 'pdf' : 'png'
@@ -68,6 +58,18 @@ export const ExportModal: React.FC<ExportModalProps> = ({
 
   const isBusy = isExporting || isExportingPdf;
 
+  const qualityOptions: { scale: ExportQualityScale; label: string; sub: string }[] = [
+    { scale: 2, label: '2×', sub: 'HD' },
+    { scale: 3, label: '3×', sub: '4K' },
+    { scale: 4, label: '4×', sub: t('Tối đa', 'Max') },
+  ];
+
+  const pdfLayoutOptions: { id: PdfPageLayout; label: string }[] = [
+    { id: 'fit', label: t('Vừa vặn', 'Fit content') },
+    { id: 'a4-landscape', label: t('A4 ngang', 'A4 landscape') },
+    { id: 'a4-portrait', label: t('A4 dọc', 'A4 portrait') },
+  ];
+
   const exportDims = useMemo(() => {
     const bounds = computeBoardExportBounds(elements, 64);
     return computeOptimalExportDimensions(bounds.width, bounds.height, exportScale);
@@ -75,9 +77,9 @@ export const ExportModal: React.FC<ExportModalProps> = ({
 
   const notebookContentPages = useMemo(() => {
     if (boardType !== 'notebook') return [];
-    const config = getNotebookConfig(notebookPaperSize);
+    const config = getNotebookConfig(notebookPaperSize, language);
     return getNotebookContentPageIndices(elements, config, 50);
-  }, [boardType, elements, notebookPaperSize]);
+  }, [boardType, elements, notebookPaperSize, language]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -127,12 +129,18 @@ export const ExportModal: React.FC<ExportModalProps> = ({
       window.setTimeout(() => URL.revokeObjectURL(objectUrl), 10000);
 
       addToast(
-        `Đã tải ảnh PNG (${result.pixelWidth} × ${result.pixelHeight} px)`,
+        t(
+          `Đã tải ảnh PNG (${result.pixelWidth} × ${result.pixelHeight} px)`,
+          `Downloaded PNG image (${result.pixelWidth} × ${result.pixelHeight} px)`
+        ),
         'success'
       );
       onClose();
     } catch {
-      addToast('Có lỗi khi xuất ảnh PNG. Vui lòng thử lại.', 'error');
+      addToast(
+        t('Có lỗi khi xuất ảnh PNG. Vui lòng thử lại.', 'Failed to export PNG. Please try again.'),
+        'error'
+      );
     } finally {
       setIsExporting(false);
     }
@@ -152,7 +160,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
         includePattern: includeBackground && includePattern,
         scale: exportScale,
         layout: pdfLayout,
-        title: title || 'Bảng trắng',
+        title: title || t('Bảng trắng', 'Whiteboard'),
       });
       const objectUrl = URL.createObjectURL(result.blob);
       const link = document.createElement('a');
@@ -163,10 +171,19 @@ export const ExportModal: React.FC<ExportModalProps> = ({
       document.body.removeChild(link);
       window.setTimeout(() => URL.revokeObjectURL(objectUrl), 10000);
 
-      addToast(`Đã xuất tệp PDF (${result.pageCount} trang)`, 'success');
+      addToast(
+        t(
+          `Đã xuất tệp PDF (${result.pageCount} trang)`,
+          `Exported PDF (${result.pageCount} ${result.pageCount === 1 ? 'page' : 'pages'})`
+        ),
+        'success'
+      );
       onClose();
     } catch {
-      addToast('Có lỗi khi xuất tệp PDF. Vui lòng thử lại.', 'error');
+      addToast(
+        t('Có lỗi khi xuất tệp PDF. Vui lòng thử lại.', 'Failed to export PDF. Please try again.'),
+        'error'
+      );
     } finally {
       setIsExportingPdf(false);
     }
@@ -200,7 +217,10 @@ export const ExportModal: React.FC<ExportModalProps> = ({
     link.click();
     document.body.removeChild(link);
     window.setTimeout(() => URL.revokeObjectURL(url), 5000);
-    addToast('Đã tải tệp sao lưu .whiteboard.json', 'success');
+    addToast(
+      t('Đã tải tệp sao lưu .whiteboard.json', 'Downloaded .whiteboard.json backup'),
+      'success'
+    );
     onClose();
   };
 
@@ -212,7 +232,10 @@ export const ExportModal: React.FC<ExportModalProps> = ({
       try {
         const json = JSON.parse(event.target?.result as string);
         if (!Array.isArray(json.elements)) {
-          addToast('Tệp JSON không đúng định dạng bảng trắng.', 'error');
+          addToast(
+            t('Tệp JSON không đúng định dạng bảng trắng.', 'Invalid whiteboard JSON file.'),
+            'error'
+          );
           return;
         }
         importBoardData({
@@ -226,7 +249,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
         });
         onClose();
       } catch {
-        addToast('Không thể đọc tệp JSON này.', 'error');
+        addToast(t('Không thể đọc tệp JSON này.', 'Unable to read this JSON file.'), 'error');
       }
     };
     reader.readAsText(file);
@@ -236,13 +259,16 @@ export const ExportModal: React.FC<ExportModalProps> = ({
   const pdfSummary =
     boardType === 'notebook' && pdfLayout !== 'fit'
       ? notebookContentPages.length > 0
-        ? `Chỉ xuất ${notebookContentPages.length} trang có nội dung · Chuẩn A4 in ấn`
-        : '1 trang trống · Chuẩn A4 in ấn'
+        ? t(
+            `Chỉ xuất ${notebookContentPages.length} trang có nội dung · Chuẩn A4 in ấn`,
+            `Exports ${notebookContentPages.length} non-empty ${notebookContentPages.length === 1 ? 'page' : 'pages'} · Print-ready A4`
+          )
+        : t('1 trang trống · Chuẩn A4 in ấn', '1 blank page · Print-ready A4')
       : pdfLayout === 'fit'
-      ? 'Tự động vừa khít khung nội dung trên bảng'
+      ? t('Tự động vừa khít khung nội dung trên bảng', 'Auto-fits the content bounds on the board')
       : pdfLayout === 'a4-landscape'
-      ? 'Khổ A4 nằm ngang, phù hợp trình chiếu'
-      : 'Khổ A4 nằm dọc, phù hợp in ấn hoặc nộp bài';
+      ? t('Khổ A4 nằm ngang, phù hợp trình chiếu', 'A4 landscape, ideal for slides & screens')
+      : t('Khổ A4 nằm dọc, phù hợp in ấn hoặc nộp bài', 'A4 portrait, ideal for printing & handouts');
 
   return (
     <div
@@ -262,17 +288,19 @@ export const ExportModal: React.FC<ExportModalProps> = ({
               id="export-modal-title"
               className="text-base font-medium text-slate-900 dark:text-slate-100 text-balance"
             >
-              Xuất & sao lưu bảng
+              {t('Xuất & sao lưu bảng', 'Export & backup board')}
             </h2>
             <p className="text-xs font-mono text-slate-500 dark:text-slate-400 mt-0.5 tabular-nums">
-              {elements.length} đối tượng trên bảng
+              {language === 'en'
+                ? `${elements.length} ${elements.length === 1 ? 'item' : 'items'} on board`
+                : `${elements.length} đối tượng trên bảng`}
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
             disabled={isBusy}
-            aria-label="Đóng hộp thoại xuất"
+            aria-label={t('Đóng hộp thoại xuất', 'Close export dialog')}
             className="size-8 rounded-lg flex items-center justify-center text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 transition-colors cursor-pointer shrink-0"
           >
             <X className="size-4" />
@@ -284,7 +312,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
           {/* Format Switcher */}
           <div
             role="tablist"
-            aria-label="Định dạng tệp xuất"
+            aria-label={t('Định dạng tệp xuất', 'Export file format')}
             className="grid grid-cols-2 gap-1 p-1 rounded-xl bg-slate-100 dark:bg-slate-800/80"
           >
             <button
@@ -300,7 +328,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
               }`}
             >
               <ImageIcon className="size-3.5" />
-              <span>Ảnh PNG</span>
+              <span>{t('Ảnh PNG', 'PNG Image')}</span>
             </button>
 
             <button
@@ -316,7 +344,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
               }`}
             >
               <FileText className="size-3.5" />
-              <span>Tệp PDF</span>
+              <span>{t('Tệp PDF', 'PDF Document')}</span>
             </button>
           </div>
 
@@ -326,7 +354,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
             <div className="p-3.5 space-y-2">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                  Độ phân giải
+                  {t('Độ phân giải', 'Resolution')}
                 </span>
                 <span
                   data-testid="export-resolution-readout"
@@ -338,10 +366,10 @@ export const ExportModal: React.FC<ExportModalProps> = ({
 
               <div
                 role="radiogroup"
-                aria-label="Độ phân giải xuất"
+                aria-label={t('Độ phân giải xuất', 'Export resolution')}
                 className="grid grid-cols-3 gap-1 p-1 rounded-lg bg-slate-200/70 dark:bg-slate-900/70"
               >
-                {QUALITY_OPTIONS.map((opt) => {
+                {qualityOptions.map((opt) => {
                   const active = exportScale === opt.scale;
                   return (
                     <button
@@ -374,7 +402,10 @@ export const ExportModal: React.FC<ExportModalProps> = ({
 
               {exportDims.wasClamped && (
                 <p className="text-[11px] text-amber-600 dark:text-amber-400 leading-snug text-pretty">
-                  Bảng có kích thước rất lớn — tự động tối ưu ở mức {exportDims.effectiveScale}× để đảm bảo an toàn trình duyệt.
+                  {t(
+                    `Bảng có kích thước rất lớn — tự động tối ưu ở mức ${exportDims.effectiveScale}× để đảm bảo an toàn trình duyệt.`,
+                    `Board is very large — automatically scaled to ${exportDims.effectiveScale}× for safe browser export.`
+                  )}
                 </p>
               )}
             </div>
@@ -383,15 +414,15 @@ export const ExportModal: React.FC<ExportModalProps> = ({
             {exportFormat === 'pdf' && (
               <div className="p-3.5 space-y-2">
                 <span className="block text-xs font-medium text-slate-700 dark:text-slate-300">
-                  Khổ giấy
+                  {t('Khổ giấy', 'Page layout')}
                 </span>
 
                 <div
                   role="radiogroup"
-                  aria-label="Khổ giấy PDF"
+                  aria-label={t('Khổ giấy PDF', 'PDF page layout')}
                   className="grid grid-cols-3 gap-1 p-1 rounded-lg bg-slate-200/70 dark:bg-slate-900/70"
                 >
-                  {PDF_LAYOUT_OPTIONS.map((opt) => {
+                  {pdfLayoutOptions.map((opt) => {
                     const active = pdfLayout === opt.id;
                     return (
                       <button
@@ -423,13 +454,13 @@ export const ExportModal: React.FC<ExportModalProps> = ({
             <div className="p-3.5 space-y-3">
               <div className="flex items-center justify-between gap-3">
                 <span className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                  Kèm màu nền bảng
+                  {t('Kèm màu nền bảng', 'Include board background')}
                 </span>
                 <button
                   type="button"
                   role="switch"
                   aria-checked={includeBackground}
-                  aria-label="Kèm màu nền bảng"
+                  aria-label={t('Kèm màu nền bảng', 'Include board background')}
                   disabled={isBusy}
                   onClick={() => setIncludeBackground((prev) => !prev)}
                   className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors cursor-pointer shrink-0 ${
@@ -451,17 +482,17 @@ export const ExportModal: React.FC<ExportModalProps> = ({
               >
                 <div className="min-w-0">
                   <span className="block text-xs font-medium text-slate-700 dark:text-slate-300">
-                    Kèm họa tiết nền
+                    {t('Kèm họa tiết nền', 'Include background pattern')}
                   </span>
                   <span className="block text-[11px] text-slate-500 dark:text-slate-400">
-                    Ô ly, chấm bi hoặc dòng kẻ
+                    {t('Ô ly, chấm bi hoặc dòng kẻ', 'Grid, dots, or ruled lines')}
                   </span>
                 </div>
                 <button
                   type="button"
                   role="switch"
                   aria-checked={includeBackground && includePattern}
-                  aria-label="Kèm họa tiết nền"
+                  aria-label={t('Kèm họa tiết nền', 'Include background pattern')}
                   disabled={!includeBackground || isBusy}
                   onClick={() => setIncludePattern((prev) => !prev)}
                   className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors shrink-0 ${
@@ -497,18 +528,18 @@ export const ExportModal: React.FC<ExportModalProps> = ({
             <span>
               {exportFormat === 'pdf'
                 ? isExportingPdf
-                  ? 'Đang xuất tệp PDF...'
-                  : 'Tải xuống tệp PDF'
+                  ? t('Đang xuất tệp PDF...', 'Exporting PDF...')
+                  : t('Tải xuống tệp PDF', 'Download PDF')
                 : isExporting
-                ? 'Đang xuất ảnh PNG...'
-                : `Tải xuống ảnh PNG (${exportScale}×)`}
+                ? t('Đang xuất ảnh PNG...', 'Exporting PNG...')
+                : t(`Tải xuống ảnh PNG (${exportScale}×)`, `Download PNG (${exportScale}×)`)}
             </span>
           </button>
 
           {/* Secondary Section: Backup & Sync */}
           <div className="pt-1 space-y-2">
             <h3 className="text-xs font-medium text-slate-500 dark:text-slate-400">
-              Sao lưu & đồng bộ
+              {t('Sao lưu & đồng bộ', 'Backup & sync')}
             </h3>
 
             <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 divide-y divide-slate-100 dark:divide-slate-800 overflow-hidden">
@@ -527,10 +558,13 @@ export const ExportModal: React.FC<ExportModalProps> = ({
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="text-[13px] font-medium text-slate-800 dark:text-slate-100 truncate">
-                      Lưu & mở trên Google Drive
+                      {t('Lưu & mở trên Google Drive', 'Save & open on Google Drive')}
                     </div>
                     <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
-                      Đồng bộ tệp dự án hoặc ảnh lên Drive
+                      {t(
+                        'Đồng bộ tệp dự án hoặc ảnh lên Drive',
+                        'Sync project files or snapshots to Drive'
+                      )}
                     </div>
                   </div>
                   <ChevronRight className="size-4 text-slate-400 shrink-0" />
@@ -548,10 +582,13 @@ export const ExportModal: React.FC<ExportModalProps> = ({
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="text-[13px] font-medium text-slate-800 dark:text-slate-100 truncate">
-                    Sao lưu tệp dự án (.json)
+                    {t('Sao lưu tệp dự án (.json)', 'Export project backup (.json)')}
                   </div>
                   <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
-                    Lưu toàn bộ đối tượng và ảnh đính kèm
+                    {t(
+                      'Lưu toàn bộ đối tượng và ảnh đính kèm',
+                      'Save all board elements and embedded images'
+                    )}
                   </div>
                 </div>
                 <ChevronRight className="size-4 text-slate-400 shrink-0" />
@@ -567,10 +604,10 @@ export const ExportModal: React.FC<ExportModalProps> = ({
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="text-[13px] font-medium text-slate-800 dark:text-slate-100 truncate">
-                    Nhập từ tệp sao lưu (.json)
+                    {t('Nhập từ tệp sao lưu (.json)', 'Import from backup (.json)')}
                   </div>
                   <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
-                    Khôi phục bảng trắng từ máy tính
+                    {t('Khôi phục bảng trắng từ máy tính', 'Restore a whiteboard from your computer')}
                   </div>
                 </div>
                 <ChevronRight className="size-4 text-slate-400 shrink-0" />

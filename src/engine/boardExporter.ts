@@ -18,6 +18,7 @@ import {
   getCanvasBackgroundColor,
 } from './renderBackground';
 import { drawBoardElement } from './renderer';
+import { tr } from '../i18n';
 
 export interface ExportPngResult {
   blob: Blob;
@@ -104,7 +105,7 @@ export async function renderBoardToOffscreenCanvas(options: RenderOffscreenOptio
   canvas.width = pixelWidth;
   canvas.height = pixelHeight;
   const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('Không thể khởi tạo Canvas xuất dữ liệu.');
+  if (!ctx) throw new Error(tr('Không thể khởi tạo Canvas xuất dữ liệu.', 'Could not initialize export canvas.'));
 
   const preloadedImages = new Map<string, HTMLImageElement>();
   const imageEls = elements.filter((e) => e.type === 'image');
@@ -200,7 +201,7 @@ export async function exportBoardToPng(options: {
         if (result) {
           resolve(result);
         } else {
-          reject(new Error('Không thể nén ảnh PNG chất lượng cao.'));
+          reject(new Error(tr('Không thể nén ảnh PNG chất lượng cao.', 'Could not encode high-resolution PNG.')));
         }
       },
       'image/png'

@@ -5,6 +5,7 @@ import {
   normalizeMathGradeMode,
 } from '../engine/boardTemplates';
 import { normalizeNotebookPaperSize } from '../engine/notebookEngine';
+import { tr } from '../i18n';
 
 export const APP_DRIVE_FOLDER_NAME = 'fzInK';
 export const DRIVE_FOLDER_MIME_TYPE = 'application/vnd.google-apps.folder';
@@ -133,7 +134,7 @@ export function filterAndSortDriveFiles(
 
   return [...filtered].sort((a, b) => {
     if (options.sort === 'nameAsc') {
-      return getDisplayBoardTitle(a).localeCompare(getDisplayBoardTitle(b), 'vi', {
+      return getDisplayBoardTitle(a).localeCompare(getDisplayBoardTitle(b), tr('vi', 'en'), {
         sensitivity: 'base',
       });
     }
@@ -160,14 +161,17 @@ export function formatDriveErrorMessage(rawMessage: string): FormattedDriveError
       urlMatch?.[0] ||
       `https://console.developers.google.com/apis/api/drive.googleapis.com/overview?project=${projectNumber}`;
     return {
-      message: `Google Drive API chưa được bật trong dự án Google Cloud (${projectNumber}). Hãy bấm nút bên dưới để bật miễn phí rồi chờ 1 phút và thử lại.`,
+      message: tr(
+        `Google Drive API chưa được bật trong dự án Google Cloud (${projectNumber}). Hãy bấm nút bên dưới để bật miễn phí rồi chờ 1 phút và thử lại.`,
+        `The Google Drive API is not enabled in Google Cloud project (${projectNumber}). Click the button below to enable it for free, wait 1 minute, and try again.`
+      ),
       actionUrl,
-      actionLabel: 'Bật Google Drive API',
+      actionLabel: tr('Bật Google Drive API', 'Enable Google Drive API'),
     };
   }
 
   return {
-    message: trimmed || 'Không thể kết nối Google Drive. Vui lòng thử lại.',
+    message: trimmed || tr('Không thể kết nối Google Drive. Vui lòng thử lại.', 'Could not connect to Google Drive. Please try again.'),
   };
 }
 
@@ -177,28 +181,40 @@ export function getGoogleAuthErrorMessage(err: unknown): string {
     code === 'auth/operation-not-supported-in-this-environment' ||
     (typeof window !== 'undefined' && window.location.protocol === 'file:')
   ) {
-    return 'Bản cài đặt chạy từ tệp cục bộ (file://) không hỗ trợ đăng nhập Google do chính sách bảo mật của Google OAuth. Dữ liệu bảng của bạn vẫn được lưu tự động và an toàn trên máy tính. Để đồng bộ Google Drive, vui lòng mở bản web hoặc cài đặt qua tính năng PWA trên trình duyệt.';
+    return tr(
+      'Bản cài đặt chạy từ tệp cục bộ (file://) không hỗ trợ đăng nhập Google do chính sách bảo mật của Google OAuth. Dữ liệu bảng của bạn vẫn được lưu tự động và an toàn trên máy tính. Để đồng bộ Google Drive, vui lòng mở bản web hoặc cài đặt qua tính năng PWA trên trình duyệt.',
+      'Running from a local file (file://) does not support Google sign-in due to Google OAuth security policy. Your board data is still saved automatically and safely on your computer. To sync with Google Drive, open the web version or install it via browser PWA.'
+    );
   }
   if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
-    return 'Bạn đã đóng cửa sổ đăng nhập Google.';
+    return tr('Bạn đã đóng cửa sổ đăng nhập Google.', 'You closed the Google sign-in window.');
   }
   if (code === 'auth/popup-blocked') {
-    return 'Trình duyệt đang chặn cửa sổ bật lên. Hãy cho phép popup và thử lại.';
+    return tr('Trình duyệt đang chặn cửa sổ bật lên. Hãy cho phép popup và thử lại.', 'The browser blocked the pop-up window. Please allow pop-ups and try again.');
   }
   if (code === 'auth/unauthorized-domain') {
     const host = typeof window !== 'undefined' ? window.location.hostname : '';
     if (!host) {
-      return 'Bản cài đặt tệp cục bộ không có tên miền web hợp lệ để đăng nhập Google OAuth. Hãy mở bản web trên trình duyệt hoặc cài đặt qua PWA để đồng bộ Google Drive.';
+      return tr(
+        'Bản cài đặt tệp cục bộ không có tên miền web hợp lệ để đăng nhập Google OAuth. Hãy mở bản web trên trình duyệt hoặc cài đặt qua PWA để đồng bộ Google Drive.',
+        'Local file installations do not have a valid web domain for Google OAuth sign-in. Open the web version in your browser or install via PWA to sync with Google Drive.'
+      );
     }
-    return `Tên miền "${host}" chưa được cấp phép trong Firebase Console (Authentication → Settings → Authorized domains). Hãy thêm tên miền này rồi thử lại.`;
+    return tr(
+      `Tên miền "${host}" chưa được cấp phép trong Firebase Console (Authentication → Settings → Authorized domains). Hãy thêm tên miền này rồi thử lại.`,
+      `Domain "${host}" is not authorized in Firebase Console (Authentication → Settings → Authorized domains). Please add this domain and try again.`
+    );
   }
   if (code === 'auth/operation-not-allowed') {
-    return 'Phương thức đăng nhập Google chưa được bật trong Firebase Console (Authentication → Sign-in method → Google).';
+    return tr(
+      'Phương thức đăng nhập Google chưa được bật trong Firebase Console (Authentication → Sign-in method → Google).',
+      'Google sign-in provider is not enabled in Firebase Console (Authentication → Sign-in method → Google).'
+    );
   }
   if (err instanceof Error && err.message) {
     return err.message;
   }
-  return 'Đăng nhập Google không thành công. Vui lòng thử lại.';
+  return tr('Đăng nhập Google không thành công. Vui lòng thử lại.', 'Google sign-in failed. Please try again.');
 }
 
 export function parseWhiteboardPayload(raw: unknown): {
@@ -211,11 +227,11 @@ export function parseWhiteboardPayload(raw: unknown): {
   mathGradeMode?: MathGradeMode;
 } {
   if (!raw || typeof raw !== 'object') {
-    throw new Error('Nội dung tệp bảng trắng không hợp lệ.');
+    throw new Error(tr('Nội dung tệp bảng trắng không hợp lệ.', 'Invalid whiteboard file content.'));
   }
   const obj = raw as Record<string, unknown>;
   if (!Array.isArray(obj.elements)) {
-    throw new Error('Tệp không đúng định dạng bảng trắng (.whiteboard.json).');
+    throw new Error(tr('Tệp không đúng định dạng bảng trắng (.whiteboard.json).', 'File does not match whiteboard format (.whiteboard.json).'));
   }
   return {
     title: typeof obj.title === 'string' ? obj.title : undefined,
@@ -264,11 +280,11 @@ export function buildMultipartRelatedBody(
   };
 }
 
-export function formatDriveModifiedTime(iso?: string): string {
+export function formatDriveModifiedTime(iso?: string, language: 'vi' | 'en' = 'vi'): string {
   if (!iso) return '';
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return '';
-  return new Intl.DateTimeFormat('vi-VN', {
+  return new Intl.DateTimeFormat(language === 'en' ? 'en-US' : 'vi-VN', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',

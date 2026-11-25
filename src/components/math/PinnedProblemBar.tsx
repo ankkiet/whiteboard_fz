@@ -1,10 +1,12 @@
 import React from 'react';
 import { useBoardStore } from '../../store/useBoardStore';
 import { getSafeMathViewport } from '../../engine/mathViewport';
+import { useI18n } from '../../i18n/useI18n';
 import { RichMathText } from './MathTex';
 import { ChevronDown, ChevronUp, Pin, X } from 'lucide-react';
 
 export const PinnedProblemBar: React.FC = () => {
+  const { t } = useI18n();
   const pinnedProblem = useBoardStore((s) => s.pinnedProblem);
   const setPinnedProblem = useBoardStore((s) => s.setPinnedProblem);
   const isCalculatorOpen = useBoardStore((s) => s.isCalculatorOpen);
@@ -38,13 +40,17 @@ export const PinnedProblemBar: React.FC = () => {
         <div className="flex items-center gap-1.5 min-w-0">
           <Pin className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" strokeWidth={1.75} />
           <span className="text-xs font-medium text-slate-900 dark:text-slate-100 truncate">
-            Đề bài đang ghim
+            {t('Đề bài đang ghim', 'Pinned problem')}
           </span>
         </div>
         <div className="flex items-center gap-1 shrink-0">
           <button
             type="button"
-            aria-label={pinnedProblem.collapsed ? 'Mở rộng đề bài' : 'Thu gọn đề bài'}
+            aria-label={
+              pinnedProblem.collapsed
+                ? t('Mở rộng đề bài', 'Expand problem')
+                : t('Thu gọn đề bài', 'Collapse problem')
+            }
             onClick={() =>
               setPinnedProblem({ ...pinnedProblem, collapsed: !pinnedProblem.collapsed })
             }
@@ -58,7 +64,7 @@ export const PinnedProblemBar: React.FC = () => {
           </button>
           <button
             type="button"
-            aria-label="Bỏ ghim đề bài"
+            aria-label={t('Bỏ ghim đề bài', 'Unpin problem')}
             onClick={() => setPinnedProblem(null)}
             className="w-6 h-6 rounded-md hover:bg-indigo-100 dark:hover:bg-indigo-900/60 text-slate-500 flex items-center justify-center cursor-pointer"
           >
@@ -77,7 +83,7 @@ export const PinnedProblemBar: React.FC = () => {
           {pinnedProblem.imageUrl && (
             <img
               src={pinnedProblem.imageUrl}
-              alt="Ảnh đề bài đã ghim"
+              alt={t('Ảnh đề bài đã ghim', 'Pinned problem image')}
               className="max-h-32 w-auto rounded-lg border border-slate-200 dark:border-slate-700 object-contain"
             />
           )}

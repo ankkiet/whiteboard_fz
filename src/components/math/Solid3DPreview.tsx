@@ -1,11 +1,12 @@
 import React, { useMemo, useRef, useState } from 'react';
 import {
-  SOLID_3D_CATALOG,
   Solid3DType,
   buildSolid3DSnapshotElements,
+  getSolid3DCatalog,
   projectSolid3D,
 } from '../../engine/mathEngine';
 import { useBoardStore } from '../../store/useBoardStore';
+import { useI18n } from '../../i18n/useI18n';
 import { Camera, RotateCcw } from 'lucide-react';
 
 interface Solid3DPreviewProps {
@@ -21,6 +22,7 @@ export const Solid3DPreview: React.FC<Solid3DPreviewProps> = ({
   onSnapshotInserted,
   getWorldCenter,
 }) => {
+  const { language, t } = useI18n();
   const addElementsBatch = useBoardStore((s) => s.addElementsBatch);
   const addToast = useBoardStore((s) => s.addToast);
   const isDarkMode = useBoardStore((s) => s.isDarkMode);
@@ -37,9 +39,10 @@ export const Solid3DPreview: React.FC<Solid3DPreviewProps> = ({
     null
   );
 
+  const catalog = useMemo(() => getSolid3DCatalog(language), [language]);
   const currentDef = useMemo(
-    () => SOLID_3D_CATALOG.find((s) => s.id === solidType) || SOLID_3D_CATALOG[0],
-    [solidType]
+    () => catalog.find((s) => s.id === solidType) || catalog[0],
+    [catalog, solidType]
   );
 
   const oxyzPoint = useMemo(() => {
@@ -52,7 +55,7 @@ export const Solid3DPreview: React.FC<Solid3DPreviewProps> = ({
 
   const projected = useMemo(
     () => projectSolid3D(solidType, yaw, pitch, 64, currentDef.supportsUnfold ? unfold : 0, oxyzPoint),
-    [solidType, yaw, pitch, unfold, currentDef.supportsUnfold, oxyzPoint]
+    [solidType, yaw, pitch, unfold, currentDef.supportsUnfold, oxyzPoint, language]
   );
 
   const handlePointerDown = (e: React.PointerEvent<SVGSVGElement>) => {
@@ -88,7 +91,13 @@ export const Solid3DPreview: React.FC<Solid3DPreviewProps> = ({
       createId: uid,
     });
     addElementsBatch(els, true);
-    addToast(`Đã chụp "${currentDef.label}" sang nét 2D (tự động nét đứt)`, 'success');
+    addToast(
+      t(
+        `Đã chụp "${currentDef.label}" sang nét 2D (tự động nét đứt)`,
+        `Inserted 2D projection of "${currentDef.label}" (auto dashed hidden edges)`
+      ),
+      'success'
+    );
     onSnapshotInserted?.();
   };
 
@@ -98,7 +107,7 @@ export const Solid3DPreview: React.FC<Solid3DPreviewProps> = ({
     <div data-testid="solid-3d-preview" className="space-y-2.5">
       <div className="flex items-center justify-between gap-2">
         <label htmlFor="solid-3d-select" className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">
-          Khối 3D &amp; Oxyz (Kéo để xoay 360°)
+          {t('Khối 3D & Oxyz (Kéo để xoay 360°)', '3D solids & Oxyz (Drag to rotate 360°)')}
         </label>
         <button
           type="button"
@@ -107,12 +116,12 @@ export const Solid3DPreview: React.FC<Solid3DPreviewProps> = ({
             setPitch(0.36);
             setUnfold(0);
           }}
-          title="Đặt lại góc nhìn"
-          aria-label="Đặt lại góc nhìn 3D"
+          title={t('Đặt lại góc nhìn', 'Reset view')}
+          aria-label={t('Đặt lại góc nhìn 3D', 'Reset 3D view')}
           className="text-[11px] text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 inline-flex items-center gap-1 cursor-pointer"
         >
           <RotateCcw className="w-3 h-3" />
-          <span>Đặt lại</span>
+          <span>{t('Đặt lại', 'Reset')}</span>
         </button>
       </div>
 
@@ -126,7 +135,7 @@ export const Solid3DPreview: React.FC<Solid3DPreviewProps> = ({
         }}
         className="w-full h-8 px-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-xs font-medium text-slate-900 dark:text-slate-100 outline-none focus:border-indigo-500 cursor-pointer"
       >
-        {SOLID_3D_CATALOG.map((item) => (
+        {catalog.map((item) => (
           <option key={item.id} value={item.id}>
             {item.label}
           </option>
@@ -176,7 +185,7 @@ export const Solid3DPreview: React.FC<Solid3DPreviewProps> = ({
       {currentDef.supportsUnfold && (
         <div className="space-y-1">
           <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
-            <span>Trải hình phẳng (Unfolding Net)</span>
+            <span>{t('Trải hình phẳng (Unfolding Net)', 'Unfolding net')}</span>
             <span className="font-mono font-semibold tabular-nums">{Math.round(unfold * 100)}%</span>
           </div>
           <input
@@ -184,7 +193,7 @@ export const Solid3DPreview: React.FC<Solid3DPreviewProps> = ({
             min={0}
             max={1}
             step={0.02}
-            aria-label="Thanh trượt trải hình phẳng 3D"
+            aria-label={t('Thanh trượt trải hình phẳng 3D', '3D unfolding net slider')}
             value={unfold}
             onChange={(e) => setUnfold(Number(e.target.value))}
             className="w-full h-1.5 accent-indigo-600 cursor-pointer"
@@ -221,7 +230,7 @@ export const Solid3DPreview: React.FC<Solid3DPreviewProps> = ({
         className="w-full h-9 inline-flex items-center justify-center gap-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold transition-colors cursor-pointer"
       >
         <Camera className="w-3.5 h-3.5" />
-        <span>Chụp sang 2D lên bảng (tự động nét đứt)</span>
+        <span>{t('Chụp sang 2D lên bảng (tự động nét đứt)', 'Capture 2D to board (auto dashed edges)')}</span>
       </button>
     </div>
   );

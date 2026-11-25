@@ -6,6 +6,7 @@ import {
   Casio2dTemplateNode,
   parseCasio2dNodes,
 } from '../../engine/casio2dParser';
+import { tr } from '../../i18n';
 
 export interface CasioNaturalEditorProps {
   expr: string;
@@ -23,38 +24,50 @@ export interface CasioNaturalEditorProps {
 
 function getSlotAriaLabel(templateKind?: Casio2dTemplateKind, argIndex?: number, role?: string): string {
   if (!templateKind) {
-    return role === 'root' ? 'Biểu thức máy tính' : 'Phần biểu thức';
+    return role === 'root' ? tr('Biểu thức máy tính', 'Calculator expression') : tr('Phần biểu thức', 'Expression part');
   }
   switch (templateKind) {
     case 'int':
-      if (argIndex === 0) return 'Hàm dưới dấu tích phân';
-      if (argIndex === 1) return 'Cận dưới tích phân';
-      if (argIndex === 2) return 'Cận trên tích phân';
-      return 'Biến tích phân';
+      if (argIndex === 0) return tr('Hàm dưới dấu tích phân', 'Integrand');
+      if (argIndex === 1) return tr('Cận dưới tích phân', 'Lower limit');
+      if (argIndex === 2) return tr('Cận trên tích phân', 'Upper limit');
+      return tr('Biến tích phân', 'Variable of integration');
     case 'frac':
-      return argIndex === 0 ? 'Tử số' : 'Mẫu số';
+      return argIndex === 0 ? tr('Tử số', 'Numerator') : tr('Mẫu số', 'Denominator');
     case 'mixfrac':
-      return argIndex === 0 ? 'Phần nguyên hỗn số' : argIndex === 1 ? 'Tử số hỗn số' : 'Mẫu số hỗn số';
+      return argIndex === 0
+        ? tr('Phần nguyên hỗn số', 'Whole part')
+        : argIndex === 1
+        ? tr('Tử số hỗn số', 'Fraction numerator')
+        : tr('Mẫu số hỗn số', 'Fraction denominator');
     case 'sqrt':
-      return 'Biểu thức trong căn bậc hai';
+      return tr('Biểu thức trong căn bậc hai', 'Square root radicand');
     case 'cbrt':
-      return 'Biểu thức trong căn bậc ba';
+      return tr('Biểu thức trong căn bậc ba', 'Cube root radicand');
     case 'nroot':
-      return argIndex === 0 ? 'Bậc căn' : 'Biểu thức trong căn';
+      return argIndex === 0 ? tr('Bậc căn', 'Root degree') : tr('Biểu thức trong căn', 'Radicand');
     case 'pow':
-      return argIndex === 0 ? 'Cơ số lũy thừa' : 'Số mũ lũy thừa';
+      return argIndex === 0 ? tr('Cơ số lũy thừa', 'Power base') : tr('Số mũ lũy thừa', 'Exponent');
     case 'logb':
-      return argIndex === 0 ? 'Cơ số logarit' : 'Biểu thức logarit';
+      return argIndex === 0 ? tr('Cơ số logarit', 'Logarithm base') : tr('Biểu thức logarit', 'Logarithm argument');
     case 'ddx':
-      return argIndex === 0 ? 'Hàm lấy đạo hàm' : 'Điểm tính đạo hàm x';
+      return argIndex === 0 ? tr('Hàm lấy đạo hàm', 'Differentiand') : tr('Điểm tính đạo hàm x', 'Evaluation point x');
     case 'sum':
-      return argIndex === 0 ? 'Biểu thức tổng Sigma' : argIndex === 1 ? 'Cận dưới tổng' : 'Cận trên tổng';
+      return argIndex === 0
+        ? tr('Biểu thức tổng Sigma', 'Summation expression')
+        : argIndex === 1
+        ? tr('Cận dưới tổng', 'Lower bound')
+        : tr('Cận trên tổng', 'Upper bound');
     case 'prod':
-      return argIndex === 0 ? 'Biểu thức tích Pi' : argIndex === 1 ? 'Cận dưới tích' : 'Cận trên tích';
+      return argIndex === 0
+        ? tr('Biểu thức tích Pi', 'Product expression')
+        : argIndex === 1
+        ? tr('Cận dưới tích', 'Lower bound')
+        : tr('Cận trên tích', 'Upper bound');
     case 'lim':
-      return argIndex === 0 ? 'Hàm tính giới hạn' : 'Giá trị tiến tới của giới hạn';
+      return argIndex === 0 ? tr('Hàm tính giới hạn', 'Limit expression') : tr('Giá trị tiến tới của giới hạn', 'Limit target');
     default:
-      return `Tham số ${templateKind} ${(argIndex ?? 0) + 1}`;
+      return tr(`Tham số ${templateKind} ${(argIndex ?? 0) + 1}`, `Argument ${templateKind} ${(argIndex ?? 0) + 1}`);
   }
 }
 

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { AlertTriangle, X } from 'lucide-react';
+import { useI18n } from '../../i18n/useI18n';
 
 interface RenameBoardModalProps {
   isOpen: boolean;
@@ -19,15 +20,19 @@ export const RenameBoardModal: React.FC<RenameBoardModalProps> = ({
   title,
   initialValue,
   isSubmitting = false,
-  submitLabel = 'Lưu tên mới',
-  submittingLabel = 'Đang lưu...',
+  submitLabel,
+  submittingLabel,
   titleId = 'rename-board-title',
   inputId = 'rename-board-input',
   onClose,
   onSubmit,
 }) => {
+  const { t } = useI18n();
   const [value, setValue] = useState(initialValue);
   const [error, setError] = useState<string | null>(null);
+
+  const resolvedSubmitLabel = submitLabel ?? t('Lưu tên mới', 'Save name');
+  const resolvedSubmittingLabel = submittingLabel ?? t('Đang lưu...', 'Saving...');
 
   useEffect(() => {
     if (isOpen) {
@@ -53,7 +58,7 @@ export const RenameBoardModal: React.FC<RenameBoardModalProps> = ({
     e.preventDefault();
     const trimmed = value.trim();
     if (!trimmed) {
-      setError('Vui lòng nhập tên bảng hợp lệ.');
+      setError(t('Vui lòng nhập tên bảng hợp lệ.', 'Please enter a valid board name.'));
       return;
     }
     const result = await onSubmit(trimmed);
@@ -84,7 +89,7 @@ export const RenameBoardModal: React.FC<RenameBoardModalProps> = ({
             type="button"
             disabled={isSubmitting}
             onClick={onClose}
-            aria-label="Đóng hộp thoại đổi tên"
+            aria-label={t('Đóng hộp thoại đổi tên', 'Close rename dialog')}
             className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer disabled:opacity-50"
           >
             <X className="w-4 h-4" />
@@ -96,7 +101,7 @@ export const RenameBoardModal: React.FC<RenameBoardModalProps> = ({
             htmlFor={inputId}
             className="block text-xs font-medium text-slate-600 dark:text-slate-400"
           >
-            Tên mới
+            {t('Tên mới', 'New name')}
           </label>
           <input
             id={inputId}
@@ -119,14 +124,14 @@ export const RenameBoardModal: React.FC<RenameBoardModalProps> = ({
             onClick={onClose}
             className="h-9 px-3.5 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer disabled:opacity-50"
           >
-            Hủy
+            {t('Hủy', 'Cancel')}
           </button>
           <button
             type="submit"
             disabled={isSubmitting}
             className="h-9 px-4 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium transition-colors disabled:opacity-60 cursor-pointer"
           >
-            {isSubmitting ? submittingLabel : submitLabel}
+            {isSubmitting ? resolvedSubmittingLabel : resolvedSubmitLabel}
           </button>
         </div>
       </form>
@@ -150,11 +155,14 @@ export const DeleteBoardConfirmModal: React.FC<DeleteBoardConfirmModalProps> = (
   title,
   description,
   isSubmitting = false,
-  confirmLabel = 'Xác nhận xóa',
+  confirmLabel,
   titleId = 'delete-board-title',
   onClose,
   onConfirm,
 }) => {
+  const { t } = useI18n();
+  const resolvedConfirmLabel = confirmLabel ?? t('Xác nhận xóa', 'Delete');
+
   useEffect(() => {
     if (!isOpen) return;
     const onKeyDown = (e: KeyboardEvent) => {
@@ -200,7 +208,7 @@ export const DeleteBoardConfirmModal: React.FC<DeleteBoardConfirmModalProps> = (
             onClick={onClose}
             className="h-9 px-3.5 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer disabled:opacity-50"
           >
-            Hủy
+            {t('Hủy', 'Cancel')}
           </button>
           <button
             type="button"
@@ -208,7 +216,7 @@ export const DeleteBoardConfirmModal: React.FC<DeleteBoardConfirmModalProps> = (
             onClick={() => void onConfirm()}
             className="h-9 px-3.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-medium transition-colors cursor-pointer disabled:opacity-60"
           >
-            {confirmLabel}
+            {resolvedConfirmLabel}
           </button>
         </div>
       </div>

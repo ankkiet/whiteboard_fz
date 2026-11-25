@@ -20,6 +20,7 @@ import {
 } from '../../engine/mathEngine';
 import { formatTrigValueToLatex, friendlyMathToLatex } from '../../engine/mathDisplay';
 import { getSafeMathViewport } from '../../engine/mathViewport';
+import { useI18n } from '../../i18n/useI18n';
 import { MathTex } from './MathTex';
 import { MathGradeMode } from '../../types/board';
 import {
@@ -47,6 +48,7 @@ export const GraphAndCalculusTab: React.FC<GraphAndCalculusTabProps> = ({
   gradeMode,
   getWorldCenter,
 }) => {
+  const { language, t } = useI18n();
   const addElementsBatch = useBoardStore((s) => s.addElementsBatch);
   const setCamera = useBoardStore((s) => s.setCamera);
   const setBoardPattern = useBoardStore((s) => s.setBoardPattern);
@@ -79,10 +81,21 @@ export const GraphAndCalculusTab: React.FC<GraphAndCalculusTabProps> = ({
 
   const parsedStatus = useMemo(() => {
     const trimmed = expression.trim();
-    if (!trimmed) return { valid: false, summary: 'Nhập hàm số theo biến x (hỗ trợ tham số m).' };
+    if (!trimmed) {
+      return {
+        valid: false,
+        summary: t('Nhập hàm số theo biến x (hỗ trợ tham số m).', 'Enter a function of x (parameter m supported).'),
+      };
+    }
     const fn = compileParametricExpression(trimmed, paramM);
     if (!fn) {
-      return { valid: false, summary: 'Cú pháp chưa hợp lệ. VD: x^3 - 3*m*x + 1, (2x+1)/(x-1)' };
+      return {
+        valid: false,
+        summary: t(
+          'Cú pháp chưa hợp lệ. VD: x^3 - 3*m*x + 1, (2x+1)/(x-1)',
+          'Invalid syntax. Example: x^3 - 3*m*x + 1, (2x+1)/(x-1)'
+        ),
+      };
     }
     const analysis = analyzeFunctionFeatures(trimmed, -6, 6, paramM);
     const parts: string[] = [];
@@ -90,21 +103,24 @@ export const GraphAndCalculusTab: React.FC<GraphAndCalculusTabProps> = ({
       parts.push(
         analysis.extrema
           .slice(0, 2)
-          .map((e) => `${e.kind === 'max' ? 'CĐ' : 'CT'}(${e.x};${e.y})`)
+          .map((e) => `${e.kind === 'max' ? t('CĐ', 'Max') : t('CT', 'Min')}(${e.x};${e.y})`)
           .join(', ')
       );
     }
     if (analysis.verticalAsymptotes.length > 0) {
-      parts.push(`TCĐ x=${analysis.verticalAsymptotes[0]}`);
+      parts.push(`${t('TCĐ', 'VA')} x=${analysis.verticalAsymptotes[0]}`);
     }
     if (analysis.horizontalAsymptote !== null) {
-      parts.push(`TCN y=${analysis.horizontalAsymptote}`);
+      parts.push(`${t('TCN', 'HA')} y=${analysis.horizontalAsymptote}`);
     }
     return {
       valid: true,
-      summary: parts.length > 0 ? parts.join(' · ') : 'Hợp lệ trên miền xác định',
+      summary:
+        parts.length > 0
+          ? parts.join(' · ')
+          : t('Hợp lệ trên miền xác định', 'Valid on domain'),
     };
-  }, [expression, paramM]);
+  }, [expression, paramM, t]);
 
   const integralRes = useMemo(() => {
     if (gradeMode !== 'high') return null;
@@ -113,7 +129,7 @@ export const GraphAndCalculusTab: React.FC<GraphAndCalculusTabProps> = ({
     return computeDefiniteIntegral(expression, a, b, paramM);
   }, [expression, intA, intB, paramM, gradeMode]);
 
-  const trigInfo = useMemo(() => getExactTrigInfo(trigDeg), [trigDeg]);
+  const trigInfo = useMemo(() => getExactTrigInfo(trigDeg, language), [trigDeg, language]);
 
   const isAxesVisible = boardPattern === 'coordinate';
 
@@ -166,7 +182,10 @@ export const GraphAndCalculusTab: React.FC<GraphAndCalculusTabProps> = ({
     const xMin = Number(xMinStr);
     const xMax = Number(xMaxStr);
     if (!Number.isFinite(xMin) || !Number.isFinite(xMax) || xMax <= xMin) {
-      addToast('Miền vẽ x chưa hợp lệ (x từ phải nhỏ hơn x đến).', 'error');
+      addToast(
+        t('Miền vẽ x chưa hợp lệ (x từ phải nhỏ hơn x đến).', 'Invalid x range (x from must be smaller than x to).'),
+        'error'
+      );
       return;
     }
 
@@ -182,7 +201,10 @@ export const GraphAndCalculusTab: React.FC<GraphAndCalculusTabProps> = ({
     });
 
     if (!built || built.length === 0) {
-      addToast('Không thể vẽ hàm số trong khoảng đã chọn.', 'error');
+      addToast(
+        t('Không thể vẽ hàm số trong khoảng đã chọn.', 'Could not plot function in the selected interval.'),
+        'error'
+      );
       return;
     }
 
@@ -215,7 +237,7 @@ export const GraphAndCalculusTab: React.FC<GraphAndCalculusTabProps> = ({
     ensureOriginInSafeViewport(false);
 
     addElementsBatch(combined, true);
-    addToast('Đã vẽ đồ thị hàm số lên hệ trục Oxy', 'success');
+    addToast(t('Đã vẽ đồ thị hàm số lên hệ trục Oxy', 'Plotted graph onto Oxy axes'), 'success');
   };
 
   const handleShadeIntegral = () => {
@@ -231,7 +253,10 @@ export const GraphAndCalculusTab: React.FC<GraphAndCalculusTabProps> = ({
       createId: uid,
     });
     if (!els) {
-      addToast('Không thể tính tích phân trên đoạn [a; b] này.', 'error');
+      addToast(
+        t('Không thể tính tích phân trên đoạn [a; b] này.', 'Could not evaluate integral over [a; b].'),
+        'error'
+      );
       return;
     }
     if (useBoardStore.getState().boardPattern !== 'coordinate') {
@@ -239,13 +264,19 @@ export const GraphAndCalculusTab: React.FC<GraphAndCalculusTabProps> = ({
     }
     ensureOriginInSafeViewport(false);
     addElementsBatch(els, true);
-    addToast(`Đã tô miền tích phân [${a}; ${b}] trên hệ trục Oxy`, 'success');
+    addToast(
+      t(`Đã tô miền tích phân [${a}; ${b}] trên hệ trục Oxy`, `Shaded integral region [${a}; ${b}] on Oxy axes`),
+      'success'
+    );
   };
 
   const handleInsertVariationTable = () => {
     const data = autoGenerateVariationTable(expression, paramM);
     if (!data) {
-      addToast('Không thể tự sinh bảng biến thiên cho biểu thức này.', 'error');
+      addToast(
+        t('Không thể tự sinh bảng biến thiên cho biểu thức này.', 'Could not auto-generate variation table for this expression.'),
+        'error'
+      );
       return;
     }
     const els = buildVariationTableElements(
@@ -256,7 +287,7 @@ export const GraphAndCalculusTab: React.FC<GraphAndCalculusTabProps> = ({
       uid
     );
     addElementsBatch(els, true);
-    addToast('Đã chèn bảng biến thiên lên bảng', 'success');
+    addToast(t('Đã chèn bảng biến thiên lên bảng', 'Inserted variation table onto board'), 'success');
   };
 
   const handleInsertInterval = () => {
@@ -275,7 +306,7 @@ export const GraphAndCalculusTab: React.FC<GraphAndCalculusTabProps> = ({
       uid
     );
     addElementsBatch(els, true);
-    addToast('Đã chèn Trục số tập hợp lên bảng', 'success');
+    addToast(t('Đã chèn Trục số tập hợp lên bảng', 'Inserted interval number line onto board'), 'success');
   };
 
   const handleInsertUnitCircle = () => {
@@ -287,7 +318,13 @@ export const GraphAndCalculusTab: React.FC<GraphAndCalculusTabProps> = ({
       uid
     );
     addElementsBatch(els, true);
-    addToast(`Đã chèn Vòng tròn lượng giác (${trigInfo.deg}° = ${trigInfo.radLabel})`, 'success');
+    addToast(
+      t(
+        `Đã chèn Vòng tròn lượng giác (${trigInfo.deg}° = ${trigInfo.radLabel})`,
+        `Inserted unit circle (${trigInfo.deg}° = ${trigInfo.radLabel})`
+      ),
+      'success'
+    );
   };
 
   return (
@@ -307,7 +344,9 @@ export const GraphAndCalculusTab: React.FC<GraphAndCalculusTabProps> = ({
             ) : (
               <EyeOff className="w-3.5 h-3.5 text-slate-400 shrink-0" />
             )}
-            <span>{isAxesVisible ? 'Đang hiện trục Oxy' : 'Hiện trục tọa độ Oxy'}</span>
+            <span>
+              {isAxesVisible ? t('Đang hiện trục Oxy', 'Oxy axes visible') : t('Hiện trục tọa độ Oxy', 'Show Oxy axes')}
+            </span>
           </button>
           {isAxesVisible && (
             <button
@@ -316,7 +355,7 @@ export const GraphAndCalculusTab: React.FC<GraphAndCalculusTabProps> = ({
               className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 hover:underline whitespace-nowrap shrink-0 cursor-pointer"
             >
               <Crosshair className="w-3 h-3" />
-              <span>Về tâm O</span>
+              <span>{t('Về tâm O', 'Center O')}</span>
             </button>
           )}
         </div>
@@ -327,7 +366,8 @@ export const GraphAndCalculusTab: React.FC<GraphAndCalculusTabProps> = ({
             htmlFor="math-graph-input"
             className="block text-xs font-semibold text-slate-600 dark:text-slate-300"
           >
-            Hàm số y = f(x) {gradeMode === 'high' ? '(hỗ trợ tham số m)' : ''}
+            {t('Hàm số', 'Function')} y = f(x){' '}
+            {gradeMode === 'high' ? t('(hỗ trợ tham số m)', '(supports parameter m)') : ''}
           </label>
           <div className="flex items-center rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 focus-within:border-indigo-500 overflow-hidden">
             <span className="pl-3 pr-1.5 text-xs font-serif italic font-semibold text-slate-500 dark:text-slate-400 select-none whitespace-nowrap shrink-0">
@@ -366,15 +406,19 @@ export const GraphAndCalculusTab: React.FC<GraphAndCalculusTabProps> = ({
         {usesM && (
           <div className="px-2.5 py-2 rounded-xl border border-indigo-200/80 dark:border-indigo-800/70 bg-indigo-50/60 dark:bg-indigo-950/30 space-y-1">
             <div className="flex items-center justify-between text-[11px] font-semibold text-indigo-700 dark:text-indigo-300">
-              <span>Tham số <MathTex latex="m" className="ml-0.5" /></span>
-              <span className="tabular-nums"><MathTex latex={`m = ${paramM}`} /></span>
+              <span>
+                {t('Tham số', 'Parameter')} <MathTex latex="m" className="ml-0.5" />
+              </span>
+              <span className="tabular-nums">
+                <MathTex latex={`m = ${paramM}`} />
+              </span>
             </div>
             <input
               type="range"
               min={-5}
               max={5}
               step={0.5}
-              aria-label="Thanh trượt tham số m"
+              aria-label={t('Thanh trượt tham số m', 'Parameter m slider')}
               value={paramM}
               onChange={(e) => setParamM(Number(e.target.value))}
               className="w-full h-1.5 accent-indigo-600 cursor-pointer"
@@ -423,7 +467,7 @@ export const GraphAndCalculusTab: React.FC<GraphAndCalculusTabProps> = ({
         {/* Domain & Color */}
         <div className="grid grid-cols-2 gap-2">
           <label className="space-y-0.5">
-            <span className="block text-[10.5px] text-slate-500">x từ</span>
+            <span className="block text-[10.5px] text-slate-500">{t('x từ', 'x from')}</span>
             <input
               type="number"
               step="1"
@@ -433,7 +477,7 @@ export const GraphAndCalculusTab: React.FC<GraphAndCalculusTabProps> = ({
             />
           </label>
           <label className="space-y-0.5">
-            <span className="block text-[10.5px] text-slate-500">x đến</span>
+            <span className="block text-[10.5px] text-slate-500">{t('x đến', 'x to')}</span>
             <input
               type="number"
               step="1"
@@ -453,17 +497,17 @@ export const GraphAndCalculusTab: React.FC<GraphAndCalculusTabProps> = ({
                 onChange={(e) => setAnnotateFeatures(e.target.checked)}
                 className="accent-indigo-600 rounded"
               />
-              <span>Đánh dấu cực trị &amp; tiệm cận</span>
+              <span>{t('Đánh dấu cực trị & tiệm cận', 'Mark extrema & asymptotes')}</span>
             </label>
           ) : (
-            <span className="text-[11px] text-slate-500">Màu đồ thị</span>
+            <span className="text-[11px] text-slate-500">{t('Màu đồ thị', 'Graph color')}</span>
           )}
           <div className="flex items-center gap-1.5">
             {GRAPH_COLORS.map((col) => (
               <button
                 key={col}
                 type="button"
-                aria-label={`Chọn màu đồ thị ${col}`}
+                aria-label={t(`Chọn màu đồ thị ${col}`, `Choose graph color ${col}`)}
                 onClick={() => setGraphColor(col)}
                 className={`w-4 h-4 rounded-full transition-transform cursor-pointer ${
                   graphColor === col
@@ -483,7 +527,7 @@ export const GraphAndCalculusTab: React.FC<GraphAndCalculusTabProps> = ({
           className="w-full h-9 inline-flex items-center justify-center gap-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-semibold transition-colors cursor-pointer"
         >
           <TrendingUp className="w-3.5 h-3.5" />
-          <span>Vẽ đồ thị lên bảng</span>
+          <span>{t('Vẽ đồ thị lên bảng', 'Plot graph on board')}</span>
         </button>
       </form>
 
@@ -492,7 +536,9 @@ export const GraphAndCalculusTab: React.FC<GraphAndCalculusTabProps> = ({
         <>
           {/* Definite Integral & Variation Table */}
           <div className="rounded-xl border border-slate-200/80 dark:border-slate-800 p-3 bg-slate-50/60 dark:bg-slate-950/50 space-y-2">
-            <div className="text-xs font-medium">Tích phân xác định &amp; bảng biến thiên</div>
+            <div className="text-xs font-medium">
+              {t('Tích phân xác định & bảng biến thiên', 'Definite integral & variation table')}
+            </div>
             <div className="grid grid-cols-2 gap-2">
               <label className="flex items-center gap-1.5 px-2 h-7 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-mono">
                 <span className="text-slate-500">a =</span>
@@ -530,7 +576,7 @@ export const GraphAndCalculusTab: React.FC<GraphAndCalculusTabProps> = ({
                 className="h-8 rounded-lg border border-indigo-300 dark:border-indigo-800 bg-indigo-50/70 dark:bg-indigo-950/50 hover:bg-indigo-100 disabled:opacity-40 text-indigo-700 dark:text-indigo-300 text-[11px] font-semibold inline-flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap"
               >
                 <Sparkles className="w-3 h-3" />
-                <span>Tô miền ∫</span>
+                <span>{t('Tô miền ∫', 'Shade ∫ area')}</span>
               </button>
               <button
                 type="button"
@@ -540,20 +586,22 @@ export const GraphAndCalculusTab: React.FC<GraphAndCalculusTabProps> = ({
                 className="h-8 rounded-lg bg-slate-900 dark:bg-slate-100 hover:bg-slate-800 dark:hover:bg-white disabled:opacity-40 text-white dark:text-slate-900 text-[11px] font-semibold inline-flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap"
               >
                 <Table2 className="w-3.5 h-3.5" />
-                <span>Bảng biến thiên</span>
+                <span>{t('Bảng biến thiên', 'Variation table')}</span>
               </button>
             </div>
           </div>
 
           {/* Number Line Interval */}
           <div className="rounded-xl border border-slate-200/80 dark:border-slate-800 p-3 bg-slate-50/60 dark:bg-slate-950/50 space-y-2">
-            <div className="text-xs font-bold">Trục số tập hợp &amp; xét dấu</div>
+            <div className="text-xs font-bold">
+              {t('Trục số tập hợp & xét dấu', 'Interval & sign number line')}
+            </div>
             <div className="flex items-center gap-1.5">
               <button
                 type="button"
                 onClick={() => setLeftClosed((v) => !v)}
                 className="w-8 h-8 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-mono font-bold text-sm cursor-pointer"
-                title="Đổi ngoặc vuông/tròn đầu trái"
+                title={t('Đổi ngoặc vuông/tròn đầu trái', 'Toggle left bracket [ or (')}
               >
                 {leftClosed ? '[' : '('}
               </button>
@@ -562,7 +610,7 @@ export const GraphAndCalculusTab: React.FC<GraphAndCalculusTabProps> = ({
                 value={intLeft}
                 onChange={(e) => setIntLeft(e.target.value)}
                 placeholder="-∞"
-                aria-label="Đầu mút trái"
+                aria-label={t('Đầu mút trái', 'Left endpoint')}
                 className="w-full min-w-0 h-8 px-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-mono text-center"
               />
               <span className="text-xs font-mono text-slate-400">;</span>
@@ -571,14 +619,14 @@ export const GraphAndCalculusTab: React.FC<GraphAndCalculusTabProps> = ({
                 value={intRight}
                 onChange={(e) => setIntRight(e.target.value)}
                 placeholder="+∞"
-                aria-label="Đầu mút phải"
+                aria-label={t('Đầu mút phải', 'Right endpoint')}
                 className="w-full min-w-0 h-8 px-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-mono text-center"
               />
               <button
                 type="button"
                 onClick={() => setRightClosed((v) => !v)}
                 className="w-8 h-8 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-mono font-bold text-sm cursor-pointer"
-                title="Đổi ngoặc vuông/tròn đầu phải"
+                title={t('Đổi ngoặc vuông/tròn đầu phải', 'Toggle right bracket ] or )')}
               >
                 {rightClosed ? ']' : ')'}
               </button>
@@ -589,14 +637,14 @@ export const GraphAndCalculusTab: React.FC<GraphAndCalculusTabProps> = ({
               className="w-full h-8 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-indigo-400 text-xs font-semibold inline-flex items-center justify-center gap-1 cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>Chèn Trục số tập hợp (có gạch bỏ)</span>
+              <span>{t('Chèn Trục số tập hợp (có gạch bỏ)', 'Insert interval number line')}</span>
             </button>
           </div>
 
           {/* Interactive Unit Circle (Lượng giác) */}
           <div className="rounded-xl border border-slate-200/80 dark:border-slate-800 p-3 bg-slate-50/60 dark:bg-slate-950/50 space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold">Vòng tròn lượng giác</span>
+              <span className="text-xs font-bold">{t('Vòng tròn lượng giác', 'Unit circle')}</span>
               <span className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 tabular-nums inline-flex items-center gap-1">
                 <span>{trigInfo.deg}°</span>
                 <span>(</span>
@@ -609,7 +657,7 @@ export const GraphAndCalculusTab: React.FC<GraphAndCalculusTabProps> = ({
               min={0}
               max={360}
               step={15}
-              aria-label="Chọn góc lượng giác"
+              aria-label={t('Chọn góc lượng giác', 'Select angle')}
               value={trigDeg}
               onChange={(e) => setTrigDeg(Number(e.target.value))}
               className="w-full h-1.5 accent-indigo-600 cursor-pointer"
@@ -641,7 +689,7 @@ export const GraphAndCalculusTab: React.FC<GraphAndCalculusTabProps> = ({
               className="w-full h-8 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-indigo-400 text-xs font-semibold inline-flex items-center justify-center gap-1 cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>Chèn Vòng tròn lượng giác lên bảng</span>
+              <span>{t('Chèn Vòng tròn lượng giác lên bảng', 'Insert unit circle onto board')}</span>
             </button>
           </div>
         </>

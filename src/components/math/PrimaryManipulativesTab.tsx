@@ -9,6 +9,7 @@ import {
   buildVerticalArithmeticElements,
 } from '../../engine/mathEngine';
 import { BoardElement, ShapeElement, TextElement } from '../../types/board';
+import { useI18n } from '../../i18n/useI18n';
 import { MathTex } from './MathTex';
 import { Plus, RotateCcw } from 'lucide-react';
 
@@ -25,6 +26,7 @@ function uid(prefix: string): string {
 export const PrimaryManipulativesTab: React.FC<PrimaryManipulativesTabProps> = ({
   getWorldCenter,
 }) => {
+  const { language, t } = useI18n();
   const addElementsBatch = useBoardStore((s) => s.addElementsBatch);
   const addToast = useBoardStore((s) => s.addToast);
 
@@ -46,11 +48,11 @@ export const PrimaryManipulativesTab: React.FC<PrimaryManipulativesTabProps> = (
   const [arithOp, setArithOp] = useState<'+' | '-' | '*' | '/'>('+');
 
   // Bar model state
-  const [barLabelA, setBarLabelA] = useState('Số bé');
+  const [barLabelA, setBarLabelA] = useState(language === 'en' ? 'Smaller' : 'Số bé');
   const [barPartsA, setBarPartsA] = useState(2);
-  const [barLabelB, setBarLabelB] = useState('Số lớn');
+  const [barLabelB, setBarLabelB] = useState(language === 'en' ? 'Larger' : 'Số lớn');
   const [barPartsB, setBarPartsB] = useState(5);
-  const [barSummary, setBarSummary] = useState('Tổng = 56');
+  const [barSummary, setBarSummary] = useState(language === 'en' ? 'Sum = 56' : 'Tổng = 56');
 
   // Fraction model state
   const [fracNum, setFracNum] = useState(3);
@@ -94,7 +96,10 @@ export const PrimaryManipulativesTab: React.FC<PrimaryManipulativesTabProps> = (
   const handleInsertBase10 = () => {
     const els = buildBase10Elements({ hundreds, tens, ones }, getWorldCenter(), getStartZ(), uid);
     addElementsBatch(els, true);
-    addToast(`Đã chèn khối Base-10 (Tổng = ${base10Total})`, 'success');
+    addToast(
+      t(`Đã chèn khối Base-10 (Tổng = ${base10Total})`, `Inserted Base-10 blocks (Total = ${base10Total})`),
+      'success'
+    );
   };
 
   const handleInsertTenFrame = () => {
@@ -154,7 +159,7 @@ export const PrimaryManipulativesTab: React.FC<PrimaryManipulativesTabProps> = (
       y: top + cellSize * 2 + 10,
       width: 230,
       height: 28,
-      text: `Khung 10 ô: ${tenFrameCount} + ${10 - tenFrameCount} = 10`,
+      text: `${t('Khung 10 ô', 'Ten-frame')}: ${tenFrameCount} + ${10 - tenFrameCount} = 10`,
       color: '#4f46e5',
       fontSize: 15,
       groupIds: [groupId],
@@ -162,18 +167,21 @@ export const PrimaryManipulativesTab: React.FC<PrimaryManipulativesTabProps> = (
     };
     els.push(label);
     addElementsBatch(els, true);
-    addToast(`Đã chèn Khung 10 ô (${tenFrameCount}/10)`, 'success');
+    addToast(
+      t(`Đã chèn Khung 10 ô (${tenFrameCount}/10)`, `Inserted Ten-Frame (${tenFrameCount}/10)`),
+      'success'
+    );
   };
 
   const handleInsertArithmetic = () => {
     const a = Number(arithA);
     const b = Number(arithB);
     if (!Number.isFinite(a) || !Number.isFinite(b)) {
-      addToast('Vui lòng nhập hai số hợp lệ.', 'error');
+      addToast(t('Vui lòng nhập hai số hợp lệ.', 'Please enter two valid numbers.'), 'error');
       return;
     }
     if (arithOp === '/' && b === 0) {
-      addToast('Không thể chia cho 0.', 'error');
+      addToast(t('Không thể chia cho 0.', 'Cannot divide by zero.'), 'error');
       return;
     }
     const els = buildVerticalArithmeticElements(
@@ -186,7 +194,7 @@ export const PrimaryManipulativesTab: React.FC<PrimaryManipulativesTabProps> = (
       uid
     );
     addElementsBatch(els, true);
-    addToast('Đã chèn phép Đặt tính rồi tính lên bảng', 'success');
+    addToast(t('Đã chèn phép Đặt tính rồi tính lên bảng', 'Inserted vertical arithmetic onto board'), 'success');
   };
 
   const handleInsertBarModel = () => {
@@ -204,7 +212,7 @@ export const PrimaryManipulativesTab: React.FC<PrimaryManipulativesTabProps> = (
       uid
     );
     addElementsBatch(els, true);
-    addToast('Đã chèn Sơ đồ đoạn thẳng lên bảng', 'success');
+    addToast(t('Đã chèn Sơ đồ đoạn thẳng lên bảng', 'Inserted bar model onto board'), 'success');
   };
 
   const handleInsertFraction = () => {
@@ -218,7 +226,10 @@ export const PrimaryManipulativesTab: React.FC<PrimaryManipulativesTabProps> = (
       uid
     );
     addElementsBatch(els, true);
-    addToast(`Đã chèn mô hình phân số ${fracNum}/${fracDen}`, 'success');
+    addToast(
+      t(`Đã chèn mô hình phân số ${fracNum}/${fracDen}`, `Inserted fraction model ${fracNum}/${fracDen}`),
+      'success'
+    );
   };
 
   const handleInsertJumpLine = () => {
@@ -234,7 +245,13 @@ export const PrimaryManipulativesTab: React.FC<PrimaryManipulativesTabProps> = (
       uid
     );
     addElementsBatch(els, true);
-    addToast(`Đã chèn trục số bước nhảy (${s} ${j >= 0 ? '+' : ''}${j} = ${s + j})`, 'success');
+    addToast(
+      t(
+        `Đã chèn trục số bước nhảy (${s} ${j >= 0 ? '+' : ''}${j} = ${s + j})`,
+        `Inserted jump number line (${s} ${j >= 0 ? '+' : ''}${j} = ${s + j})`
+      ),
+      'success'
+    );
   };
 
   const handleInsertClock = () => {
@@ -247,36 +264,42 @@ export const PrimaryManipulativesTab: React.FC<PrimaryManipulativesTabProps> = (
       uid
     );
     addElementsBatch(els, true);
-    addToast(`Đã chèn đồng hồ ${String(clockH).padStart(2, '0')}:${String(clockM).padStart(2, '0')}`, 'success');
+    addToast(
+      t(
+        `Đã chèn đồng hồ ${String(clockH).padStart(2, '0')}:${String(clockM).padStart(2, '0')}`,
+        `Inserted clock ${String(clockH).padStart(2, '0')}:${String(clockM).padStart(2, '0')}`
+      ),
+      'success'
+    );
   };
 
   const subTools: { id: PrimarySubTool; label: string }[] = [
     { id: 'base10', label: 'Base-10' },
-    { id: 'tenframe', label: 'Khung 10 ô' },
-    { id: 'arithmetic', label: 'Đặt tính' },
-    { id: 'barmodel', label: 'Đoạn thẳng' },
-    { id: 'fraction', label: 'Phân số' },
-    { id: 'numberline', label: 'Bước nhảy' },
-    { id: 'clock', label: 'Đồng hồ' },
+    { id: 'tenframe', label: t('Khung 10 ô', 'Ten-frame') },
+    { id: 'arithmetic', label: t('Đặt tính', 'Arithmetic') },
+    { id: 'barmodel', label: t('Đoạn thẳng', 'Bar model') },
+    { id: 'fraction', label: t('Phân số', 'Fractions') },
+    { id: 'numberline', label: t('Bước nhảy', 'Number line') },
+    { id: 'clock', label: t('Đồng hồ', 'Clock') },
   ];
 
   return (
     <div className="space-y-3">
       {/* Compact Selector Grid */}
       <div className="flex flex-wrap gap-1.5">
-        {subTools.map((t) => (
+        {subTools.map((tool) => (
           <button
-            key={t.id}
+            key={tool.id}
             type="button"
-            data-testid={`primary-tool-${t.id}`}
-            onClick={() => setSubTool(t.id)}
+            data-testid={`primary-tool-${tool.id}`}
+            onClick={() => setSubTool(tool.id)}
             className={`h-7 px-2.5 rounded-lg text-[11px] font-semibold transition-colors cursor-pointer whitespace-nowrap ${
-              subTool === t.id
+              subTool === tool.id
                 ? 'bg-indigo-600 text-white shadow-xs'
                 : 'border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-300 hover:border-indigo-400'
             }`}
           >
-            {t.label}
+            {tool.label}
           </button>
         ))}
       </div>
@@ -285,16 +308,16 @@ export const PrimaryManipulativesTab: React.FC<PrimaryManipulativesTabProps> = (
       {subTool === 'base10' && (
         <div className="space-y-2.5 rounded-xl border border-slate-200/80 dark:border-slate-800 p-3 bg-slate-50/60 dark:bg-slate-950/50">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold">Khối trục thập phân (Base-10)</span>
+            <span className="text-xs font-bold">{t('Khối trục thập phân (Base-10)', 'Base-10 place value blocks')}</span>
             <span className="text-xs font-mono font-bold text-indigo-600 dark:text-indigo-400 tabular-nums">
               = {base10Total}
             </span>
           </div>
           <div className="grid grid-cols-3 gap-2">
             {[
-              { lbl: 'Trăm (100)', val: hundreds, set: setHundreds, max: 5, col: 'text-emerald-600' },
-              { lbl: 'Chục (10)', val: tens, set: setTens, max: 12, col: 'text-blue-600' },
-              { lbl: 'Đơn vị (1)', val: ones, set: setOnes, max: 19, col: 'text-amber-600' },
+              { lbl: t('Trăm (100)', 'Hundreds'), val: hundreds, set: setHundreds, max: 5, col: 'text-emerald-600' },
+              { lbl: t('Chục (10)', 'Tens'), val: tens, set: setTens, max: 12, col: 'text-blue-600' },
+              { lbl: t('Đơn vị (1)', 'Ones'), val: ones, set: setOnes, max: 19, col: 'text-amber-600' },
             ].map((item) => (
               <div key={item.lbl} className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-2 text-center space-y-1">
                 <div className={`text-[10.5px] font-semibold ${item.col}`}>{item.lbl}</div>
@@ -325,7 +348,7 @@ export const PrimaryManipulativesTab: React.FC<PrimaryManipulativesTabProps> = (
               disabled={ones < 10 && tens < 10}
               className="h-7 rounded-lg border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 disabled:opacity-40 text-emerald-700 dark:text-emerald-300 text-[11px] font-semibold cursor-pointer"
             >
-              Gộp 10 → 1 (Nhớ)
+              {t('Gộp 10 → 1 (Nhớ)', 'Group 10 → 1 (Carry)')}
             </button>
             <button
               type="button"
@@ -333,7 +356,7 @@ export const PrimaryManipulativesTab: React.FC<PrimaryManipulativesTabProps> = (
               disabled={tens < 1 && hundreds < 1}
               className="h-7 rounded-lg border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 disabled:opacity-40 text-amber-700 dark:text-amber-300 text-[11px] font-semibold cursor-pointer"
             >
-              Tách 1 → 10 (Mượn)
+              {t('Tách 1 → 10 (Mượn)', 'Split 1 → 10 (Borrow)')}
             </button>
           </div>
           <button
@@ -343,7 +366,7 @@ export const PrimaryManipulativesTab: React.FC<PrimaryManipulativesTabProps> = (
             className="w-full h-9 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold inline-flex items-center justify-center gap-1.5 cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
-            <span>Chèn bộ khối Base-10 lên bảng</span>
+            <span>{t('Chèn bộ khối Base-10 lên bảng', 'Insert Base-10 blocks onto board')}</span>
           </button>
         </div>
       )}
@@ -352,14 +375,14 @@ export const PrimaryManipulativesTab: React.FC<PrimaryManipulativesTabProps> = (
       {subTool === 'tenframe' && (
         <div className="space-y-2.5 rounded-xl border border-slate-200/80 dark:border-slate-800 p-3 bg-slate-50/60 dark:bg-slate-950/50">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold">Khung 10 ô (Bấm để bật/tắt chấm)</span>
+            <span className="text-xs font-bold">{t('Khung 10 ô (Bấm để bật/tắt chấm)', 'Ten-frame (Click to toggle dots)')}</span>
             <button
               type="button"
               onClick={() => setTenFrameCells(Array(10).fill(false))}
               className="text-[11px] text-slate-500 hover:text-indigo-600 inline-flex items-center gap-1 cursor-pointer"
             >
               <RotateCcw className="w-3 h-3" />
-              <span>Xóa hết</span>
+              <span>{t('Xóa hết', 'Clear')}</span>
             </button>
           </div>
           <div className="grid grid-cols-5 gap-1.5 bg-white dark:bg-slate-900 p-2 rounded-xl border border-slate-200 dark:border-slate-800">
@@ -367,7 +390,7 @@ export const PrimaryManipulativesTab: React.FC<PrimaryManipulativesTabProps> = (
               <button
                 key={idx}
                 type="button"
-                aria-label={`Ô số ${idx + 1}`}
+                aria-label={t(`Ô số ${idx + 1}`, `Cell ${idx + 1}`)}
                 aria-pressed={filled}
                 onClick={() =>
                   setTenFrameCells((prev) => prev.map((v, i) => (i === idx ? !v : v)))
@@ -387,7 +410,7 @@ export const PrimaryManipulativesTab: React.FC<PrimaryManipulativesTabProps> = (
             className="w-full h-9 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold inline-flex items-center justify-center gap-1.5 cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
-            <span>Chèn Khung 10 ô lên bảng</span>
+            <span>{t('Chèn Khung 10 ô lên bảng', 'Insert Ten-frame onto board')}</span>
           </button>
         </div>
       )}
@@ -395,14 +418,16 @@ export const PrimaryManipulativesTab: React.FC<PrimaryManipulativesTabProps> = (
       {/* 3. Vertical Arithmetic */}
       {subTool === 'arithmetic' && (
         <div className="space-y-2.5 rounded-xl border border-slate-200/80 dark:border-slate-800 p-3 bg-slate-50/60 dark:bg-slate-950/50">
-          <div className="text-xs font-bold">Đặt tính rồi tính (Cộng / Trừ / Nhân / Chia chữ T)</div>
+          <div className="text-xs font-bold">
+            {t('Đặt tính rồi tính (Cộng / Trừ / Nhân / Chia chữ T)', 'Vertical arithmetic (Add / Sub / Mul / Division)')}
+          </div>
           <div className="grid grid-cols-4 gap-1">
             {(
               [
                 { op: '+', lbl: '+' },
                 { op: '-', lbl: '−' },
                 { op: '*', lbl: '×' },
-                { op: '/', lbl: ': (Chữ T)' },
+                { op: '/', lbl: t(': (Chữ T)', '÷ (Long)') },
               ] as const
             ).map((item) => (
               <button
@@ -422,7 +447,7 @@ export const PrimaryManipulativesTab: React.FC<PrimaryManipulativesTabProps> = (
           </div>
           <div className="grid grid-cols-2 gap-2">
             <label className="space-y-1">
-              <span className="text-[11px] text-slate-500">Số thứ nhất</span>
+              <span className="text-[11px] text-slate-500">{t('Số thứ nhất', 'First number')}</span>
               <input
                 type="number"
                 value={arithA}
@@ -431,7 +456,7 @@ export const PrimaryManipulativesTab: React.FC<PrimaryManipulativesTabProps> = (
               />
             </label>
             <label className="space-y-1">
-              <span className="text-[11px] text-slate-500">Số thứ hai</span>
+              <span className="text-[11px] text-slate-500">{t('Số thứ hai', 'Second number')}</span>
               <input
                 type="number"
                 value={arithB}
@@ -447,7 +472,7 @@ export const PrimaryManipulativesTab: React.FC<PrimaryManipulativesTabProps> = (
             className="w-full h-9 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold inline-flex items-center justify-center gap-1.5 cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
-            <span>Chèn phép Đặt tính lên bảng</span>
+            <span>{t('Chèn phép Đặt tính lên bảng', 'Insert vertical arithmetic')}</span>
           </button>
         </div>
       )}
@@ -455,17 +480,17 @@ export const PrimaryManipulativesTab: React.FC<PrimaryManipulativesTabProps> = (
       {/* 4. Bar Model */}
       {subTool === 'barmodel' && (
         <div className="space-y-2.5 rounded-xl border border-slate-200/80 dark:border-slate-800 p-3 bg-slate-50/60 dark:bg-slate-950/50">
-          <div className="text-xs font-bold">Sơ đồ đoạn thẳng (Tổng – Hiệu – Tỷ)</div>
+          <div className="text-xs font-bold">{t('Sơ đồ đoạn thẳng (Tổng – Hiệu – Tỷ)', 'Bar model diagram (Sum – Diff – Ratio)')}</div>
           <div className="grid grid-cols-2 gap-2">
             <input
               type="text"
               value={barLabelA}
               onChange={(e) => setBarLabelA(e.target.value)}
-              placeholder="Nhãn 1"
+              placeholder={t('Nhãn 1', 'Label 1')}
               className="h-8 px-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs"
             />
             <label className="flex items-center justify-between px-2 h-8 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs">
-              <span className="text-slate-500">Phần:</span>
+              <span className="text-slate-500">{t('Phần:', 'Parts:')}</span>
               <input
                 type="number"
                 min={1}
@@ -479,11 +504,11 @@ export const PrimaryManipulativesTab: React.FC<PrimaryManipulativesTabProps> = (
               type="text"
               value={barLabelB}
               onChange={(e) => setBarLabelB(e.target.value)}
-              placeholder="Nhãn 2"
+              placeholder={t('Nhãn 2', 'Label 2')}
               className="h-8 px-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs"
             />
             <label className="flex items-center justify-between px-2 h-8 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs">
-              <span className="text-slate-500">Phần:</span>
+              <span className="text-slate-500">{t('Phần:', 'Parts:')}</span>
               <input
                 type="number"
                 min={1}
@@ -498,7 +523,7 @@ export const PrimaryManipulativesTab: React.FC<PrimaryManipulativesTabProps> = (
             type="text"
             value={barSummary}
             onChange={(e) => setBarSummary(e.target.value)}
-            placeholder="Nhãn ngoặc nhọn (VD: Tổng = 56)"
+            placeholder={t('Nhãn ngoặc nhọn (VD: Tổng = 56)', 'Brace label (e.g. Sum = 56)')}
             className="w-full h-8 px-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs"
           />
           <button
@@ -507,7 +532,7 @@ export const PrimaryManipulativesTab: React.FC<PrimaryManipulativesTabProps> = (
             className="w-full h-9 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold inline-flex items-center justify-center gap-1.5 cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
-            <span>Chèn Sơ đồ đoạn thẳng</span>
+            <span>{t('Chèn Sơ đồ đoạn thẳng', 'Insert bar model')}</span>
           </button>
         </div>
       )}
@@ -516,7 +541,7 @@ export const PrimaryManipulativesTab: React.FC<PrimaryManipulativesTabProps> = (
       {subTool === 'fraction' && (
         <div className="space-y-2.5 rounded-xl border border-slate-200/80 dark:border-slate-800 p-3 bg-slate-50/60 dark:bg-slate-950/50">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold">Mô hình Phân số trực quan</span>
+            <span className="text-xs font-bold">{t('Mô hình Phân số trực quan', 'Visual fraction model')}</span>
             <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400">
               <MathTex latex={`\\frac{${fracNum}}{${fracDen}}`} />
             </span>
@@ -531,7 +556,7 @@ export const PrimaryManipulativesTab: React.FC<PrimaryManipulativesTabProps> = (
                   : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700'
               }`}
             >
-              Hình tròn (Bánh)
+              {t('Hình tròn (Bánh)', 'Pie / Circle')}
             </button>
             <button
               type="button"
@@ -542,12 +567,12 @@ export const PrimaryManipulativesTab: React.FC<PrimaryManipulativesTabProps> = (
                   : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700'
               }`}
             >
-              Thanh phân số
+              {t('Thanh phân số', 'Fraction bar')}
             </button>
           </div>
           <div className="space-y-1.5">
             <label className="flex items-center justify-between text-[11px]">
-              <span>Tử số (phần tô màu): {fracNum}</span>
+              <span>{t(`Tử số (phần tô màu): ${fracNum}`, `Numerator (shaded): ${fracNum}`)}</span>
               <input
                 type="range"
                 min={0}
@@ -558,7 +583,7 @@ export const PrimaryManipulativesTab: React.FC<PrimaryManipulativesTabProps> = (
               />
             </label>
             <label className="flex items-center justify-between text-[11px]">
-              <span>Mẫu số (tổng phần): {fracDen}</span>
+              <span>{t(`Mẫu số (tổng phần): ${fracDen}`, `Denominator (total): ${fracDen}`)}</span>
               <input
                 type="range"
                 min={2}
@@ -580,7 +605,7 @@ export const PrimaryManipulativesTab: React.FC<PrimaryManipulativesTabProps> = (
             className="w-full h-9 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold inline-flex items-center justify-center gap-1.5 cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
-            <span>Chèn hình phân số {fracNum}/{fracDen}</span>
+            <span>{t(`Chèn hình phân số ${fracNum}/${fracDen}`, `Insert fraction ${fracNum}/${fracDen}`)}</span>
           </button>
         </div>
       )}
@@ -588,10 +613,10 @@ export const PrimaryManipulativesTab: React.FC<PrimaryManipulativesTabProps> = (
       {/* 6. Jump Number Line */}
       {subTool === 'numberline' && (
         <div className="space-y-2.5 rounded-xl border border-slate-200/80 dark:border-slate-800 p-3 bg-slate-50/60 dark:bg-slate-950/50">
-          <div className="text-xs font-bold">Trục số bước nhảy (Cộng / Trừ)</div>
+          <div className="text-xs font-bold">{t('Trục số bước nhảy (Cộng / Trừ)', 'Jump number line (Add / Subtract)')}</div>
           <div className="grid grid-cols-2 gap-2">
             <label className="space-y-1">
-              <span className="text-[11px] text-slate-500">Điểm bắt đầu</span>
+              <span className="text-[11px] text-slate-500">{t('Điểm bắt đầu', 'Start point')}</span>
               <input
                 type="number"
                 value={jumpStart}
@@ -600,7 +625,7 @@ export const PrimaryManipulativesTab: React.FC<PrimaryManipulativesTabProps> = (
               />
             </label>
             <label className="space-y-1">
-              <span className="text-[11px] text-slate-500">Bước nhảy (+ / −)</span>
+              <span className="text-[11px] text-slate-500">{t('Bước nhảy (+ / −)', 'Jump step (+ / −)')}</span>
               <input
                 type="number"
                 value={jumpStep}
@@ -615,7 +640,7 @@ export const PrimaryManipulativesTab: React.FC<PrimaryManipulativesTabProps> = (
             className="w-full h-9 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold inline-flex items-center justify-center gap-1.5 cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
-            <span>Chèn Trục số bước nhảy</span>
+            <span>{t('Chèn Trục số bước nhảy', 'Insert jump number line')}</span>
           </button>
         </div>
       )}
@@ -624,14 +649,14 @@ export const PrimaryManipulativesTab: React.FC<PrimaryManipulativesTabProps> = (
       {subTool === 'clock' && (
         <div className="space-y-2.5 rounded-xl border border-slate-200/80 dark:border-slate-800 p-3 bg-slate-50/60 dark:bg-slate-950/50">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold">Đồng hồ kim &amp; 24 giờ</span>
+            <span className="text-xs font-bold">{t('Đồng hồ kim & 24 giờ', 'Analog & 24h clock')}</span>
             <span className="text-sm font-mono font-bold text-indigo-600 dark:text-indigo-400 tabular-nums">
               {String(clockH).padStart(2, '0')}:{String(clockM).padStart(2, '0')}
             </span>
           </div>
           <div className="space-y-1.5">
             <label className="flex items-center justify-between text-[11px]">
-              <span>Giờ (0–23): {clockH}h</span>
+              <span>{t(`Giờ (0–23): ${clockH}h`, `Hour (0–23): ${clockH}h`)}</span>
               <input
                 type="range"
                 min={0}
@@ -642,7 +667,7 @@ export const PrimaryManipulativesTab: React.FC<PrimaryManipulativesTabProps> = (
               />
             </label>
             <label className="flex items-center justify-between text-[11px]">
-              <span>Phút (0–55): {clockM}p</span>
+              <span>{t(`Phút (0–55): ${clockM}p`, `Minute (0–55): ${clockM}m`)}</span>
               <input
                 type="range"
                 min={0}
@@ -660,7 +685,7 @@ export const PrimaryManipulativesTab: React.FC<PrimaryManipulativesTabProps> = (
             className="w-full h-9 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold inline-flex items-center justify-center gap-1.5 cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
-            <span>Chèn Đồng hồ lên bảng</span>
+            <span>{t('Chèn Đồng hồ lên bảng', 'Insert clock onto board')}</span>
           </button>
         </div>
       )}

@@ -8,8 +8,9 @@ import {
   formatLocalBoardTime,
 } from '../../services/localBoardLibrary';
 import { parseWhiteboardPayload } from '../../services/googleDriveUtils';
-import { BOARD_TEMPLATES, getBoardTypeLabel } from '../../engine/boardTemplates';
+import { getBoardTemplates, getBoardTypeLabel } from '../../engine/boardTemplates';
 import { isDesktopApp } from '../../services/appUpdater';
+import { useI18n } from '../../i18n/useI18n';
 import { BoardTemplatePreview } from './BoardTemplatePreview';
 import { DeleteBoardConfirmModal, RenameBoardModal } from './BoardActionModals';
 import {
@@ -31,7 +32,6 @@ interface LocalBoardsSectionProps {
 
 export const LocalBoardsSection: React.FC<LocalBoardsSectionProps> = ({
   onOpenBoard,
-  onCreateNewClick,
   onBoardOpenedFromLocal,
 }) => {
   const localBoards = useBoardStore((s) => s.localBoards);
@@ -43,6 +43,7 @@ export const LocalBoardsSection: React.FC<LocalBoardsSectionProps> = ({
   const deleteLocalBoardById = useBoardStore((s) => s.deleteLocalBoardById);
   const importBoardData = useBoardStore((s) => s.importBoardData);
   const addToast = useBoardStore((s) => s.addToast);
+  const { language, t } = useI18n();
 
   const [filter, setFilter] = useState<LocalBoardFilter>('all');
   const [sort, setSort] = useState<LocalBoardSort>('updatedDesc');
@@ -55,41 +56,58 @@ export const LocalBoardsSection: React.FC<LocalBoardsSectionProps> = ({
 
   const jsonInputRef = useRef<HTMLInputElement>(null);
   const isDesktop = isDesktopApp();
+  const templates = useMemo(() => getBoardTemplates(language), [language]);
 
   const copy = isDesktop
     ? {
-        heading: 'Thư viện bảng trên máy',
-        badgeSuffix: 'Lưu trên máy tính',
-        filterAria: 'Lọc loại bảng trên máy',
-        searchPlaceholder: 'Tìm bảng trên máy',
-        sortAria: 'Sắp xếp bảng trên máy',
-        gridAria: 'Hiển thị bảng trên máy dạng lưới',
-        listAria: 'Hiển thị bảng trên máy dạng danh sách',
-        emptyTitle: 'Chưa có bảng nào được lưu trên máy',
-        emptyDesc:
+        heading: t('Thư viện bảng trên máy', 'On-device board library'),
+        badgeSuffix: t('Lưu trên máy tính', 'Saved on device'),
+        filterAria: t('Lọc loại bảng trên máy', 'Filter local boards by type'),
+        searchPlaceholder: t('Tìm bảng trên máy', 'Search local boards'),
+        sortAria: t('Sắp xếp bảng trên máy', 'Sort local boards'),
+        gridAria: t('Hiển thị bảng trên máy dạng lưới', 'Grid view for local boards'),
+        listAria: t('Hiển thị bảng trên máy dạng danh sách', 'List view for local boards'),
+        emptyTitle: t('Chưa có bảng nào được lưu trên máy', 'No boards saved on this device yet'),
+        emptyDesc: t(
           'Khi bạn bắt đầu viết hoặc vẽ trên một bảng mới, bảng đó sẽ tự động lưu trực tiếp trên ổ cứng máy tính và hiển thị tại đây.',
-        emptyFilter: 'Không tìm thấy bảng nào trên máy khớp với bộ lọc hiện tại.',
-        deleteTooltip: 'Xóa khỏi máy',
-        renameTitle: 'Đổi tên bảng trên máy',
-        deleteTitle: 'Xóa bảng khỏi máy?',
-        deleteDescSuffix: 'khỏi bộ nhớ máy tính',
+          'Once you draw or write on a new board, it is automatically saved to your computer and appears here.'
+        ),
+        emptyFilter: t(
+          'Không tìm thấy bảng nào trên máy khớp với bộ lọc hiện tại.',
+          'No local boards match your current search or filter.'
+        ),
+        deleteTooltip: t('Xóa khỏi máy', 'Delete from device'),
+        renameTitle: t('Đổi tên bảng trên máy', 'Rename local board'),
+        deleteTitle: t('Xóa bảng khỏi máy?', 'Delete board from device?'),
+        deleteDescSuffix: t('khỏi bộ nhớ máy tính', 'from device storage'),
       }
     : {
-        heading: 'Thư viện bảng trên trình duyệt',
-        badgeSuffix: 'Lưu trên trình duyệt này',
-        filterAria: 'Lọc loại bảng trên trình duyệt',
-        searchPlaceholder: 'Tìm bảng trên trình duyệt',
-        sortAria: 'Sắp xếp bảng trên trình duyệt',
-        gridAria: 'Hiển thị bảng trên trình duyệt dạng lưới',
-        listAria: 'Hiển thị bảng trên trình duyệt dạng danh sách',
-        emptyTitle: 'Chưa có bảng nào được lưu trên trình duyệt',
-        emptyDesc:
+        heading: t('Thư viện bảng trên trình duyệt', 'Browser board library'),
+        badgeSuffix: t('Lưu trên trình duyệt này', 'Saved in this browser'),
+        filterAria: t('Lọc loại bảng trên trình duyệt', 'Filter browser boards by type'),
+        searchPlaceholder: t('Tìm bảng trên trình duyệt', 'Search browser boards'),
+        sortAria: t('Sắp xếp bảng trên trình duyệt', 'Sort browser boards'),
+        gridAria: t('Hiển thị bảng trên trình duyệt dạng lưới', 'Grid view for browser boards'),
+        listAria: t(
+          'Hiển thị bảng trên trình duyệt dạng danh sách',
+          'List view for browser boards'
+        ),
+        emptyTitle: t(
+          'Chưa có bảng nào được lưu trên trình duyệt',
+          'No boards saved in this browser yet'
+        ),
+        emptyDesc: t(
           'Khi bạn bắt đầu viết hoặc vẽ trên một bảng mới, bảng đó sẽ tự động lưu trong bộ nhớ trình duyệt này. Đăng nhập Google Drive hoặc tải ứng dụng máy tính để lưu lâu dài.',
-        emptyFilter: 'Không tìm thấy bảng nào trên trình duyệt khớp với bộ lọc hiện tại.',
-        deleteTooltip: 'Xóa khỏi trình duyệt',
-        renameTitle: 'Đổi tên bảng trên trình duyệt',
-        deleteTitle: 'Xóa bảng khỏi trình duyệt?',
-        deleteDescSuffix: 'khỏi bộ nhớ trình duyệt này',
+          'Once you draw or write on a new board, it is automatically saved in this browser. Sign in to Google Drive or download the desktop app for long-term backup.'
+        ),
+        emptyFilter: t(
+          'Không tìm thấy bảng nào trên trình duyệt khớp với bộ lọc hiện tại.',
+          'No browser boards match your current search or filter.'
+        ),
+        deleteTooltip: t('Xóa khỏi trình duyệt', 'Delete from browser'),
+        renameTitle: t('Đổi tên bảng trên trình duyệt', 'Rename browser board'),
+        deleteTitle: t('Xóa bảng khỏi trình duyệt?', 'Delete board from browser?'),
+        deleteDescSuffix: t('khỏi bộ nhớ trình duyệt này', 'from browser storage'),
       };
 
   const countsByType = useMemo(() => {
@@ -161,7 +179,13 @@ export const LocalBoardsSection: React.FC<LocalBoardsSectionProps> = ({
       const text = await file.text();
       const parsed = parseWhiteboardPayload(JSON.parse(text));
       if (!parsed) {
-        addToast('Tệp không đúng định dạng dự án .whiteboard.json.', 'error');
+        addToast(
+          t(
+            'Tệp không đúng định dạng dự án .whiteboard.json.',
+            'Invalid .whiteboard.json project file format.'
+          ),
+          'error'
+        );
         return;
       }
       onBoardOpenedFromLocal();
@@ -175,9 +199,15 @@ export const LocalBoardsSection: React.FC<LocalBoardsSectionProps> = ({
       });
       onOpenBoard();
     } catch {
-      addToast('Không thể đọc tệp .whiteboard.json này.', 'error');
+      addToast(
+        t('Không thể đọc tệp .whiteboard.json này.', 'Unable to read this .whiteboard.json file.'),
+        'error'
+      );
     }
   };
+
+  const formatElementCount = (count: number) =>
+    language === 'en' ? `${count} ${count === 1 ? 'item' : 'items'}` : `${count} đối tượng`;
 
   return (
     <section
@@ -205,7 +235,7 @@ export const LocalBoardsSection: React.FC<LocalBoardsSectionProps> = ({
             {copy.heading}
           </h2>
           <span className="text-xs font-mono text-slate-500 dark:text-slate-400 tabular-nums">
-            {localBoards.length} bảng · {copy.badgeSuffix}
+            {t(`${localBoards.length} bảng`, `${localBoards.length} boards`)} · {copy.badgeSuffix}
           </span>
         </div>
 
@@ -216,7 +246,7 @@ export const LocalBoardsSection: React.FC<LocalBoardsSectionProps> = ({
             className="h-8 inline-flex items-center gap-2 px-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-medium transition-colors duration-150 whitespace-nowrap shrink-0 cursor-pointer"
           >
             <FileUp className="w-4 h-4 text-slate-500 dark:text-slate-400" strokeWidth={1.75} />
-            <span>Mở tệp .json</span>
+            <span>{t('Mở tệp .json', 'Open .json file')}</span>
           </button>
         </div>
       </div>
@@ -241,27 +271,29 @@ export const LocalBoardsSection: React.FC<LocalBoardsSectionProps> = ({
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
-              Tất cả ({localBoards.length})
+              {t('Tất cả', 'All')} ({localBoards.length})
             </button>
-            {BOARD_TEMPLATES.filter((tpl) => (countsByType[tpl.id] || 0) > 0).map((tpl) => {
-              const active = filter === tpl.id;
-              return (
-                <button
-                  key={tpl.id}
-                  type="button"
-                  role="tab"
-                  aria-selected={active}
-                  onClick={() => setFilter(tpl.id)}
-                  className={`h-7 px-2.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap shrink-0 tabular-nums cursor-pointer ${
-                    active
-                      ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-                  }`}
-                >
-                  {tpl.shortName} ({countsByType[tpl.id]})
-                </button>
-              );
-            })}
+            {templates
+              .filter((tpl) => (countsByType[tpl.id] || 0) > 0)
+              .map((tpl) => {
+                const active = filter === tpl.id;
+                return (
+                  <button
+                    key={tpl.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    onClick={() => setFilter(tpl.id)}
+                    className={`h-7 px-2.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap shrink-0 tabular-nums cursor-pointer ${
+                      active
+                        ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                    }`}
+                  >
+                    {tpl.shortName} ({countsByType[tpl.id]})
+                  </button>
+                );
+              })}
           </div>
 
           {/* Search + Sort + Grid/List */}
@@ -287,9 +319,9 @@ export const LocalBoardsSection: React.FC<LocalBoardsSectionProps> = ({
               onChange={(e) => setSort(e.target.value as LocalBoardSort)}
               className="h-9 px-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-medium text-slate-700 dark:text-slate-200 cursor-pointer shrink-0"
             >
-              <option value="updatedDesc">Mới cập nhật</option>
-              <option value="nameAsc">Tên A → Z</option>
-              <option value="elementsDesc">Nhiều nội dung nhất</option>
+              <option value="updatedDesc">{t('Mới cập nhật', 'Recently updated')}</option>
+              <option value="nameAsc">{t('Tên A → Z', 'Name A → Z')}</option>
+              <option value="elementsDesc">{t('Nhiều nội dung nhất', 'Most items')}</option>
             </select>
 
             <div className="h-9 inline-flex items-center p-0.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shrink-0">
@@ -362,7 +394,7 @@ export const LocalBoardsSection: React.FC<LocalBoardsSectionProps> = ({
             }}
             className="h-8 px-3 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-semibold text-slate-800 dark:text-slate-100 transition-colors cursor-pointer"
           >
-            Xóa bộ lọc
+            {t('Xóa bộ lọc', 'Clear filters')}
           </button>
         </div>
       ) : viewMode === 'grid' ? (
@@ -384,7 +416,7 @@ export const LocalBoardsSection: React.FC<LocalBoardsSectionProps> = ({
                   type="button"
                   disabled={isBusy}
                   onClick={() => void handleOpen(board)}
-                  aria-label={`Mở bảng ${board.title}`}
+                  aria-label={t(`Mở bảng ${board.title}`, `Open board ${board.title}`)}
                   className="relative h-28 w-full border-b border-slate-100 dark:border-slate-800 block text-left cursor-pointer group focus-visible:outline-none overflow-hidden"
                 >
                   <div className="w-full h-full">
@@ -392,7 +424,7 @@ export const LocalBoardsSection: React.FC<LocalBoardsSectionProps> = ({
                   </div>
                   {isCurrent && (
                     <span className="absolute top-2 right-2 px-2 py-0.5 rounded-md bg-slate-900/90 dark:bg-slate-100/95 text-white dark:text-slate-900 text-xs font-medium">
-                      Đang mở
+                      {t('Đang mở', 'Open')}
                     </span>
                   )}
                 </button>
@@ -403,11 +435,11 @@ export const LocalBoardsSection: React.FC<LocalBoardsSectionProps> = ({
                       {board.title}
                     </h3>
                     <div className="flex flex-wrap items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 tabular-nums">
-                      <span>{getBoardTypeLabel(board.boardType)}</span>
+                      <span>{getBoardTypeLabel(board.boardType, language)}</span>
                       <span aria-hidden="true">·</span>
-                      <span>{board.elementCount} đối tượng</span>
+                      <span>{formatElementCount(board.elementCount)}</span>
                       <span aria-hidden="true">·</span>
-                      <span>{formatLocalBoardTime(board.updatedAt)}</span>
+                      <span>{formatLocalBoardTime(board.updatedAt, Date.now(), language)}</span>
                     </div>
                   </div>
 
@@ -419,7 +451,7 @@ export const LocalBoardsSection: React.FC<LocalBoardsSectionProps> = ({
                       className="h-8 inline-flex items-center gap-1.5 px-2.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 text-xs font-semibold transition-colors whitespace-nowrap shrink-0 cursor-pointer disabled:opacity-60"
                     >
                       <FolderOpen className="w-3.5 h-3.5" />
-                      <span>{isCurrent ? 'Tiếp tục' : 'Mở'}</span>
+                      <span>{isCurrent ? t('Tiếp tục', 'Resume') : t('Mở', 'Open')}</span>
                     </button>
 
                     <div className="flex items-center gap-0.5 shrink-0">
@@ -427,8 +459,8 @@ export const LocalBoardsSection: React.FC<LocalBoardsSectionProps> = ({
                         type="button"
                         disabled={isBusy}
                         onClick={() => void handleDuplicate(board)}
-                        aria-label={`Nhân bản ${board.title}`}
-                        title="Nhân bản"
+                        aria-label={t(`Nhân bản ${board.title}`, `Duplicate ${board.title}`)}
+                        title={t('Nhân bản', 'Duplicate')}
                         className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer disabled:opacity-50"
                       >
                         <Copy className="w-3.5 h-3.5" />
@@ -437,8 +469,8 @@ export const LocalBoardsSection: React.FC<LocalBoardsSectionProps> = ({
                         type="button"
                         disabled={isBusy}
                         onClick={() => setRenameTarget(board)}
-                        aria-label={`Đổi tên ${board.title}`}
-                        title="Đổi tên"
+                        aria-label={t(`Đổi tên ${board.title}`, `Rename ${board.title}`)}
+                        title={t('Đổi tên', 'Rename')}
                         className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer disabled:opacity-50"
                       >
                         <Pencil className="w-3.5 h-3.5" />
@@ -447,7 +479,7 @@ export const LocalBoardsSection: React.FC<LocalBoardsSectionProps> = ({
                         type="button"
                         disabled={isBusy}
                         onClick={() => setDeleteTarget(board)}
-                        aria-label={`Xóa ${board.title}`}
+                        aria-label={t(`Xóa ${board.title}`, `Delete ${board.title}`)}
                         title={copy.deleteTooltip}
                         className="w-8 h-8 rounded-lg flex items-center justify-center text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/50 transition-colors cursor-pointer disabled:opacity-50"
                       >
@@ -486,13 +518,14 @@ export const LocalBoardsSection: React.FC<LocalBoardsSectionProps> = ({
                       </span>
                       {isCurrent && (
                         <span className="px-1.5 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 text-[10px] font-semibold shrink-0">
-                          Đang mở
+                          {t('Đang mở', 'Open')}
                         </span>
                       )}
                     </div>
                     <div className="text-[11px] text-slate-500 dark:text-slate-400 tabular-nums truncate">
-                      {getBoardTypeLabel(board.boardType)} · {board.elementCount} đối tượng ·{' '}
-                      {formatLocalBoardTime(board.updatedAt)}
+                      {getBoardTypeLabel(board.boardType, language)} ·{' '}
+                      {formatElementCount(board.elementCount)} ·{' '}
+                      {formatLocalBoardTime(board.updatedAt, Date.now(), language)}
                     </div>
                   </div>
                 </button>
@@ -505,14 +538,14 @@ export const LocalBoardsSection: React.FC<LocalBoardsSectionProps> = ({
                     className="h-8 inline-flex items-center gap-1.5 px-2.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 text-xs font-semibold transition-colors whitespace-nowrap shrink-0 cursor-pointer"
                   >
                     <FolderOpen className="w-3.5 h-3.5" />
-                    <span>{isCurrent ? 'Tiếp tục' : 'Mở'}</span>
+                    <span>{isCurrent ? t('Tiếp tục', 'Resume') : t('Mở', 'Open')}</span>
                   </button>
                   <button
                     type="button"
                     disabled={isBusy}
                     onClick={() => void handleDuplicate(board)}
-                    aria-label={`Nhân bản ${board.title}`}
-                    title="Nhân bản"
+                    aria-label={t(`Nhân bản ${board.title}`, `Duplicate ${board.title}`)}
+                    title={t('Nhân bản', 'Duplicate')}
                     className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
                   >
                     <Copy className="w-3.5 h-3.5" />
@@ -521,8 +554,8 @@ export const LocalBoardsSection: React.FC<LocalBoardsSectionProps> = ({
                     type="button"
                     disabled={isBusy}
                     onClick={() => setRenameTarget(board)}
-                    aria-label={`Đổi tên ${board.title}`}
-                    title="Đổi tên"
+                    aria-label={t(`Đổi tên ${board.title}`, `Rename ${board.title}`)}
+                    title={t('Đổi tên', 'Rename')}
                     className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
                   >
                     <Pencil className="w-3.5 h-3.5" />
@@ -531,7 +564,7 @@ export const LocalBoardsSection: React.FC<LocalBoardsSectionProps> = ({
                     type="button"
                     disabled={isBusy}
                     onClick={() => setDeleteTarget(board)}
-                    aria-label={`Xóa ${board.title}`}
+                    aria-label={t(`Xóa ${board.title}`, `Delete ${board.title}`)}
                     title={copy.deleteTooltip}
                     className="w-8 h-8 rounded-lg flex items-center justify-center text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/50 transition-colors cursor-pointer"
                   >
@@ -560,9 +593,17 @@ export const LocalBoardsSection: React.FC<LocalBoardsSectionProps> = ({
         title={copy.deleteTitle}
         description={
           deleteTarget ? (
-            <>
-              Bạn có chắc muốn xóa vĩnh viễn &ldquo;{deleteTarget.title}&rdquo; {copy.deleteDescSuffix}? Thao tác này không thể hoàn tác.
-            </>
+            language === 'en' ? (
+              <>
+                Are you sure you want to permanently delete &ldquo;{deleteTarget.title}&rdquo;{' '}
+                {copy.deleteDescSuffix}? This action cannot be undone.
+              </>
+            ) : (
+              <>
+                Bạn có chắc muốn xóa vĩnh viễn &ldquo;{deleteTarget.title}&rdquo;{' '}
+                {copy.deleteDescSuffix}? Thao tác này không thể hoàn tác.
+              </>
+            )
           ) : null
         }
         isSubmitting={Boolean(busyId)}

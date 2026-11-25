@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { useBoardStore } from '../../store/useBoardStore';
 import { BoardPattern, RevealElement } from '../../types/board';
+import { useI18n } from '../../i18n/useI18n';
 import { Calculator, EyeOff, Grid3X3, ImagePlus, Pin } from 'lucide-react';
 
 interface MathToolsTabProps {
@@ -11,14 +12,8 @@ function uid(prefix: string): string {
   return `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
 }
 
-const PATTERN_CHOICES: { id: BoardPattern; label: string }[] = [
-  { id: 'grid', label: 'Ô ly vuông' },
-  { id: 'coordinate', label: 'Trục Oxy' },
-  { id: 'isometric', label: 'Lưới 3D Iso' },
-  { id: 'polar', label: 'Tọa độ cực' },
-];
-
 export const MathToolsTab: React.FC<MathToolsTabProps> = ({ getWorldCenter }) => {
+  const { language, t } = useI18n();
   const isCalculatorOpen = useBoardStore((s) => s.isCalculatorOpen);
   const setIsCalculatorOpen = useBoardStore((s) => s.setIsCalculatorOpen);
   const pinnedProblem = useBoardStore((s) => s.pinnedProblem);
@@ -29,11 +24,25 @@ export const MathToolsTab: React.FC<MathToolsTabProps> = ({ getWorldCenter }) =>
   const setCurrentTool = useBoardStore((s) => s.setCurrentTool);
   const addToast = useBoardStore((s) => s.addToast);
 
+  const defaultDraftVi = 'Cho hàm số y = x³ - 3mx + 1. Tìm m để hàm số có 2 điểm cực trị.';
+  const defaultDraftEn = 'Given y = x³ - 3mx + 1. Find m so that the function has 2 local extrema.';
+  const defaultRevealVi = "Bước 1: Tính đạo hàm y'";
+  const defaultRevealEn = "Step 1: Compute derivative y'";
+
   const [problemDraft, setProblemDraft] = useState(
-    'Cho hàm số y = x³ - 3mx + 1. Tìm m để hàm số có 2 điểm cực trị.'
+    language === 'en' ? defaultDraftEn : defaultDraftVi
   );
-  const [revealLabel, setRevealLabel] = useState("Bước 1: Tính đạo hàm y'");
+  const [revealLabel, setRevealLabel] = useState(
+    language === 'en' ? defaultRevealEn : defaultRevealVi
+  );
   const problemImageInputRef = useRef<HTMLInputElement>(null);
+
+  const patternChoices: { id: BoardPattern; label: string }[] = [
+    { id: 'grid', label: t('Ô ly vuông', 'Square grid') },
+    { id: 'coordinate', label: t('Trục Oxy', 'Oxy axes') },
+    { id: 'isometric', label: t('Lưới 3D Iso', '3D Iso grid') },
+    { id: 'polar', label: t('Tọa độ cực', 'Polar grid') },
+  ];
 
   const handleInsertRevealCurtain = () => {
     const state = useBoardStore.getState();
@@ -46,14 +55,20 @@ export const MathToolsTab: React.FC<MathToolsTabProps> = ({ getWorldCenter }) =>
       y: Math.round(center.y - 32),
       width: 330,
       height: 64,
-      label: revealLabel.trim() || 'Che lời giải từng bước',
+      label: revealLabel.trim() || t('Che lời giải từng bước', 'Step-by-step solution curtain'),
       revealed: false,
       color: '#4f46e5',
       zIndex: maxZ + 1,
     };
     addElement(curtain, true);
     setCurrentTool('select');
-    addToast('Đã chèn rèm che lời giải (kéo đặt lên dòng giải, nhấp đúp để mở)', 'success');
+    addToast(
+      t(
+        'Đã chèn rèm che lời giải (kéo đặt lên dòng giải, nhấp đúp để mở)',
+        'Inserted solution curtain (drag over solution lines, double-click to reveal)'
+      ),
+      'success'
+    );
   };
 
   const handlePinProblemImage = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -68,7 +83,7 @@ export const MathToolsTab: React.FC<MathToolsTabProps> = ({ getWorldCenter }) =>
           imageUrl: url,
           collapsed: false,
         });
-        addToast('Đã ghim ảnh đề bài lên đầu màn hình', 'success');
+        addToast(t('Đã ghim ảnh đề bài lên đầu màn hình', 'Pinned problem image to top of screen'), 'success');
       }
     };
     reader.readAsDataURL(file);
@@ -79,9 +94,12 @@ export const MathToolsTab: React.FC<MathToolsTabProps> = ({ getWorldCenter }) =>
     <div className="space-y-3.5">
       {/* Casio fx-580VN X Scientific Calculator */}
       <div className="rounded-xl border border-slate-200/80 dark:border-slate-800 p-3 bg-slate-50/60 dark:bg-slate-950/50 space-y-2">
-        <div className="text-xs font-medium">Máy tính Casio fx-580VN X</div>
+        <div className="text-xs font-medium">{t('Máy tính Casio fx-580VN X', 'Casio fx-580VN X Calculator')}</div>
         <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
-          Giao diện ClassWiz Natural-V.P.A.M., phím SHIFT/ALPHA, chuyển S⇔D phân số/căn, bảng f(x), giải PT bậc 2 &amp; Hệ 2 ẩn.
+          {t(
+            'Giao diện ClassWiz Natural-V.P.A.M., phím SHIFT/ALPHA, chuyển S⇔D phân số/căn, bảng f(x), giải PT bậc 2 & Hệ 2 ẩn.',
+            'ClassWiz Natural-V.P.A.M. display, SHIFT/ALPHA keys, S⇔D fraction/surd toggle, f(x) table, quadratic & 2-variable solvers.'
+          )}
         </p>
         <button
           type="button"
@@ -95,19 +113,26 @@ export const MathToolsTab: React.FC<MathToolsTabProps> = ({ getWorldCenter }) =>
           }`}
         >
           <Calculator className="w-3.5 h-3.5" />
-          <span>{isCalculatorOpen ? 'Đóng Casio fx-580VN X' : 'Mở Casio fx-580VN X'}</span>
+          <span>
+            {isCalculatorOpen
+              ? t('Đóng Casio fx-580VN X', 'Close Casio fx-580VN X')
+              : t('Mở Casio fx-580VN X', 'Open Casio fx-580VN X')}
+          </span>
         </button>
       </div>
 
       {/* Pinned Problem Bar */}
       <div className="rounded-xl border border-slate-200/80 dark:border-slate-800 p-3 bg-slate-50/60 dark:bg-slate-950/50 space-y-2">
-        <div className="text-xs font-medium">Khung ghim đề bài cố định</div>
+        <div className="text-xs font-medium">{t('Khung ghim đề bài cố định', 'Pinned problem bar')}</div>
         <textarea
           rows={2}
-          aria-label="Nội dung đề bài muốn ghim"
+          aria-label={t('Nội dung đề bài muốn ghim', 'Problem text to pin')}
           value={problemDraft}
           onChange={(e) => setProblemDraft(e.target.value)}
-          placeholder="Nhập đề bài để ghim cố định ở đỉnh màn hình..."
+          placeholder={t(
+            'Nhập đề bài để ghim cố định ở đỉnh màn hình...',
+            'Enter a problem statement to pin at the top of the screen...'
+          )}
           className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs outline-none focus:border-indigo-500 resize-none"
         />
         <input
@@ -129,12 +154,12 @@ export const MathToolsTab: React.FC<MathToolsTabProps> = ({ getWorldCenter }) =>
                 imageUrl: pinnedProblem?.imageUrl,
                 collapsed: false,
               });
-              addToast('Đã ghim đề bài ở đầu màn hình', 'success');
+              addToast(t('Đã ghim đề bài ở đầu màn hình', 'Pinned problem to top of screen'), 'success');
             }}
             className="h-8 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-semibold inline-flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap"
           >
             <Pin className="w-3 h-3" />
-            <span>Ghim đề bài</span>
+            <span>{t('Ghim đề bài', 'Pin text')}</span>
           </button>
           <button
             type="button"
@@ -142,20 +167,22 @@ export const MathToolsTab: React.FC<MathToolsTabProps> = ({ getWorldCenter }) =>
             className="h-8 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-indigo-400 text-[11px] font-semibold inline-flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap"
           >
             <ImagePlus className="w-3 h-3" />
-            <span>Ghim ảnh đề</span>
+            <span>{t('Ghim ảnh đề', 'Pin image')}</span>
           </button>
         </div>
       </div>
 
       {/* Step-by-Step Reveal Curtain */}
       <div className="rounded-xl border border-slate-200/80 dark:border-slate-800 p-3 bg-slate-50/60 dark:bg-slate-950/50 space-y-2">
-        <div className="text-xs font-medium">Che lời giải từng bước (Reveal Curtain)</div>
+        <div className="text-xs font-medium">
+          {t('Che lời giải từng bước (Reveal Curtain)', 'Step-by-step reveal curtain')}
+        </div>
         <input
           type="text"
-          aria-label="Nhãn rèm che lời giải"
+          aria-label={t('Nhãn rèm che lời giải', 'Reveal curtain label')}
           value={revealLabel}
           onChange={(e) => setRevealLabel(e.target.value)}
-          placeholder="VD: Bước 1: Tính đạo hàm"
+          placeholder={t('VD: Bước 1: Tính đạo hàm', "e.g. Step 1: Compute derivative y'")}
           className="w-full h-8 px-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs"
         />
         <button
@@ -165,7 +192,7 @@ export const MathToolsTab: React.FC<MathToolsTabProps> = ({ getWorldCenter }) =>
           className="w-full h-8 rounded-lg border border-indigo-300 dark:border-indigo-800 bg-indigo-50/80 dark:bg-indigo-950/50 hover:bg-indigo-100 text-indigo-700 dark:text-indigo-300 text-xs font-semibold inline-flex items-center justify-center gap-1.5 cursor-pointer"
         >
           <EyeOff className="w-3.5 h-3.5" />
-          <span>Chèn rèm che lời giải</span>
+          <span>{t('Chèn rèm che lời giải', 'Insert reveal curtain')}</span>
         </button>
       </div>
 
@@ -173,10 +200,10 @@ export const MathToolsTab: React.FC<MathToolsTabProps> = ({ getWorldCenter }) =>
       <div className="rounded-xl border border-slate-200/80 dark:border-slate-800 p-3 bg-slate-50/60 dark:bg-slate-950/50 space-y-2">
         <div className="flex items-center gap-1.5 text-xs font-medium">
           <Grid3X3 className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-          <span>Nền lưới toán học chuyên dụng</span>
+          <span>{t('Nền lưới toán học chuyên dụng', 'Dedicated math backgrounds')}</span>
         </div>
         <div className="grid grid-cols-2 gap-1.5">
-          {PATTERN_CHOICES.map((pat) => (
+          {patternChoices.map((pat) => (
             <button
               key={pat.id}
               type="button"

@@ -410,7 +410,7 @@ export const createElementsSlice: StateCreator<BoardState, [], [], ElementsSlice
         width: w,
         height: h,
         assetId,
-        fileName: `${fileName} (Trang ${page.pageNumber})`,
+        fileName: `${fileName} (${tr('Trang', 'Page')} ${page.pageNumber})`,
         naturalWidth: page.width,
         naturalHeight: page.height,
         isLocked: lockPages,
@@ -428,7 +428,13 @@ export const createElementsSlice: StateCreator<BoardState, [], [], ElementsSlice
       currentTool: lockPages ? 'pen' : 'select',
     });
     get().commitHistory();
-    get().addToast(`Đã trải ${pages.length} trang từ "${fileName}" lên bảng`, 'success');
+    get().addToast(
+      tr(
+        `Đã trải ${pages.length} trang từ "${fileName}" lên bảng`,
+        `Spread ${pages.length} pages from "${fileName}" onto board`
+      ),
+      'success'
+    );
   },
 
   insertFileCard: (payload) => {

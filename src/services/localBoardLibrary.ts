@@ -1,4 +1,5 @@
 import { del as idbDel, get as idbGet, set as idbSet } from 'idb-keyval';
+import { AppLanguage, getAppLanguage, tr } from '../i18n';
 import {
   BoardElement,
   BoardPattern,
@@ -162,26 +163,30 @@ export function filterAndSortLocalBoards(
   });
 }
 
-export function formatLocalBoardTime(isoString: string, nowMs: number = Date.now()): string {
+export function formatLocalBoardTime(
+  isoString: string,
+  nowMs: number = Date.now(),
+  lang: AppLanguage = getAppLanguage()
+): string {
   const ts = new Date(isoString).getTime();
   if (!Number.isFinite(ts)) return '';
 
   const diffMs = Math.max(0, nowMs - ts);
   const diffMin = Math.floor(diffMs / 60_000);
-  if (diffMin < 1) return 'Vừa xong';
-  if (diffMin < 60) return `${diffMin} phút trước`;
+  if (diffMin < 1) return tr('Vừa xong', 'Just now', lang);
+  if (diffMin < 60) return tr(`${diffMin} phút trước`, `${diffMin}m ago`, lang);
 
   const diffHours = Math.floor(diffMin / 60);
-  if (diffHours < 24) return `${diffHours} giờ trước`;
+  if (diffHours < 24) return tr(`${diffHours} giờ trước`, `${diffHours}h ago`, lang);
 
   const diffDays = Math.floor(diffHours / 24);
-  if (diffDays < 7) return `${diffDays} ngày trước`;
+  if (diffDays < 7) return tr(`${diffDays} ngày trước`, `${diffDays}d ago`, lang);
 
   const date = new Date(ts);
   const dd = String(date.getDate()).padStart(2, '0');
   const mm = String(date.getMonth() + 1).padStart(2, '0');
   const yyyy = date.getFullYear();
-  return `${dd}/${mm}/${yyyy}`;
+  return lang === 'en' ? `${mm}/${dd}/${yyyy}` : `${dd}/${mm}/${yyyy}`;
 }
 
 export function normalizeLocalBoardMeta(raw: Partial<LocalBoardMeta>): LocalBoardMeta | null {
@@ -368,7 +373,7 @@ export async function duplicateLocalBoard(
   if (!payload) return null;
 
   const copyId = generateLocalBoardId();
-  const copyTitle = `${payload.title.trim() || 'Bảng trắng mới'} (bản sao)`;
+  const copyTitle = `${payload.title.trim() || tr('Bảng trắng mới', 'Untitled board')} ${tr('(bản sao)', '(copy)')}`;
 
   return saveLocalBoard({
     ...payload,

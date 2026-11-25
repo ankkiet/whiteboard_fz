@@ -38,6 +38,13 @@ contextBridge.exposeInMainWorld('fzinkDesktopUpdater', {
       return Promise.resolve({ ok: false, error: err && err.message ? err.message : 'Update failed' });
     }
   },
+  cancelDownload: () => {
+    try {
+      return ipcRenderer.invoke('fzink:updater:cancel');
+    } catch {
+      return Promise.resolve({ ok: false });
+    }
+  },
   onProgress: (callback) => {
     if (typeof callback !== 'function') return () => {};
     const listener = (_event, payload) => callback(payload);

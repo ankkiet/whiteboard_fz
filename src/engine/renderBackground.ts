@@ -11,6 +11,7 @@ import {
   getNotebookConfig,
   normalizeNotebookPaperStyle,
 } from './notebookEngine';
+import { tr } from '../i18n';
 
 export const ADAPTIVE_INK = '#1e293b';
 
@@ -492,11 +493,11 @@ export function drawNotebookLayout(
     ctx.font = '500 11px system-ui, -apple-system, sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    const displayTitle = (notebookTitle && notebookTitle.trim()) || 'Vở ghi chép';
+    const displayTitle = (notebookTitle && notebookTitle.trim()) || tr('Vở ghi chép', 'Notebook');
     ctx.fillText(displayTitle, config.marginLeft + 6, pageY + config.marginTop * 0.45);
 
     ctx.textAlign = 'right';
-    ctx.fillText(`Trang ${p + 1}`, rightMarginX - 4, pageY + config.marginTop * 0.45);
+    ctx.fillText(`${tr('Trang', 'Page')} ${p + 1}`, rightMarginX - 4, pageY + config.marginTop * 0.45);
 
     ctx.strokeStyle = isDarkMode ? 'rgba(148, 163, 184, 0.55)' : 'rgba(100, 116, 139, 0.45)';
     ctx.lineWidth = 1.5 / safeZoom;

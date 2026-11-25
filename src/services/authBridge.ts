@@ -4,6 +4,7 @@
  */
 
 import { PRODUCTION_UPDATE_ORIGIN } from '../engine/versionCheck';
+import { tr } from '../i18n';
 
 export interface BridgeUser {
   uid: string;
@@ -77,13 +78,20 @@ export function createAuthBridgeToken(user: BridgeUser, accessToken: string): st
   return `${BRIDGE_PREFIX}${base64}`;
 }
 
+class BridgeTokenValidationError extends Error {}
+
 export function parseAuthBridgeToken(raw: string): BridgeSession {
   const trimmed = (raw || '').trim();
   if (!trimmed) {
-    throw new Error('Vui lòng nhập hoặc dán mã kết nối từ trình duyệt.');
+    throw new Error(tr('Vui lòng nhập hoặc dán mã kết nối từ trình duyệt.', 'Please enter or paste the connection code from your browser.'));
   }
   if (!trimmed.startsWith(BRIDGE_PREFIX)) {
-    throw new Error('Mã kết nối không đúng định dạng. Mã hợp lệ cần bắt đầu bằng "BTTM-".');
+    throw new Error(
+      tr(
+        'Mã kết nối không đúng định dạng. Mã hợp lệ cần bắt đầu bằng "BTTM-".',
+        'Invalid connection code format. Valid codes must start with "BTTM-".'
+      )
+    );
   }
 
   const base64 = trimmed.slice(BRIDGE_PREFIX.length);
@@ -96,17 +104,21 @@ export function parseAuthBridgeToken(raw: string): BridgeSession {
     const parsed = JSON.parse(json) as Partial<BridgeSession>;
 
     if (!parsed.accessToken || typeof parsed.accessToken !== 'string') {
-      throw new Error('Mã kết nối bị thiếu mã truy cập Google Drive.');
+      throw new BridgeTokenValidationError(
+        tr('Mã kết nối bị thiếu mã truy cập Google Drive.', 'Bridge token is missing the Google Drive access token.')
+      );
     }
     if (!parsed.user || !parsed.user.email) {
-      throw new Error('Mã kết nối bị thiếu thông tin tài khoản Google.');
+      throw new BridgeTokenValidationError(
+        tr('Mã kết nối bị thiếu thông tin tài khoản Google.', 'Bridge token is missing Google account information.')
+      );
     }
 
     return {
       accessToken: parsed.accessToken,
       user: {
         uid: parsed.user.uid || 'bridge-user',
-        displayName: parsed.user.displayName || parsed.user.email || 'Người dùng Google',
+        displayName: parsed.user.displayName || parsed.user.email || tr('Người dùng Google', 'Google User'),
         email: parsed.user.email,
         photoURL: parsed.user.photoURL || null,
       },
@@ -114,10 +126,15 @@ export function parseAuthBridgeToken(raw: string): BridgeSession {
       expiresIn: parsed.expiresIn || 3600,
     };
   } catch (err) {
-    if (err instanceof Error && err.message.startsWith('Mã kết nối')) {
+    if (err instanceof BridgeTokenValidationError) {
       throw err;
     }
-    throw new Error('Không thể giải mã dữ liệu kết nối. Hãy sao chép lại mã từ trình duyệt.');
+    throw new Error(
+      tr(
+        'Không thể giải mã dữ liệu kết nối. Hãy sao chép lại mã từ trình duyệt.',
+        'Could not decode connection data. Please copy the code again from your browser.'
+      )
+    );
   }
 }
 

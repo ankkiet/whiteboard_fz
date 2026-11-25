@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { User } from 'firebase/auth';
+import { tr } from '../i18n';
 import { useBoardStore } from '../store/useBoardStore';
 import {
   googleLogout,
@@ -167,7 +168,9 @@ export function useGoogleDriveWorkspace(): GoogleDriveWorkspaceState {
         setSyncStatus((prev) => (prev === 'pending' ? 'idle' : prev));
       }
       addToast(
-        enabled ? 'Đã bật tự động lưu lên Google Drive' : 'Đã tắt tự động lưu lên Google Drive',
+        enabled
+          ? tr('Đã bật tự động lưu lên Google Drive', 'Google Drive auto-save enabled')
+          : tr('Đã tắt tự động lưu lên Google Drive', 'Google Drive auto-save disabled'),
         'info'
       );
     },
@@ -209,7 +212,7 @@ export function useGoogleDriveWorkspace(): GoogleDriveWorkspaceState {
   const buildCurrentPayload = () => {
     const state = useBoardStore.getState();
     return {
-      title: state.title || 'Bảng Trắng Mới',
+      title: state.title || tr('Bảng Trắng Mới', 'Untitled board'),
       elements: state.elements,
       assets: state.assets,
       boardType: state.boardType,
@@ -351,7 +354,7 @@ export function useGoogleDriveWorkspace(): GoogleDriveWorkspaceState {
         }
       } catch (err) {
         if (boardSessionRef.current !== sessionId) return;
-        handleDriveError(err, 'Tự động lưu lên Google Drive không thành công.', true);
+        handleDriveError(err, tr('Tự động lưu lên Google Drive không thành công.', 'Google Drive auto-save failed.'), true);
       } finally {
         isAutoSavingRef.current = false;
         inFlightAutoSaveRef.current = null;
@@ -434,7 +437,7 @@ export function useGoogleDriveWorkspace(): GoogleDriveWorkspaceState {
       setAppFolder(workspace.folder);
       setFiles(workspace.files);
     } catch (err) {
-      handleDriveError(err, 'Không thể tải danh sách bảng từ Google Drive.');
+      handleDriveError(err, tr('Không thể tải danh sách bảng từ Google Drive.', 'Could not load board list from Google Drive.'));
     } finally {
       setIsLoadingFiles(false);
     }
@@ -448,7 +451,10 @@ export function useGoogleDriveWorkspace(): GoogleDriveWorkspaceState {
       setAppFolder(folder);
       const targets = findUnorganizedDriveFiles(files, folder.id);
       if (targets.length === 0) {
-        addToast(`Tất cả tệp đã nằm gọn trong thư mục "${folder.name}".`, 'info');
+        addToast(
+          tr(`Tất cả tệp đã nằm gọn trong thư mục "${folder.name}".`, `All files are already organized in the "${folder.name}" folder.`),
+          'info'
+        );
         return;
       }
 
@@ -460,11 +466,14 @@ export function useGoogleDriveWorkspace(): GoogleDriveWorkspaceState {
 
       setFiles((prev) => prev.map((f) => updatedById.get(f.id) || f));
       addToast(
-        `Đã gom ${targets.length} tệp vào thư mục "${folder.name}" trên Google Drive`,
+        tr(
+          `Đã gom ${targets.length} tệp vào thư mục "${folder.name}" trên Google Drive`,
+          `Moved ${targets.length} file(s) into "${folder.name}" on Google Drive`
+        ),
         'success'
       );
     } catch (err) {
-      handleDriveError(err, 'Không thể gom các tệp cũ vào thư mục Google Drive.');
+      handleDriveError(err, tr('Không thể gom các tệp cũ vào thư mục Google Drive.', 'Could not move older files into the Google Drive folder.'));
     } finally {
       setBusyAction(null);
     }
@@ -501,7 +510,10 @@ export function useGoogleDriveWorkspace(): GoogleDriveWorkspaceState {
       setNeedsAuth(false);
       needsAuthRef.current = false;
       addToast(
-        `Đã kết nối Google Drive (${result.user.email || result.user.displayName})`,
+        tr(
+          `Đã kết nối Google Drive (${result.user.email || result.user.displayName})`,
+          `Connected to Google Drive (${result.user.email || result.user.displayName})`
+        ),
         'success'
       );
       return true;
@@ -536,13 +548,16 @@ export function useGoogleDriveWorkspace(): GoogleDriveWorkspaceState {
         setAppFolder(null);
         setError(null);
         addToast(
-          `Đã kết nối Google Drive qua trình duyệt (${session.user.email || session.user.displayName})`,
+          tr(
+            `Đã kết nối Google Drive qua trình duyệt (${session.user.email || session.user.displayName})`,
+            `Connected to Google Drive via browser (${session.user.email || session.user.displayName})`
+          ),
           'success'
         );
         void refreshFiles();
         return true;
       } catch (err) {
-        const msg = err instanceof Error ? err.message : 'Mã kết nối không hợp lệ.';
+        const msg = err instanceof Error ? err.message : tr('Mã kết nối không hợp lệ.', 'Invalid connection code.');
         setError({ message: msg });
         addToast(msg, 'error');
         return false;
@@ -568,7 +583,7 @@ export function useGoogleDriveWorkspace(): GoogleDriveWorkspaceState {
       lastSyncedSignatureRef.current = null;
       setSyncStatus('idle');
       setLastSyncedAt(null);
-      addToast('Đã ngắt kết nối Google Drive', 'info');
+      addToast(tr('Đã ngắt kết nối Google Drive', 'Disconnected from Google Drive'), 'info');
     } finally {
       setBusyAction(null);
     }
@@ -596,10 +611,13 @@ export function useGoogleDriveWorkspace(): GoogleDriveWorkspaceState {
           setLastSyncedAt(updated.modifiedTime || new Date().toISOString());
           setSyncStatus('saved');
           setFiles((prev) => [updated, ...prev.filter((f) => f.id !== updated.id)]);
-          addToast(`Đã cập nhật "${updated.name}" trên Google Drive`, 'success');
+          addToast(
+            tr(`Đã cập nhật "${updated.name}" trên Google Drive`, `Updated "${updated.name}" on Google Drive`),
+            'success'
+          );
           return updated;
         } catch (err) {
-          handleDriveError(err, 'Không thể cập nhật tệp trên Google Drive.');
+          handleDriveError(err, tr('Không thể cập nhật tệp trên Google Drive.', 'Could not update file on Google Drive.'));
           return null;
         } finally {
           setBusyAction(null);
@@ -619,10 +637,13 @@ export function useGoogleDriveWorkspace(): GoogleDriveWorkspaceState {
         setLastSyncedAt(saved.modifiedTime || new Date().toISOString());
         setSyncStatus('saved');
         setFiles((prev) => [saved, ...prev.filter((f) => f.id !== saved.id)]);
-        addToast(`Đã lưu "${saved.name}" lên Google Drive`, 'success');
+        addToast(
+          tr(`Đã lưu "${saved.name}" lên Google Drive`, `Saved "${saved.name}" to Google Drive`),
+          'success'
+        );
         return saved;
       } catch (err) {
-        handleDriveError(err, 'Không thể lưu tệp bảng trắng lên Google Drive.');
+        handleDriveError(err, tr('Không thể lưu tệp bảng trắng lên Google Drive.', 'Could not save whiteboard file to Google Drive.'));
         return null;
       } finally {
         setBusyAction(null);
@@ -650,10 +671,13 @@ export function useGoogleDriveWorkspace(): GoogleDriveWorkspaceState {
         setLastSyncedAt(updated.modifiedTime || new Date().toISOString());
         setSyncStatus('saved');
         setFiles((prev) => [updated, ...prev.filter((f) => f.id !== updated.id)]);
-        addToast(`Đã cập nhật "${updated.name}" trên Google Drive`, 'success');
+        addToast(
+          tr(`Đã cập nhật "${updated.name}" trên Google Drive`, `Updated "${updated.name}" on Google Drive`),
+          'success'
+        );
         return updated;
       } catch (err) {
-        handleDriveError(err, 'Không thể cập nhật tệp trên Google Drive.');
+        handleDriveError(err, tr('Không thể cập nhật tệp trên Google Drive.', 'Could not update file on Google Drive.'));
         return null;
       } finally {
         setBusyAction(null);
@@ -680,12 +704,15 @@ export function useGoogleDriveWorkspace(): GoogleDriveWorkspaceState {
       const saved = await uploadDrivePngSnapshot(state.title, rendered.blob);
       setFiles((prev) => [saved, ...prev.filter((f) => f.id !== saved.id)]);
       addToast(
-        `Đã lưu ảnh PNG (${rendered.pixelWidth} × ${rendered.pixelHeight} px) lên Google Drive`,
+        tr(
+          `Đã lưu ảnh PNG (${rendered.pixelWidth} × ${rendered.pixelHeight} px) lên Google Drive`,
+          `Saved PNG image (${rendered.pixelWidth} × ${rendered.pixelHeight} px) to Google Drive`
+        ),
         'success'
       );
       return saved;
     } catch (err) {
-      handleDriveError(err, 'Không thể tải ảnh PNG lên Google Drive.');
+      handleDriveError(err, tr('Không thể tải ảnh PNG lên Google Drive.', 'Could not upload PNG image to Google Drive.'));
       return null;
     } finally {
       setBusyAction(null);
@@ -721,7 +748,7 @@ export function useGoogleDriveWorkspace(): GoogleDriveWorkspaceState {
         setSyncStatus('saved');
         return true;
       } catch (err) {
-        handleDriveError(err, 'Không thể mở tệp bảng trắng từ Google Drive.');
+        handleDriveError(err, tr('Không thể mở tệp bảng trắng từ Google Drive.', 'Could not open whiteboard file from Google Drive.'));
         return false;
       } finally {
         setBusyAction(null);
@@ -746,10 +773,13 @@ export function useGoogleDriveWorkspace(): GoogleDriveWorkspaceState {
           lastSyncedSignatureRef.current = sig;
           setDriveSyncMeta({ driveFileId: updated.id, driveSyncedSignature: sig });
         }
-        addToast(`Đã đổi tên thành "${getDisplayBoardTitle(updated)}"`, 'success');
+        addToast(
+          tr(`Đã đổi tên thành "${getDisplayBoardTitle(updated)}"`, `Renamed to "${getDisplayBoardTitle(updated)}"`),
+          'success'
+        );
         return true;
       } catch (err) {
-        handleDriveError(err, 'Không thể đổi tên tệp trên Google Drive.');
+        handleDriveError(err, tr('Không thể đổi tên tệp trên Google Drive.', 'Could not rename file on Google Drive.'));
         return false;
       } finally {
         setBusyAction(null);
@@ -776,10 +806,13 @@ export function useGoogleDriveWorkspace(): GoogleDriveWorkspaceState {
           setSyncStatus('idle');
           setLastSyncedAt(null);
         }
-        addToast(`Đã xóa "${file.name}" khỏi Google Drive`, 'info');
+        addToast(
+          tr(`Đã xóa "${file.name}" khỏi Google Drive`, `Deleted "${file.name}" from Google Drive`),
+          'info'
+        );
         return true;
       } catch (err) {
-        handleDriveError(err, 'Không thể xóa tệp trên Google Drive.');
+        handleDriveError(err, tr('Không thể xóa tệp trên Google Drive.', 'Could not delete file on Google Drive.'));
         return false;
       } finally {
         setBusyAction(null);

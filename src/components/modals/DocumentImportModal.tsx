@@ -13,6 +13,7 @@ import {
   paginatePlainText,
   parsePageSelection,
 } from '../../engine/documentUtils';
+import { useI18n } from '../../i18n/useI18n';
 import { FileText, Layers, CreditCard, Lock, X, Loader2 } from 'lucide-react';
 
 export interface PendingDocumentImport {
@@ -32,6 +33,7 @@ export const DocumentImportModal: React.FC<DocumentImportModalProps> = ({
   const insertDocumentPages = useBoardStore((s) => s.insertDocumentPages);
   const insertFileCard = useBoardStore((s) => s.insertFileCard);
   const addToast = useBoardStore((s) => s.addToast);
+  const { t } = useI18n();
 
   const [mode, setMode] = useState<'spread' | 'card'>('spread');
   const [layout, setLayout] = useState<'row' | 'grid'>('row');
@@ -105,7 +107,10 @@ export const DocumentImportModal: React.FC<DocumentImportModalProps> = ({
       } catch {
         if (!cancelled) {
           setAnalysisError(
-            'Không thể tách trang tự động từ tệp này. Bạn vẫn có thể chèn dưới dạng thẻ tài liệu.'
+            t(
+              'Không thể tách trang tự động từ tệp này. Bạn vẫn có thể chèn dưới dạng thẻ tài liệu.',
+              'Could not extract pages automatically from this file. You can still insert it as a document card.'
+            )
           );
           setMode('card');
         }
@@ -118,7 +123,7 @@ export const DocumentImportModal: React.FC<DocumentImportModalProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [file, kind]);
+  }, [file, kind, t]);
 
   useEffect(() => {
     if (!file) return;
@@ -142,7 +147,13 @@ export const DocumentImportModal: React.FC<DocumentImportModalProps> = ({
           selectedPageNumbers.length > 0 ? selectedPageNumbers : [1];
         const cappedPages = pagesToRender.slice(0, 20);
         if (pagesToRender.length > 20) {
-          addToast('Giới hạn tối đa 20 trang mỗi lần trải để giữ bảng mượt 60fps.', 'info');
+          addToast(
+            t(
+              'Giới hạn tối đa 20 trang mỗi lần trải để giữ bảng mượt 60fps.',
+              'Maximum 20 pages per batch to keep the canvas smooth at 60fps.'
+            ),
+            'info'
+          );
         }
 
         if (isPdf) {
@@ -180,7 +191,10 @@ export const DocumentImportModal: React.FC<DocumentImportModalProps> = ({
         onClose();
       }
     } catch {
-      addToast('Có lỗi khi xử lý tài liệu. Vui lòng thử lại.', 'error');
+      addToast(
+        t('Có lỗi khi xử lý tài liệu. Vui lòng thử lại.', 'Failed to process document. Please try again.'),
+        'error'
+      );
     } finally {
       setIsProcessing(false);
     }
@@ -201,7 +215,7 @@ export const DocumentImportModal: React.FC<DocumentImportModalProps> = ({
           type="button"
           onClick={onClose}
           disabled={isProcessing}
-          aria-label="Đóng hộp thoại nhập tài liệu"
+          aria-label={t('Đóng hộp thoại nhập tài liệu', 'Close document import dialog')}
           className="absolute top-4 right-4 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-500 dark:text-slate-400"
         >
           <X className="w-4 h-4" />
@@ -220,10 +234,16 @@ export const DocumentImportModal: React.FC<DocumentImportModalProps> = ({
               {file.name}
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              {isPdf ? 'Tài liệu PDF' : kind === 'word' ? 'Tài liệu Word' : 'Tệp tài liệu'}
+              {isPdf
+                ? t('Tài liệu PDF', 'PDF Document')
+                : kind === 'word'
+                ? t('Tài liệu Word', 'Word Document')
+                : t('Tệp tài liệu', 'Document File')}
               {' · '}
               {formatFileSize(file.size)}
-              {totalPages > 0 && !isAnalyzing && ` · ${totalPages} trang`}
+              {totalPages > 0 &&
+                !isAnalyzing &&
+                ` · ${totalPages} ${t('trang', totalPages === 1 ? 'page' : 'pages')}`}
             </p>
           </div>
         </div>
@@ -231,13 +251,18 @@ export const DocumentImportModal: React.FC<DocumentImportModalProps> = ({
         {isAnalyzing ? (
           <div className="py-10 flex flex-col items-center justify-center gap-2 text-slate-500 dark:text-slate-400">
             <Loader2 className="w-6 h-6 animate-spin text-indigo-600" />
-            <span className="text-xs font-medium">Đang phân tích tài liệu...</span>
+            <span className="text-xs font-medium">
+              {t('Đang phân tích tài liệu...', 'Analyzing document...')}
+            </span>
           </div>
         ) : (
           <>
             {isLegacyDoc && (
               <div className="mb-4 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 text-xs text-amber-800 dark:text-amber-300">
-                Định dạng Word cũ (.doc) sẽ được chèn dưới dạng thẻ tài liệu. Để trải trang trực tiếp lên bảng, hãy dùng định dạng <strong>.docx</strong> hoặc <strong>.pdf</strong>.
+                {t(
+                  'Định dạng Word cũ (.doc) sẽ được chèn dưới dạng thẻ tài liệu. Để trải trang trực tiếp lên bảng, hãy dùng định dạng .docx hoặc .pdf.',
+                  'Legacy Word (.doc) files are inserted as a document card. Use .docx or .pdf to spread pages directly onto the board.'
+                )}
               </div>
             )}
 
@@ -261,10 +286,13 @@ export const DocumentImportModal: React.FC<DocumentImportModalProps> = ({
               >
                 <div className="flex items-center gap-2 font-semibold text-sm mb-1">
                   <Layers className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-                  <span>Trải trang lên bảng</span>
+                  <span>{t('Trải trang lên bảng', 'Spread pages on board')}</span>
                 </div>
                 <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                  Tách từng trang thành ảnh sắc nét để viết, gạch chân, khoanh tròn trực tiếp
+                  {t(
+                    'Tách từng trang thành ảnh sắc nét để viết, gạch chân, khoanh tròn trực tiếp',
+                    'Render each page as a crisp image to annotate, highlight, and draw on directly'
+                  )}
                 </p>
               </button>
 
@@ -279,10 +307,13 @@ export const DocumentImportModal: React.FC<DocumentImportModalProps> = ({
               >
                 <div className="flex items-center gap-2 font-medium text-sm mb-1">
                   <CreditCard className="w-4 h-4 text-slate-500 dark:text-slate-400" strokeWidth={1.75} />
-                  <span>Thẻ tài liệu</span>
+                  <span>{t('Thẻ tài liệu', 'Document card')}</span>
                 </div>
                 <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                  Đính kèm thẻ gọn gàng trên bảng, nhấp đúp để xem nhanh hoặc tải tệp gốc
+                  {t(
+                    'Đính kèm thẻ gọn gàng trên bảng, nhấp đúp để xem nhanh hoặc tải tệp gốc',
+                    'Attach a compact card on the board — double-click to preview or download'
+                  )}
                 </p>
               </button>
             </div>
@@ -295,14 +326,20 @@ export const DocumentImportModal: React.FC<DocumentImportModalProps> = ({
                       htmlFor="doc-page-range"
                       className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1"
                     >
-                      Chọn trang cần trải (để trống = tất cả {totalPages} trang)
+                      {t(
+                        `Chọn trang cần trải (để trống = tất cả ${totalPages} trang)`,
+                        `Pages to insert (blank = all ${totalPages} pages)`
+                      )}
                     </label>
                     <input
                       id="doc-page-range"
                       type="text"
                       value={pageRange}
                       onChange={(e) => setPageRange(e.target.value)}
-                      placeholder={`Ví dụ: 1-${Math.min(3, totalPages)} hoặc 1, 2`}
+                      placeholder={t(
+                        `Ví dụ: 1-${Math.min(3, totalPages)} hoặc 1, 2`,
+                        `e.g. 1-${Math.min(3, totalPages)} or 1, 2`
+                      )}
                       className="w-full px-3 py-1.5 text-xs rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 outline-none focus:border-indigo-500 font-mono"
                     />
                   </div>
@@ -310,7 +347,7 @@ export const DocumentImportModal: React.FC<DocumentImportModalProps> = ({
 
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                    Bố cục sắp xếp
+                    {t('Bố cục sắp xếp', 'Page layout')}
                   </span>
                   <div className="flex items-center gap-1 p-0.5 rounded-lg bg-slate-200/70 dark:bg-slate-800">
                     <button
@@ -322,7 +359,7 @@ export const DocumentImportModal: React.FC<DocumentImportModalProps> = ({
                           : 'text-slate-600 dark:text-slate-400'
                       }`}
                     >
-                      Hàng ngang
+                      {t('Hàng ngang', 'Horizontal row')}
                     </button>
                     <button
                       type="button"
@@ -333,7 +370,7 @@ export const DocumentImportModal: React.FC<DocumentImportModalProps> = ({
                           : 'text-slate-600 dark:text-slate-400'
                       }`}
                     >
-                      Lưới 2 cột
+                      {t('Lưới 2 cột', '2-column grid')}
                     </button>
                   </div>
                 </div>
@@ -341,7 +378,10 @@ export const DocumentImportModal: React.FC<DocumentImportModalProps> = ({
                 <label className="flex items-center justify-between text-xs font-medium cursor-pointer">
                   <span className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
                     <Lock className="w-3.5 h-3.5 text-slate-500" />
-                    Khóa trang làm nền để vẽ đè không bị xê dịch
+                    {t(
+                      'Khóa trang làm nền để vẽ đè không bị xê dịch',
+                      'Lock pages as background so annotations stay aligned'
+                    )}
                   </span>
                   <input
                     type="checkbox"
@@ -360,7 +400,7 @@ export const DocumentImportModal: React.FC<DocumentImportModalProps> = ({
                 disabled={isProcessing}
                 className="px-4 py-2 text-xs font-medium rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
               >
-                Hủy
+                {t('Hủy', 'Cancel')}
               </button>
               <button
                 type="button"
@@ -374,10 +414,13 @@ export const DocumentImportModal: React.FC<DocumentImportModalProps> = ({
                 {isProcessing && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                 <span>
                   {isProcessing
-                    ? 'Đang chèn vào bảng...'
+                    ? t('Đang chèn vào bảng...', 'Inserting onto board...')
                     : mode === 'spread'
-                    ? `Trải ${selectedPageNumbers.length} trang lên bảng`
-                    : 'Chèn thẻ tài liệu'}
+                    ? t(
+                        `Trải ${selectedPageNumbers.length} trang lên bảng`,
+                        `Spread ${selectedPageNumbers.length} ${selectedPageNumbers.length === 1 ? 'page' : 'pages'}`
+                      )
+                    : t('Chèn thẻ tài liệu', 'Insert document card')}
                 </span>
               </button>
             </div>

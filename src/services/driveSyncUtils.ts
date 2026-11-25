@@ -1,3 +1,4 @@
+import { AppLanguage, getAppLanguage } from '../i18n';
 import { BoardElement } from '../types/board';
 
 export type DriveSyncStatus = 'idle' | 'pending' | 'saving' | 'saved' | 'error';
@@ -92,11 +93,11 @@ export function shouldTriggerDriveAutoSave(
   return 'skip';
 }
 
-export function formatSyncTime(iso: string | null): string {
+export function formatSyncTime(iso: string | null, lang: AppLanguage = getAppLanguage()): string {
   if (!iso) return '';
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return '';
-  return new Intl.DateTimeFormat('vi-VN', {
+  return new Intl.DateTimeFormat(lang === 'en' ? 'en-US' : 'vi-VN', {
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit',

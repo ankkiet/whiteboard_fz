@@ -9,8 +9,9 @@ import {
   getNotebookConfig,
   getNotebookFitCamera,
 } from '../../engine/notebookEngine';
-import { TOOLS } from './toolbarConfig';
+import { getTools } from './toolbarConfig';
 import { TopBarFlyout } from './TopBarFlyout';
+import { useI18n } from '../../i18n/useI18n';
 import {
   ChevronDown,
   ChevronUp,
@@ -49,6 +50,7 @@ export const UnifiedTopBar: React.FC<UnifiedTopBarProps> = ({
   isMathPanelOpen = false,
   onToggleMathPanel,
 }) => {
+  const { language, t } = useI18n();
   const title = useBoardStore((s) => s.title);
   const setTitle = useBoardStore((s) => s.setTitle);
   const undo = useBoardStore((s) => s.undo);
@@ -126,7 +128,7 @@ export const UnifiedTopBar: React.FC<UnifiedTopBarProps> = ({
     setCamera((prev) => {
       const next = zoomCameraAtPoint(prev, prev.zoom * 1.2, cx, cy);
       if (boardType === 'notebook') {
-        const config = getNotebookConfig(notebookPaperSize);
+        const config = getNotebookConfig(notebookPaperSize, language);
         const totalPages = computeTotalNotebookPages(elements, next, window.innerHeight, config);
         return clampNotebookCamera(next, { width: window.innerWidth, height: window.innerHeight }, config, totalPages);
       }
@@ -140,7 +142,7 @@ export const UnifiedTopBar: React.FC<UnifiedTopBarProps> = ({
     setCamera((prev) => {
       const next = zoomCameraAtPoint(prev, prev.zoom / 1.2, cx, cy);
       if (boardType === 'notebook') {
-        const config = getNotebookConfig(notebookPaperSize);
+        const config = getNotebookConfig(notebookPaperSize, language);
         const totalPages = computeTotalNotebookPages(elements, next, window.innerHeight, config);
         return clampNotebookCamera(next, { width: window.innerWidth, height: window.innerHeight }, config, totalPages);
       }
@@ -150,7 +152,7 @@ export const UnifiedTopBar: React.FC<UnifiedTopBarProps> = ({
 
   const handleResetZoom = () => {
     if (boardType === 'notebook') {
-      const config = getNotebookConfig(notebookPaperSize);
+      const config = getNotebookConfig(notebookPaperSize, language);
       setCamera(getNotebookFitCamera({ width: window.innerWidth, height: window.innerHeight }, config));
       return;
     }
@@ -161,14 +163,15 @@ export const UnifiedTopBar: React.FC<UnifiedTopBarProps> = ({
 
   const handleFitToScreen = () => {
     if (boardType === 'notebook') {
-      const config = getNotebookConfig(notebookPaperSize);
+      const config = getNotebookConfig(notebookPaperSize, language);
       setCamera(getNotebookFitCamera({ width: window.innerWidth, height: window.innerHeight }, config));
       return;
     }
     setCamera(computeFitCamera(elements, window.innerWidth, window.innerHeight, 100));
   };
 
-  const activeToolDef = TOOLS.find((t) => t.id === currentTool) || TOOLS[2];
+  const tools = getTools(language);
+  const activeToolDef = tools.find((item) => item.id === currentTool) || tools[2];
   const ActiveToolIcon = activeToolDef.icon;
 
   const resolvedPenInk =
@@ -195,7 +198,7 @@ export const UnifiedTopBar: React.FC<UnifiedTopBarProps> = ({
     <header
       ref={containerRef}
       role="banner"
-      aria-label="Thanh công cụ bảng trắng"
+      aria-label={t('Thanh công cụ bảng trắng', 'Whiteboard toolbar')}
       className="pointer-events-none absolute top-3 inset-x-0 z-30 flex flex-col items-center px-3"
     >
       {/* 1. Persistent floating bar */}
@@ -207,8 +210,8 @@ export const UnifiedTopBar: React.FC<UnifiedTopBarProps> = ({
         <button
           type="button"
           onClick={onHomeClick}
-          title="Về trang chủ xem tất cả bảng đã lưu"
-          aria-label="Về trang chủ"
+          title={t('Về trang chủ xem tất cả bảng đã lưu', 'Return home to view all saved boards')}
+          aria-label={t('Về trang chủ', 'Return home')}
           className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center text-slate-700 dark:text-slate-200 shrink-0 transition-colors duration-150 cursor-pointer"
         >
           <Home className="w-4 h-4" strokeWidth={1.75} />
@@ -217,11 +220,19 @@ export const UnifiedTopBar: React.FC<UnifiedTopBarProps> = ({
         {/* Tiêu đề sổ ghi chép / bảng trắng */}
         <input
           type="text"
-          aria-label={boardType === 'notebook' ? 'Tên sổ ghi chép' : 'Tên bảng trắng'}
+          aria-label={
+            boardType === 'notebook'
+              ? t('Tên sổ ghi chép', 'Notebook name')
+              : t('Tên bảng trắng', 'Board name')
+          }
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           className="font-medium text-xs sm:text-sm bg-transparent hover:bg-slate-100 dark:hover:bg-slate-800 focus:bg-slate-100 dark:focus:bg-slate-800 px-2 py-1 rounded-lg outline-none transition-colors duration-150 w-28 sm:w-36 md:w-44 max-w-[280px] truncate text-slate-900 dark:text-slate-100"
-          placeholder={boardType === 'notebook' ? 'Tên sổ ghi chép' : 'Tên bảng'}
+          placeholder={
+            boardType === 'notebook'
+              ? t('Tên sổ ghi chép', 'Notebook title')
+              : t('Tên bảng', 'Board title')
+          }
         />
 
         <div className="h-4 w-px bg-slate-200 dark:bg-slate-800 shrink-0" />
@@ -230,8 +241,11 @@ export const UnifiedTopBar: React.FC<UnifiedTopBarProps> = ({
         <button
           type="button"
           onClick={() => setIsExpanded((v) => !v)}
-          title={`Công cụ hiện tại: ${activeToolDef.label} (${activeToolDef.shortcut}) — Bấm để mở rộng khay công cụ`}
-          aria-label={`Công cụ hiện tại: ${activeToolDef.label}`}
+          title={t(
+            `Công cụ hiện tại: ${activeToolDef.label} (${activeToolDef.shortcut}) — Bấm để mở rộng khay công cụ`,
+            `Current tool: ${activeToolDef.label} (${activeToolDef.shortcut}) — Click to expand toolbar`
+          )}
+          aria-label={t(`Công cụ hiện tại: ${activeToolDef.label}`, `Current tool: ${activeToolDef.label}`)}
           aria-expanded={isExpanded}
           className={`h-8 flex items-center gap-2 px-2.5 rounded-lg transition-colors duration-150 shrink-0 cursor-pointer ${
             isExpanded
@@ -258,10 +272,10 @@ export const UnifiedTopBar: React.FC<UnifiedTopBarProps> = ({
           onClick={handleQuickEraserToggle}
           title={
             currentTool === 'eraser'
-              ? 'Đang dùng tẩy — Bấm để quay lại bút vẽ (E)'
-              : 'Chuyển nhanh sang tẩy (E)'
+              ? t('Đang dùng tẩy — Bấm để quay lại bút vẽ (E)', 'Eraser active — Click to return to pen (E)')
+              : t('Chuyển nhanh sang tẩy (E)', 'Quick switch to eraser (E)')
           }
-          aria-label="Tẩy xóa nhanh"
+          aria-label={t('Tẩy xóa nhanh', 'Quick eraser')}
           className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors duration-150 shrink-0 cursor-pointer ${
             currentTool === 'eraser'
               ? 'bg-indigo-600 text-white'
@@ -279,8 +293,8 @@ export const UnifiedTopBar: React.FC<UnifiedTopBarProps> = ({
             type="button"
             onClick={undo}
             disabled={!canUndo}
-            title="Hoàn tác (Ctrl+Z)"
-            aria-label="Hoàn tác"
+            title={t('Hoàn tác (Ctrl+Z)', 'Undo (Ctrl+Z)')}
+            aria-label={t('Hoàn tác', 'Undo')}
             className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-30 disabled:hover:bg-transparent transition-colors duration-150 text-slate-600 dark:text-slate-300 cursor-pointer"
           >
             <Undo2 className="w-4 h-4" strokeWidth={1.75} />
@@ -289,8 +303,8 @@ export const UnifiedTopBar: React.FC<UnifiedTopBarProps> = ({
             type="button"
             onClick={redo}
             disabled={!canRedo}
-            title="Làm lại (Ctrl+Shift+Z)"
-            aria-label="Làm lại"
+            title={t('Làm lại (Ctrl+Shift+Z)', 'Redo (Ctrl+Shift+Z)')}
+            aria-label={t('Làm lại', 'Redo')}
             className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-30 disabled:hover:bg-transparent transition-colors duration-150 text-slate-600 dark:text-slate-300 cursor-pointer"
           >
             <Redo2 className="w-4 h-4" strokeWidth={1.75} />
@@ -303,8 +317,11 @@ export const UnifiedTopBar: React.FC<UnifiedTopBarProps> = ({
         <button
           type="button"
           onClick={handleResetZoom}
-          title="Đặt lại tỷ lệ 100% (Ctrl 0)"
-          aria-label={`Tỷ lệ thu phóng ${zoomPercent}%, bấm để đặt lại 100%`}
+          title={t('Đặt lại tỷ lệ 100% (Ctrl 0)', 'Reset zoom to 100% (Ctrl 0)')}
+          aria-label={t(
+            `Tỷ lệ thu phóng ${zoomPercent}%, bấm để đặt lại 100%`,
+            `Zoom ${zoomPercent}%, click to reset to 100%`
+          )}
           className="h-8 px-2 text-xs font-medium font-mono tabular-nums hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors duration-150 text-slate-600 dark:text-slate-300 shrink-0 text-center cursor-pointer"
         >
           {zoomPercent}%
@@ -314,15 +331,19 @@ export const UnifiedTopBar: React.FC<UnifiedTopBarProps> = ({
         <button
           type="button"
           onClick={() => setIsExpanded((v) => !v)}
-          title={isExpanded ? 'Thu gọn thanh công cụ' : 'Mở rộng toàn bộ công cụ & cài đặt'}
-          aria-label={isExpanded ? 'Thu gọn' : 'Mở rộng'}
+          title={
+            isExpanded
+              ? t('Thu gọn thanh công cụ', 'Collapse toolbar')
+              : t('Mở rộng toàn bộ công cụ & cài đặt', 'Expand all tools & settings')
+          }
+          aria-label={isExpanded ? t('Thu gọn', 'Collapse') : t('Mở rộng', 'Expand')}
           className={`h-8 flex items-center gap-1.5 px-3 rounded-lg text-xs font-medium transition-colors duration-150 shrink-0 cursor-pointer ${
             isExpanded
               ? 'bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-slate-100'
               : 'bg-indigo-600 hover:bg-indigo-700 text-white'
           }`}
         >
-          <span>{isExpanded ? 'Thu gọn' : 'Mở rộng'}</span>
+          <span>{isExpanded ? t('Thu gọn', 'Collapse') : t('Mở rộng', 'Tools')}</span>
           {isExpanded ? (
             <ChevronUp className="w-4 h-4" strokeWidth={1.75} />
           ) : (

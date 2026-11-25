@@ -4,6 +4,7 @@ import { getArrowEndpoints } from './geometry';
 import { getCachedImage } from './imageCache';
 import { latexToReadableMath } from './mathDisplay';
 import { drawRoundedRectPath, resolveColor } from './renderBackground';
+import { tr } from '../i18n';
 
 export {
   ADAPTIVE_INK,
@@ -286,7 +287,7 @@ export function drawBoardElement(
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(
-        `${el.label || 'Che lời giải'} · Nhấp đúp để mở`,
+        `${el.label || tr('Che lời giải', 'Solution curtain')} · ${tr('Nhấp đúp để mở', 'Double-click to reveal')}`,
         el.x + el.width / 2,
         el.y + el.height / 2
       );
@@ -303,7 +304,7 @@ export function drawBoardElement(
       ctx.font = '600 11px "Plus Jakarta Sans", system-ui, sans-serif';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'top';
-      ctx.fillText('Đã mở (nhấp đúp để che lại)', el.x + 10, el.y + 6);
+      ctx.fillText(tr('Đã mở (nhấp đúp để che lại)', 'Revealed (double-click to hide)'), el.x + 10, el.y + 6);
     }
   } else if (el.type === 'text') {
     if (editingId === el.id) {
@@ -315,7 +316,7 @@ export function drawBoardElement(
     ctx.font = `500 ${el.fontSize}px "Plus Jakarta Sans", system-ui, sans-serif`;
     ctx.textBaseline = 'top';
     const maxW = Math.max(el.width - 8, 60);
-    const lines = wrapTextLines(ctx, el.text || 'Nhấp đúp để nhập chữ', maxW);
+    const lines = wrapTextLines(ctx, el.text || tr('Nhấp đúp để nhập chữ', 'Double-click to type'), maxW);
     const lineHeight = el.fontSize * 1.4;
     if (!el.text) {
       ctx.globalAlpha *= 0.45;
@@ -349,7 +350,7 @@ export function drawBoardElement(
       const pad = 16;
       const lines = wrapTextLines(
         ctx,
-        el.text || 'Nhấp đúp để viết ghi chú...',
+        el.text || tr('Nhấp đúp để viết ghi chú...', 'Double-click to write note...'),
         Math.max(el.width - pad * 2, 40)
       );
       if (!el.text) {
@@ -388,7 +389,7 @@ export function drawBoardElement(
       ctx.font = '500 13px "Plus Jakarta Sans", sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText('Đang tải ảnh...', el.x + el.width / 2, el.y + el.height / 2);
+      ctx.fillText(tr('Đang tải ảnh...', 'Loading image...'), el.x + el.width / 2, el.y + el.height / 2);
     }
     ctx.restore();
 
@@ -460,7 +461,7 @@ export function drawBoardElement(
         ? `${kb.toFixed(kb < 10 ? 1 : 0)} KB`
         : `${(kb / 1024).toFixed(1)} MB`;
     const metaText = el.pageCount
-      ? `${badge.label} · ${el.pageCount} trang · ${sizeStr}`
+      ? `${badge.label} · ${el.pageCount} ${tr('trang', 'pages')} · ${sizeStr}`
       : `${badge.label} · ${sizeStr}`;
 
     ctx.fillStyle = isDarkMode ? '#94a3b8' : '#64748b';
@@ -475,7 +476,7 @@ export function drawBoardElement(
 
     ctx.fillStyle = isDarkMode ? '#818cf8' : '#4f46e5';
     ctx.font = '500 11.5px "Plus Jakarta Sans", system-ui, sans-serif';
-    ctx.fillText('Nhấp đúp để xem nhanh hoặc tải tệp', el.x + 16, el.y + el.height - 23);
+    ctx.fillText(tr('Nhấp đúp để xem nhanh hoặc tải tệp', 'Double-click to preview or download'), el.x + 16, el.y + el.height - 23);
 
     ctx.restore();
   }

@@ -1,4 +1,5 @@
 import { clearGoogleAccessToken, getGoogleAccessToken } from './googleAuth';
+import { tr } from '../i18n';
 import {
   APP_DRIVE_FOLDER_NAME,
   buildDriveFileName,
@@ -26,7 +27,12 @@ export function clearCachedDriveFolder(): void {
 }
 
 export class DriveAuthError extends Error {
-  constructor(message = 'Phiên kết nối Google Drive đã hết hạn. Vui lòng đăng nhập lại.') {
+  constructor(
+    message = tr(
+      'Phiên kết nối Google Drive đã hết hạn. Vui lòng đăng nhập lại.',
+      'Google Drive session expired. Please sign in again.'
+    )
+  ) {
     super(message);
     this.name = 'DriveAuthError';
   }
@@ -35,7 +41,9 @@ export class DriveAuthError extends Error {
 function requireToken(): string {
   const token = getGoogleAccessToken();
   if (!token) {
-    throw new DriveAuthError('Vui lòng đăng nhập bằng Google để sử dụng Google Drive.');
+    throw new DriveAuthError(
+      tr('Vui lòng đăng nhập bằng Google để sử dụng Google Drive.', 'Please sign in with Google to use Google Drive.')
+    );
   }
   return token;
 }
@@ -59,7 +67,7 @@ async function driveFetch(url: string, init: RequestInit = {}): Promise<Response
     } catch {
       // ignore non-json error body
     }
-    throw new Error(detail || `Lỗi Google Drive (HTTP ${res.status})`);
+    throw new Error(detail || tr(`Lỗi Google Drive (HTTP ${res.status})`, `Google Drive error (HTTP ${res.status})`));
   }
   return res;
 }

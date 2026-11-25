@@ -1,5 +1,6 @@
 import React from 'react';
 import { BoardType } from '../../types/board';
+import { useI18n } from '../../i18n/useI18n';
 
 interface BoardTemplatePreviewProps {
   type: BoardType;
@@ -10,6 +11,7 @@ export const BoardTemplatePreview: React.FC<BoardTemplatePreviewProps> = ({
   type,
   className = 'w-full h-24',
 }) => {
+  const { t } = useI18n();
   if (type === 'math') {
     return (
       <div
@@ -136,7 +138,7 @@ export const BoardTemplatePreview: React.FC<BoardTemplatePreviewProps> = ({
             fontSize="5.5"
             fontWeight="500"
           >
-            Vở ghi chú • A4
+            {t('Vở ghi chú • A4', 'Notebook • A4')}
           </text>
           <text
             x="174"
@@ -146,7 +148,7 @@ export const BoardTemplatePreview: React.FC<BoardTemplatePreviewProps> = ({
             fontSize="5.5"
             fontWeight="500"
           >
-            Trang 1
+            {t('Trang 1', 'Page 1')}
           </text>
 
           {/* Handwriting sample */}
@@ -205,7 +207,7 @@ export const BoardTemplatePreview: React.FC<BoardTemplatePreviewProps> = ({
             fontSize="4.8"
             fontWeight="600"
           >
-            Hết trang 1
+            {t('Hết trang 1', 'End of page 1')}
           </text>
         </svg>
       </div>

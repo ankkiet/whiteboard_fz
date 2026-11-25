@@ -4,19 +4,11 @@ import { resolveColor } from '../../engine/renderer';
 import { friendlyMathToLatex } from '../../engine/mathDisplay';
 import { FormulaElement, RevealElement } from '../../types/board';
 import { MathTex, renderKatexSafe } from '../math/MathTex';
+import { useI18n } from '../../i18n/useI18n';
 import { Check, Code2 } from 'lucide-react';
 
-const INLINE_QUICK_KEYS = [
-  { title: 'Phân số', display: '\\frac{a}{b}', insert: '\\frac{a}{b}' },
-  { title: 'Căn bậc hai', display: '\\sqrt{x}', insert: '\\sqrt{x}' },
-  { title: 'Lũy thừa', display: 'x^{2}', insert: 'x^{2}' },
-  { title: 'Cộng trừ', display: '\\pm', insert: ' \\pm ' },
-  { title: 'Nhân', display: '\\times', insert: ' \\times ' },
-  { title: 'Số Pi', display: '\\pi', insert: '\\pi' },
-  { title: 'Tích phân', display: '\\int_{a}^{b}', insert: '\\int_{a}^{b} f(x)\\,dx' },
-];
-
 export const MathFormulaLayer: React.FC = () => {
+  const { t } = useI18n();
   const elements = useBoardStore((s) => s.elements);
   const camera = useBoardStore((s) => s.camera);
   const isDarkMode = useBoardStore((s) => s.isDarkMode);
@@ -24,6 +16,23 @@ export const MathFormulaLayer: React.FC = () => {
   const updateElement = useBoardStore((s) => s.updateElement);
   const setEditingElementId = useBoardStore((s) => s.setEditingElementId);
   const commitHistory = useBoardStore((s) => s.commitHistory);
+
+  const inlineQuickKeys = useMemo(
+    () => [
+      { title: t('Phân số', 'Fraction'), display: '\\frac{a}{b}', insert: '\\frac{a}{b}' },
+      { title: t('Căn bậc hai', 'Square root'), display: '\\sqrt{x}', insert: '\\sqrt{x}' },
+      { title: t('Lũy thừa', 'Power'), display: 'x^{2}', insert: 'x^{2}' },
+      { title: t('Cộng trừ', 'Plus-minus'), display: '\\pm', insert: ' \\pm ' },
+      { title: t('Nhân', 'Multiply'), display: '\\times', insert: ' \\times ' },
+      { title: t('Số Pi', 'Pi'), display: '\\pi', insert: '\\pi' },
+      {
+        title: t('Tích phân', 'Integral'),
+        display: '\\int_{a}^{b}',
+        insert: '\\int_{a}^{b} f(x)\\,dx',
+      },
+    ],
+    [t]
+  );
 
   const inputRef = useRef<HTMLInputElement>(null);
   const [friendlyText, setFriendlyText] = useState('');
@@ -131,7 +140,10 @@ export const MathFormulaLayer: React.FC = () => {
             }}
             className="pointer-events-none absolute border-2 border-dashed flex items-center justify-center px-3 text-center font-semibold text-slate-800 dark:text-slate-100 select-none shadow-sm"
           >
-            <span className="truncate">{el.label || 'Che lời giải'} · Nhấp đúp để mở</span>
+            <span className="truncate">
+              {el.label || t('Che lời giải', 'Solution curtain')} ·{' '}
+              {t('Nhấp đúp để mở', 'Double-click to reveal')}
+            </span>
           </div>
         );
       })}
@@ -158,12 +170,12 @@ export const MathFormulaLayer: React.FC = () => {
         >
           <div className="flex items-center justify-between gap-2">
             <span className="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400">
-              Chỉnh sửa công thức toán học
+              {t('Chỉnh sửa công thức toán học', 'Edit math formula')}
             </span>
             <div className="flex items-center gap-1">
               <button
                 type="button"
-                title="Bật/tắt mã nguồn nâng cao"
+                title={t('Bật/tắt mã nguồn nâng cao', 'Toggle advanced LaTeX source')}
                 onClick={() => setShowRawCode((v) => !v)}
                 className={`h-6 px-1.5 rounded-md text-[10.5px] font-semibold inline-flex items-center gap-1 cursor-pointer ${
                   showRawCode
@@ -172,7 +184,7 @@ export const MathFormulaLayer: React.FC = () => {
                 }`}
               >
                 <Code2 className="w-3 h-3" />
-                <span>Mã</span>
+                <span>{t('Mã', 'Code')}</span>
               </button>
               <button
                 type="button"
@@ -180,7 +192,7 @@ export const MathFormulaLayer: React.FC = () => {
                 className="h-6 px-2 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-semibold inline-flex items-center gap-1 cursor-pointer"
               >
                 <Check className="w-3 h-3" />
-                <span>Xong</span>
+                <span>{t('Xong', 'Done')}</span>
               </button>
             </div>
           </div>
@@ -193,9 +205,12 @@ export const MathFormulaLayer: React.FC = () => {
             <input
               ref={inputRef}
               type="text"
-              aria-label="Nhập biểu thức toán học mới"
+              aria-label={t('Nhập biểu thức toán học mới', 'Enter new math expression')}
               value={friendlyText}
-              placeholder="Gõ biểu thức thay thế (VD: (a+b)/2, x^2 - 4 = 0)..."
+              placeholder={t(
+                'Gõ biểu thức thay thế (VD: (a+b)/2, x^2 - 4 = 0)...',
+                'Type expression (e.g. (a+b)/2, x^2 - 4 = 0)...'
+              )}
               onChange={(e) => {
                 const val = e.target.value;
                 setFriendlyText(val);
@@ -215,7 +230,7 @@ export const MathFormulaLayer: React.FC = () => {
             <input
               ref={inputRef}
               type="text"
-              aria-label="Chỉnh sửa mã nguồn LaTeX"
+              aria-label={t('Chỉnh sửa mã nguồn LaTeX', 'Edit LaTeX source')}
               value={editingFormula.latex}
               onChange={(e) => applyLatexUpdate(e.target.value)}
               onKeyDown={(e) => {
@@ -229,7 +244,7 @@ export const MathFormulaLayer: React.FC = () => {
           )}
 
           <div className="flex items-center gap-1 flex-wrap">
-            {INLINE_QUICK_KEYS.map((k) => (
+            {inlineQuickKeys.map((k) => (
               <button
                 key={k.title}
                 type="button"

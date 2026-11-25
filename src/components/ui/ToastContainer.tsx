@@ -1,10 +1,12 @@
 import React from 'react';
 import { useBoardStore } from '../../store/useBoardStore';
+import { useI18n } from '../../i18n/useI18n';
 import { CheckCircle2, Info, AlertCircle, X } from 'lucide-react';
 
 export const ToastContainer: React.FC = () => {
   const toasts = useBoardStore((s) => s.toasts);
   const dismissToast = useBoardStore((s) => s.dismissToast);
+  const { t } = useI18n();
 
   if (toasts.length === 0) return null;
 
@@ -31,7 +33,7 @@ export const ToastContainer: React.FC = () => {
           <button
             type="button"
             onClick={() => dismissToast(toast.id)}
-            aria-label="Đóng thông báo"
+            aria-label={t('Đóng thông báo', 'Dismiss notification')}
             className="ml-1 p-1 rounded-md text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors duration-150 cursor-pointer"
           >
             <X className="w-3.5 h-3.5" strokeWidth={1.75} />

@@ -6,26 +6,56 @@ import {
   classifyUpdateCheckFailure,
   normalizeOriginUrl,
 } from '../engine/versionCheck';
+import { tr } from '../i18n';
 
 export type { AppVersionManifest, UpdateCheckResult };
 
 export interface DesktopUpdaterProgress {
-  phase: 'downloading' | 'launching' | 'error';
+  phase: 'preparing' | 'downloading' | 'launching' | 'cancelled' | 'error';
   percent: number;
   receivedBytes?: number;
   totalBytes?: number;
+  speedBps?: number;
   fileName?: string;
 }
 
+export interface DesktopUpdaterResult {
+  ok: boolean;
+  cancelled?: boolean;
+  fileName?: string;
+  destPath?: string;
+  launched?: boolean;
+  platform?: string;
+  error?: string;
+}
+
 export interface DesktopUpdaterBridgeApi {
-  downloadAndInstall: () => Promise<{
-    ok: boolean;
-    fileName?: string;
-    destPath?: string;
-    launched?: boolean;
-    error?: string;
-  }>;
+  downloadAndInstall: () => Promise<DesktopUpdaterResult>;
+  cancelDownload?: () => Promise<{ ok: boolean }>;
   onProgress: (cb: (payload: DesktopUpdaterProgress) => void) => () => void;
+}
+
+export function formatDownloadEta(
+  receivedBytes: number,
+  totalBytes: number,
+  speedBps: number,
+  language: 'vi' | 'en' = 'vi'
+): string {
+  if (!Number.isFinite(speedBps) || speedBps <= 0 || totalBytes <= receivedBytes) {
+    return '';
+  }
+  const remainingSec = Math.max(1, Math.ceil((totalBytes - receivedBytes) / speedBps));
+  if (remainingSec < 60) {
+    return language === 'en' ? `~${remainingSec}s left` : `Còn ~${remainingSec} giây`;
+  }
+  const mins = Math.floor(remainingSec / 60);
+  const secs = remainingSec % 60;
+  if (secs === 0) {
+    return language === 'en' ? `~${mins}m left` : `Còn ~${mins} phút`;
+  }
+  return language === 'en'
+    ? `~${mins}m ${secs}s left`
+    : `Còn ~${mins} phút ${secs} giây`;
 }
 
 declare global {
@@ -36,7 +66,7 @@ declare global {
   }
 }
 
-export const LATEST_DESKTOP_VERSION_FALLBACK = 'v_fz.1.1.1.1.10';
+export const LATEST_DESKTOP_VERSION_FALLBACK = 'v_fz.1.1.1.1.11';
 export const DESKTOP_APP_DOWNLOADED_EVENT = 'bttm:desktop-app-downloaded';
 
 const DESKTOP_APP_DOWNLOADED_KEY = 'bttm_desktop_app_downloaded_v1';
@@ -274,11 +304,16 @@ export async function applyInPlaceAppUpdate(
   const bundleUrl = `${origin}/desktop-app-bundle.html?t=${Date.now()}`;
   const res = await fetch(bundleUrl, { cache: 'no-store' });
   if (!res.ok) {
-    throw new Error(`Tải gói cập nhật thất bại (mã phản hồi: ${res.status})`);
+    throw new Error(
+      tr(
+        `Tải gói cập nhật thất bại (mã phản hồi: ${res.status})`,
+        `Failed to download update package (HTTP ${res.status})`
+      )
+    );
   }
   const html = await res.text();
   if (!html.includes('<!doctype html>') && !html.includes('<html')) {
-    throw new Error('Dữ liệu gói cập nhật nhận được không hợp lệ.');
+    throw new Error(tr('Dữ liệu gói cập nhật nhận được không hợp lệ.', 'Received update package data is invalid.'));
   }
 
   markDesktopAppAsDownloaded(manifest);

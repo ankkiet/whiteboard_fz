@@ -3,6 +3,7 @@ import { useBoardStore } from '../../store/useBoardStore';
 import { screenToWorld } from '../../engine/geometry';
 import { getSafeMathViewport } from '../../engine/mathViewport';
 import { BoardElement, ShapeElement, StrokeElement } from '../../types/board';
+import { useI18n } from '../../i18n/useI18n';
 import { RotateCw, X, Circle, Spline, LayoutGrid } from 'lucide-react';
 
 function uid(prefix: string): string {
@@ -10,6 +11,7 @@ function uid(prefix: string): string {
 }
 
 export const VirtualGeometryToolsOverlay: React.FC = () => {
+  const { t } = useI18n();
   const virtualTools = useBoardStore((s) => s.virtualTools);
   const updateVirtualTool = useBoardStore((s) => s.updateVirtualTool);
   const toggleVirtualTool = useBoardStore((s) => s.toggleVirtualTool);
@@ -145,7 +147,13 @@ export const VirtualGeometryToolsOverlay: React.FC = () => {
         zIndex: maxZ + 2,
       };
       addElementsBatch([circleEl, centerDot], false);
-      addToast(`Đã vẽ đường tròn bán kính R = ${(radius / 40).toFixed(1)} cm`, 'success');
+      addToast(
+        t(
+          `Đã vẽ đường tròn bán kính R = ${(radius / 40).toFixed(1)} cm`,
+          `Drew circle with radius R = ${(radius / 40).toFixed(1)} cm`
+        ),
+        'success'
+      );
       return;
     }
 
@@ -173,7 +181,13 @@ export const VirtualGeometryToolsOverlay: React.FC = () => {
       zIndex: maxZ + 1,
     };
     addElementsBatch([arcEl as BoardElement], false);
-    addToast(`Đã vẽ cung tròn 180° (R = ${(radius / 40).toFixed(1)} cm)`, 'success');
+    addToast(
+      t(
+        `Đã vẽ cung tròn 180° (R = ${(radius / 40).toFixed(1)} cm)`,
+        `Drew 180° arc (R = ${(radius / 40).toFixed(1)} cm)`
+      ),
+      'success'
+    );
   };
 
   return (
@@ -191,16 +205,16 @@ export const VirtualGeometryToolsOverlay: React.FC = () => {
         className="pointer-events-auto absolute -translate-x-1/2 z-20 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/92 dark:bg-slate-900/92 backdrop-blur-md border border-indigo-200/80 dark:border-indigo-800/80 shadow-md text-[11px]"
       >
         <span className="font-semibold text-slate-600 dark:text-slate-300 px-1">
-          Dụng cụ hình học:
+          {t('Dụng cụ hình học:', 'Drafting tools:')}
         </span>
         {ruler.active && (
           <button
             type="button"
             onClick={() => toggleVirtualTool('ruler')}
-            title="Ẩn Thước kẻ"
+            title={t('Ẩn Thước kẻ', 'Hide ruler')}
             className="h-5 px-2 rounded-full bg-amber-100 dark:bg-amber-950/70 text-amber-900 dark:text-amber-300 font-semibold inline-flex items-center gap-1 cursor-pointer hover:bg-amber-200/80"
           >
-            <span>Thước</span>
+            <span>{t('Thước', 'Ruler')}</span>
             <X className="w-2.5 h-2.5" />
           </button>
         )}
@@ -208,10 +222,10 @@ export const VirtualGeometryToolsOverlay: React.FC = () => {
           <button
             type="button"
             onClick={() => toggleVirtualTool('setSquare')}
-            title="Ẩn Ê-ke"
+            title={t('Ẩn Ê-ke', 'Hide set square')}
             className="h-5 px-2 rounded-full bg-sky-100 dark:bg-sky-950/70 text-sky-900 dark:text-sky-300 font-semibold inline-flex items-center gap-1 cursor-pointer hover:bg-sky-200/80"
           >
-            <span>Ê-ke</span>
+            <span>{t('Ê-ke', 'Set square')}</span>
             <X className="w-2.5 h-2.5" />
           </button>
         )}
@@ -219,10 +233,10 @@ export const VirtualGeometryToolsOverlay: React.FC = () => {
           <button
             type="button"
             onClick={() => toggleVirtualTool('protractor')}
-            title="Ẩn Đo độ"
+            title={t('Ẩn Đo độ', 'Hide protractor')}
             className="h-5 px-2 rounded-full bg-emerald-100 dark:bg-emerald-950/70 text-emerald-900 dark:text-emerald-300 font-semibold inline-flex items-center gap-1 cursor-pointer hover:bg-emerald-200/80"
           >
-            <span>Đo độ</span>
+            <span>{t('Đo độ', 'Protractor')}</span>
             <X className="w-2.5 h-2.5" />
           </button>
         )}
@@ -230,10 +244,10 @@ export const VirtualGeometryToolsOverlay: React.FC = () => {
           <button
             type="button"
             onClick={() => toggleVirtualTool('compass')}
-            title="Ẩn Compa"
+            title={t('Ẩn Compa', 'Hide compass')}
             className="h-5 px-2 rounded-full bg-indigo-100 dark:bg-indigo-950/70 text-indigo-900 dark:text-indigo-300 font-semibold inline-flex items-center gap-1 cursor-pointer hover:bg-indigo-200/80"
           >
-            <span>Compa</span>
+            <span>{t('Compa', 'Compass')}</span>
             <X className="w-2.5 h-2.5" />
           </button>
         )}
@@ -242,20 +256,23 @@ export const VirtualGeometryToolsOverlay: React.FC = () => {
           type="button"
           data-testid="floating-arrange-virtual-tools-button"
           onClick={() => arrangeVirtualTools()}
-          title="Xếp gọn các thước & compa vào vùng trống để không đè lên nhau"
+          title={t(
+            'Xếp gọn các thước & compa vào vùng trống để không đè lên nhau',
+            'Arrange rulers & compass cleanly without overlap'
+          )}
           className="h-5 px-2 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold inline-flex items-center gap-1 cursor-pointer"
         >
           <LayoutGrid className="w-2.5 h-2.5" />
-          <span>Xếp gọn</span>
+          <span>{t('Xếp gọn', 'Arrange')}</span>
         </button>
         <button
           type="button"
           data-testid="floating-hide-all-virtual-tools-button"
           onClick={() => hideAllVirtualTools()}
-          title="Ẩn toàn bộ dụng cụ hình học"
+          title={t('Ẩn toàn bộ dụng cụ hình học', 'Hide all drafting tools')}
           className="h-5 px-2 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-rose-50 dark:hover:bg-rose-950/50 text-slate-600 dark:text-slate-300 hover:text-rose-600 font-semibold cursor-pointer"
         >
-          Ẩn hết
+          {t('Ẩn hết', 'Hide all')}
         </button>
       </div>
 
@@ -316,12 +333,13 @@ export const VirtualGeometryToolsOverlay: React.FC = () => {
           {/* Angle indicator + rotate + close controls */}
           <div className="absolute right-2 bottom-1.5 flex items-center gap-1.5">
             <span className="text-[10px] font-mono font-semibold text-amber-950/80 tabular-nums">
-              {Math.round(((ruler.angle * 180) / Math.PI + 360) % 360)}° · Hút nét bút
+              {Math.round(((ruler.angle * 180) / Math.PI + 360) % 360)}° ·{' '}
+              {t('Hút nét bút', 'Snap edge')}
             </span>
             <button
               type="button"
-              aria-label="Xoay thước kẻ"
-              title="Kéo để xoay thước (giữ Shift xoay mỗi 15°)"
+              aria-label={t('Xoay thước kẻ', 'Rotate ruler')}
+              title={t('Kéo để xoay thước (giữ Shift xoay mỗi 15°)', 'Drag to rotate (hold Shift for 15° snap)')}
               onPointerDown={(e) =>
                 startRotate(e, ruler.x, ruler.y, (ang) => updateVirtualTool('ruler', { angle: ang }))
               }
@@ -331,7 +349,7 @@ export const VirtualGeometryToolsOverlay: React.FC = () => {
             </button>
             <button
               type="button"
-              aria-label="Ẩn thước kẻ"
+              aria-label={t('Ẩn thước kẻ', 'Hide ruler')}
               onPointerDown={(e) => e.stopPropagation()}
               onClick={() => toggleVirtualTool('ruler')}
               className="w-5 h-5 rounded-full bg-slate-800/80 hover:bg-slate-900 text-white flex items-center justify-center cursor-pointer"
@@ -394,7 +412,7 @@ export const VirtualGeometryToolsOverlay: React.FC = () => {
             </span>
             <button
               type="button"
-              aria-label="Xoay thước Ê-ke"
+              aria-label={t('Xoay thước Ê-ke', 'Rotate set square')}
               onPointerDown={(e) =>
                 startRotate(e, setSquare.x, setSquare.y, (ang) =>
                   updateVirtualTool('setSquare', { angle: ang })
@@ -406,7 +424,7 @@ export const VirtualGeometryToolsOverlay: React.FC = () => {
             </button>
             <button
               type="button"
-              aria-label="Ẩn thước Ê-ke"
+              aria-label={t('Ẩn thước Ê-ke', 'Hide set square')}
               onPointerDown={(e) => e.stopPropagation()}
               onClick={() => toggleVirtualTool('setSquare')}
               className="w-5 h-5 rounded-full bg-slate-800/80 text-white flex items-center justify-center cursor-pointer"
@@ -502,7 +520,7 @@ export const VirtualGeometryToolsOverlay: React.FC = () => {
               min={0}
               max={180}
               step={1}
-              aria-label="Đo góc thước đo độ"
+              aria-label={t('Đo góc thước đo độ', 'Protractor angle')}
               value={protractor.measureDeg}
               onPointerDown={(e) => e.stopPropagation()}
               onChange={(e) => updateVirtualTool('protractor', { measureDeg: Number(e.target.value) })}
@@ -513,7 +531,7 @@ export const VirtualGeometryToolsOverlay: React.FC = () => {
             </span>
             <button
               type="button"
-              aria-label="Xoay thước đo độ"
+              aria-label={t('Xoay thước đo độ', 'Rotate protractor')}
               onPointerDown={(e) =>
                 startRotate(e, protractor.x, protractor.y, (ang) =>
                   updateVirtualTool('protractor', { angle: ang })
@@ -525,7 +543,7 @@ export const VirtualGeometryToolsOverlay: React.FC = () => {
             </button>
             <button
               type="button"
-              aria-label="Ẩn thước đo độ"
+              aria-label={t('Ẩn thước đo độ', 'Hide protractor')}
               onClick={() => toggleVirtualTool('protractor')}
               className="w-4 h-4 rounded-full bg-slate-700 text-white flex items-center justify-center cursor-pointer"
             >
@@ -576,7 +594,7 @@ export const VirtualGeometryToolsOverlay: React.FC = () => {
                     updateVirtualTool('compass', { cx: nx, cy: ny })
                   )
                 }
-                title="Kéo tâm Compa O"
+                title={t('Kéo tâm Compa O', 'Drag compass center O')}
                 style={{ left: sx, top: sy }}
                 className="pointer-events-auto absolute -translate-x-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-indigo-600 border-2 border-white shadow-md flex items-center justify-center text-[10px] font-bold text-white cursor-grab active:cursor-grabbing"
               >
@@ -586,7 +604,7 @@ export const VirtualGeometryToolsOverlay: React.FC = () => {
               {/* Draggable Pencil Tip Handle */}
               <div
                 onPointerDown={startCompassRadiusDrag}
-                title="Kéo đầu chì để chỉnh bán kính R"
+                title={t('Kéo đầu chì để chỉnh bán kính R', 'Drag pencil tip to adjust radius R')}
                 style={{ left: tipX, top: tipY }}
                 className="pointer-events-auto absolute -translate-x-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-rose-500 border-2 border-white shadow-md cursor-crosshair"
               />
@@ -606,7 +624,7 @@ export const VirtualGeometryToolsOverlay: React.FC = () => {
                   className="h-6 px-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-semibold inline-flex items-center gap-1 whitespace-nowrap cursor-pointer"
                 >
                   <Circle className="w-3 h-3" />
-                  <span>Vẽ tròn</span>
+                  <span>{t('Vẽ tròn', 'Circle')}</span>
                 </button>
                 <button
                   type="button"
@@ -614,11 +632,11 @@ export const VirtualGeometryToolsOverlay: React.FC = () => {
                   className="h-6 px-2 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-[11px] font-semibold inline-flex items-center gap-1 whitespace-nowrap cursor-pointer"
                 >
                   <Spline className="w-3 h-3" />
-                  <span>Cung 180°</span>
+                  <span>{t('Cung 180°', '180° arc')}</span>
                 </button>
                 <button
                   type="button"
-                  aria-label="Ẩn Compa"
+                  aria-label={t('Ẩn Compa', 'Hide compass')}
                   onClick={() => toggleVirtualTool('compass')}
                   className="w-5 h-5 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 flex items-center justify-center cursor-pointer"
                 >

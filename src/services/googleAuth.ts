@@ -7,6 +7,7 @@ import {
   User,
 } from 'firebase/auth';
 import firebaseConfig from '../../firebase-applet-config.json';
+import { tr } from '../i18n';
 import {
   BridgeSession,
   clearBridgeSession,
@@ -109,14 +110,22 @@ export const googleSignIn = async (options?: {
     isSigningIn = true;
     if (typeof window !== 'undefined' && window.location.protocol === 'file:') {
       throw new Error(
-        'Bản cài đặt chạy từ tệp cục bộ (file://) không hỗ trợ đăng nhập Google do chính sách bảo mật của Google OAuth. Vui lòng bấm "Đăng nhập qua trình duyệt" để kết nối an toàn.'
+        tr(
+          'Bản cài đặt chạy từ tệp cục bộ (file://) không hỗ trợ đăng nhập Google do chính sách bảo mật của Google OAuth. Vui lòng bấm "Đăng nhập qua trình duyệt" để kết nối an toàn.',
+          'Running from a local file (file://) does not support Google sign-in due to Google OAuth security policy. Please click "Sign in via browser" to connect safely.'
+        )
       );
     }
     const googleProvider = buildGoogleProvider(options);
     const result = await signInWithPopup(auth, googleProvider);
     const credential = GoogleAuthProvider.credentialFromResult(result);
     if (!credential?.accessToken) {
-      throw new Error('Không nhận được mã truy cập Google Drive từ phiên đăng nhập.');
+      throw new Error(
+        tr(
+          'Không nhận được mã truy cập Google Drive từ phiên đăng nhập.',
+          'Did not receive Google Drive access token from the sign-in session.'
+        )
+      );
     }
     cachedAccessToken = credential.accessToken;
     saveWebAccessTokenCache(cachedAccessToken, result.user.email);

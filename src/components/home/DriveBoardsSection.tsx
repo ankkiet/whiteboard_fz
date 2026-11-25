@@ -12,6 +12,7 @@ import {
   isWhiteboardProjectFile,
 } from '../../services/googleDriveUtils';
 import { getWebPortalOrigin } from '../../services/authBridge';
+import { useI18n } from '../../i18n/useI18n';
 import { GoogleSignInButton } from './GoogleSignInButton';
 import { DeleteBoardConfirmModal, RenameBoardModal } from './BoardActionModals';
 import {
@@ -48,13 +49,14 @@ const BoardThumbnail: React.FC<{ file: DriveWhiteboardFile; isBoard: boolean }> 
   file,
   isBoard,
 }) => {
+  const { t } = useI18n();
   const [imgFailed, setImgFailed] = useState(false);
 
   if (!isBoard && file.thumbnailLink && !imgFailed) {
     return (
       <img
         src={file.thumbnailLink}
-        alt={`Xem trước ${getDisplayBoardTitle(file)}`}
+        alt={t(`Xem trước ${getDisplayBoardTitle(file)}`, `Preview ${getDisplayBoardTitle(file)}`)}
         referrerPolicy="no-referrer"
         onError={() => setImgFailed(true)}
         className="w-full h-full object-cover"
@@ -131,7 +133,7 @@ const BoardThumbnail: React.FC<{ file: DriveWhiteboardFile; isBoard: boolean }> 
       ) : (
         <div className="flex flex-col items-center gap-1 text-slate-400 dark:text-slate-500">
           <ImageIcon className="w-6 h-6" />
-          <span className="text-[11px] font-medium">Ảnh PNG 4×</span>
+          <span className="text-[11px] font-medium">{t('Ảnh PNG 4×', '4× PNG Image')}</span>
         </div>
       )}
     </div>
@@ -147,6 +149,7 @@ export const DriveBoardsSection: React.FC<DriveBoardsSectionProps> = ({
   onCreateNewClick,
   onOpenAuthBridgeClick,
 }) => {
+  const { language, t } = useI18n();
   const [filter, setFilter] = useState<DriveFileFilter>('all');
   const [sort, setSort] = useState<DriveFileSort>('modifiedDesc');
   const [query, setQuery] = useState('');
@@ -190,7 +193,7 @@ export const DriveBoardsSection: React.FC<DriveBoardsSectionProps> = ({
           id="drive-boards-heading"
           className="text-base font-medium text-slate-900 dark:text-slate-100"
         >
-          Bảng đã lưu trên Google Drive
+          {t('Bảng đã lưu trên Google Drive', 'Saved boards on Google Drive')}
         </h2>
 
         {!drive.needsAuth && (
@@ -207,19 +210,27 @@ export const DriveBoardsSection: React.FC<DriveBoardsSectionProps> = ({
                 ) : (
                   <Folder className="w-3.5 h-3.5" />
                 )}
-                <span>Gom {drive.unorganizedCount} tệp vào thư mục</span>
+                <span>
+                  {t(
+                    `Gom ${drive.unorganizedCount} tệp vào thư mục`,
+                    `Move ${drive.unorganizedCount} files into folder`
+                  )}
+                </span>
               </button>
             )}
 
             <div className="h-8 inline-flex items-center gap-2 px-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
               <span className="text-xs font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">
-                Tự động lưu
+                {t('Tự động lưu', 'Auto-save')}
               </span>
               <button
                 type="button"
                 role="switch"
                 aria-checked={drive.autoSaveEnabled}
-                aria-label="Bật hoặc tắt tự động lưu lên Google Drive"
+                aria-label={t(
+                  'Bật hoặc tắt tự động lưu lên Google Drive',
+                  'Toggle Google Drive auto-save'
+                )}
                 onClick={() => drive.setAutoSaveEnabled(!drive.autoSaveEnabled)}
                 className={`relative inline-flex h-4.5 w-8 items-center rounded-full transition-colors cursor-pointer shrink-0 ${
                   drive.autoSaveEnabled
@@ -239,8 +250,8 @@ export const DriveBoardsSection: React.FC<DriveBoardsSectionProps> = ({
               type="button"
               onClick={() => void drive.refreshFiles()}
               disabled={drive.isLoadingFiles || Boolean(drive.busyAction)}
-              aria-label="Làm mới danh sách Google Drive"
-              title="Làm mới danh sách"
+              aria-label={t('Làm mới danh sách Google Drive', 'Refresh Google Drive list')}
+              title={t('Làm mới danh sách', 'Refresh list')}
               className="h-8 w-8 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300 transition-colors shrink-0 cursor-pointer disabled:opacity-60"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${drive.isLoadingFiles ? 'animate-spin' : ''}`} />
@@ -267,7 +278,7 @@ export const DriveBoardsSection: React.FC<DriveBoardsSectionProps> = ({
                 rel="noopener noreferrer"
                 className="h-8 inline-flex items-center gap-1.5 px-3 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-semibold transition-colors whitespace-nowrap shrink-0"
               >
-                <span>{drive.error.actionLabel || 'Mở bảng điều khiển'}</span>
+                <span>{drive.error.actionLabel || t('Mở bảng điều khiển', 'Open console')}</span>
                 <ExternalLink className="w-3.5 h-3.5" />
               </a>
             )}
@@ -277,7 +288,7 @@ export const DriveBoardsSection: React.FC<DriveBoardsSectionProps> = ({
                 onClick={() => void drive.refreshFiles()}
                 className="h-8 px-3 rounded-lg border border-red-300 dark:border-red-800 text-xs font-medium text-red-700 dark:text-red-200 hover:bg-red-100/60 dark:hover:bg-red-900/40 transition-colors whitespace-nowrap shrink-0 cursor-pointer"
               >
-                Thử lại
+                {t('Thử lại', 'Retry')}
               </button>
             )}
           </div>
@@ -291,10 +302,13 @@ export const DriveBoardsSection: React.FC<DriveBoardsSectionProps> = ({
               <Check className="w-5 h-5" strokeWidth={1.75} />
             </div>
             <h3 className="text-base font-medium text-slate-900 dark:text-slate-100 text-balance max-w-md">
-              Ứng dụng đang chạy ở chế độ ngoại tuyến
+              {t('Ứng dụng đang chạy ở chế độ ngoại tuyến', 'Running in offline mode')}
             </h3>
             <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-2 max-w-lg leading-relaxed">
-              Bản cài đặt lưu trữ toàn bộ bảng trắng trực tiếp trên máy tính của bạn (IndexedDB). Bạn không cần đăng nhập vẫn dùng đầy đủ mọi công cụ vẽ, toán học, máy tính Casio và xuất tệp.
+              {t(
+                'Bản cài đặt lưu trữ toàn bộ bảng trắng trực tiếp trên máy tính của bạn (IndexedDB). Bạn không cần đăng nhập vẫn dùng đầy đủ mọi công cụ vẽ, toán học, máy tính Casio và xuất tệp.',
+                'The desktop app stores all whiteboards locally on your computer (IndexedDB). No sign-in is required to use all drawing, math, Casio calculator, and export features.'
+              )}
             </p>
 
             <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
@@ -304,7 +318,7 @@ export const DriveBoardsSection: React.FC<DriveBoardsSectionProps> = ({
                 className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs transition-colors duration-150 cursor-pointer"
               >
                 <Plus className="w-4 h-4" strokeWidth={1.75} />
-                <span>Tạo bảng mới</span>
+                <span>{t('Tạo bảng mới', 'New board')}</span>
               </button>
 
               <button
@@ -321,12 +335,28 @@ export const DriveBoardsSection: React.FC<DriveBoardsSectionProps> = ({
                 className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-medium text-xs transition-colors duration-150 cursor-pointer"
               >
                 <KeyRound className="w-4 h-4 text-slate-500 dark:text-slate-400" strokeWidth={1.75} />
-                <span>Đăng nhập qua trình duyệt</span>
+                <span>{t('Đăng nhập qua trình duyệt', 'Sign in via browser')}</span>
               </button>
             </div>
 
             <p className="mt-4 text-xs text-slate-500 dark:text-slate-400 max-w-md leading-relaxed">
-              Để đồng bộ Google Drive, bấm <strong className="font-medium text-slate-700 dark:text-slate-300">Đăng nhập qua trình duyệt</strong> và chọn tài khoản Google của bạn.
+              {language === 'en' ? (
+                <>
+                  To sync with Google Drive, click{' '}
+                  <strong className="font-medium text-slate-700 dark:text-slate-300">
+                    Sign in via browser
+                  </strong>{' '}
+                  and choose your Google account.
+                </>
+              ) : (
+                <>
+                  Để đồng bộ Google Drive, bấm{' '}
+                  <strong className="font-medium text-slate-700 dark:text-slate-300">
+                    Đăng nhập qua trình duyệt
+                  </strong>{' '}
+                  và chọn tài khoản Google của bạn.
+                </>
+              )}
             </p>
           </div>
         ) : (
@@ -336,10 +366,16 @@ export const DriveBoardsSection: React.FC<DriveBoardsSectionProps> = ({
               <CloudUpload className="w-5 h-5" strokeWidth={1.75} />
             </div>
             <h3 className="text-base font-medium text-slate-900 dark:text-slate-100 text-balance max-w-md">
-              Đăng nhập Google để đồng bộ bảng đã lưu
+              {t(
+                'Đăng nhập Google để đồng bộ bảng đã lưu',
+                'Sign in with Google to sync saved boards'
+              )}
             </h3>
             <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-2 max-w-md leading-relaxed">
-              Tự động lưu dự án bảng trắng và ảnh PNG 4× trong thư mục riêng &ldquo;{APP_DRIVE_FOLDER_NAME}&rdquo;
+              {t(
+                `Tự động lưu dự án bảng trắng và ảnh PNG 4× trong thư mục riêng "${APP_DRIVE_FOLDER_NAME}"`,
+                `Automatically save whiteboard projects and 4× PNG exports in a dedicated "${APP_DRIVE_FOLDER_NAME}" folder`
+              )}
             </p>
 
             <div className="mt-5">
@@ -351,11 +387,11 @@ export const DriveBoardsSection: React.FC<DriveBoardsSectionProps> = ({
             </div>
 
             <div className="mt-5 flex flex-col sm:flex-row items-center justify-center gap-x-2 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
-              <span>Chỉ truy cập tệp do ứng dụng tạo</span>
+              <span>{t('Chỉ truy cập tệp do ứng dụng tạo', 'Only accesses files created by this app')}</span>
               <span aria-hidden="true" className="hidden sm:inline">
                 ·
               </span>
-              <span>Dùng chung dung lượng Drive cá nhân</span>
+              <span>{t('Dùng chung dung lượng Drive cá nhân', 'Uses your personal Google Drive storage')}</span>
             </div>
           </div>
         )
@@ -366,14 +402,14 @@ export const DriveBoardsSection: React.FC<DriveBoardsSectionProps> = ({
             {/* Segmented Filter Tabs */}
             <div
               role="tablist"
-              aria-label="Lọc loại tệp Google Drive"
+              aria-label={t('Lọc loại tệp Google Drive', 'Filter Google Drive file types')}
               className="inline-flex items-center gap-0.5 p-1 rounded-xl bg-slate-200/70 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 self-start"
             >
               {(
                 [
-                  { id: 'all', label: 'Tất cả', count: drive.files.length },
-                  { id: 'boards', label: 'Bảng trắng', count: boardCount },
-                  { id: 'images', label: 'Ảnh PNG', count: imageCount },
+                  { id: 'all', label: t('Tất cả', 'All'), count: drive.files.length },
+                  { id: 'boards', label: t('Bảng trắng', 'Boards'), count: boardCount },
+                  { id: 'images', label: t('Ảnh PNG', 'PNG Images'), count: imageCount },
                 ] as const
               ).map((tab) => {
                 const active = filter === tab.id;
@@ -407,28 +443,28 @@ export const DriveBoardsSection: React.FC<DriveBoardsSectionProps> = ({
                   type="search"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  aria-label="Tìm bảng theo tên"
-                  placeholder="Tìm theo tên"
+                  aria-label={t('Tìm bảng theo tên', 'Search boards by name')}
+                  placeholder={t('Tìm theo tên', 'Search by name')}
                   className="h-9 w-full pl-8 pr-3 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:border-indigo-500 transition-colors"
                 />
               </div>
 
               <select
-                aria-label="Sắp xếp bảng"
+                aria-label={t('Sắp xếp bảng', 'Sort boards')}
                 value={sort}
                 onChange={(e) => setSort(e.target.value as DriveFileSort)}
                 className="h-9 px-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-medium text-slate-700 dark:text-slate-200 cursor-pointer shrink-0"
               >
-                <option value="modifiedDesc">Mới cập nhật</option>
-                <option value="nameAsc">Tên A → Z</option>
-                <option value="sizeDesc">Dung lượng lớn nhất</option>
+                <option value="modifiedDesc">{t('Mới cập nhật', 'Recently modified')}</option>
+                <option value="nameAsc">{t('Tên A → Z', 'Name A → Z')}</option>
+                <option value="sizeDesc">{t('Dung lượng lớn nhất', 'Largest size')}</option>
               </select>
 
               <div className="h-9 inline-flex items-center p-0.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shrink-0">
                 <button
                   type="button"
                   onClick={() => setViewMode('grid')}
-                  aria-label="Hiển thị dạng lưới"
+                  aria-label={t('Hiển thị dạng lưới', 'Grid view')}
                   aria-pressed={viewMode === 'grid'}
                   className={`h-7 w-7 rounded-md flex items-center justify-center transition-colors cursor-pointer ${
                     viewMode === 'grid'
@@ -441,7 +477,7 @@ export const DriveBoardsSection: React.FC<DriveBoardsSectionProps> = ({
                 <button
                   type="button"
                   onClick={() => setViewMode('list')}
-                  aria-label="Hiển thị dạng danh sách"
+                  aria-label={t('Hiển thị dạng danh sách', 'List view')}
                   aria-pressed={viewMode === 'list'}
                   className={`h-7 w-7 rounded-md flex items-center justify-center transition-colors cursor-pointer ${
                     viewMode === 'list'
@@ -475,17 +511,31 @@ export const DriveBoardsSection: React.FC<DriveBoardsSectionProps> = ({
             /* Calm Empty Account State */
             <div className="bg-white dark:bg-slate-900 border border-dashed border-slate-300 dark:border-slate-800 rounded-xl px-6 py-10 text-center space-y-1.5">
               <h3 className="text-sm font-medium text-slate-900 dark:text-slate-100">
-                Chưa có tệp nào trong thư mục &ldquo;{APP_DRIVE_FOLDER_NAME}&rdquo;
+                {t(
+                  `Chưa có tệp nào trong thư mục "${APP_DRIVE_FOLDER_NAME}"`,
+                  `No files in "${APP_DRIVE_FOLDER_NAME}" folder yet`
+                )}
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
-                Bấm <strong className="font-medium text-slate-700 dark:text-slate-300">Tạo bảng mới</strong> ở góc trên hoặc lưu bản nháp hiện tại để các bảng của bạn xuất hiện tại đây.
+                {language === 'en' ? (
+                  <>
+                    Click <strong className="font-medium text-slate-700 dark:text-slate-300">New board</strong> above or save your current draft to see your boards here.
+                  </>
+                ) : (
+                  <>
+                    Bấm <strong className="font-medium text-slate-700 dark:text-slate-300">Tạo bảng mới</strong> ở góc trên hoặc lưu bản nháp hiện tại để các bảng của bạn xuất hiện tại đây.
+                  </>
+                )}
               </p>
             </div>
           ) : visibleFiles.length === 0 ? (
             /* Empty Search / Filter State */
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-6 py-9 text-center space-y-3">
               <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">
-                Không tìm thấy tệp nào khớp với từ khóa hoặc bộ lọc hiện tại.
+                {t(
+                  'Không tìm thấy tệp nào khớp với từ khóa hoặc bộ lọc hiện tại.',
+                  'No files match your current search or filter.'
+                )}
               </p>
               <button
                 type="button"
@@ -495,7 +545,7 @@ export const DriveBoardsSection: React.FC<DriveBoardsSectionProps> = ({
                 }}
                 className="h-8 px-3 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-semibold text-slate-800 dark:text-slate-100 transition-colors cursor-pointer"
               >
-                Xóa bộ lọc
+                {t('Xóa bộ lọc', 'Clear filters')}
               </button>
             </div>
           ) : viewMode === 'grid' ? (
@@ -523,7 +573,7 @@ export const DriveBoardsSection: React.FC<DriveBoardsSectionProps> = ({
                         type="button"
                         disabled={Boolean(drive.busyAction)}
                         onClick={() => void handleOpenDriveBoard(file)}
-                        aria-label={`Mở bảng ${displayTitle}`}
+                        aria-label={t(`Mở bảng ${displayTitle}`, `Open board ${displayTitle}`)}
                         className="h-32 w-full border-b border-slate-100 dark:border-slate-800 block text-left cursor-pointer group focus-visible:outline-none overflow-hidden"
                       >
                         <div className="w-full h-full">
@@ -542,7 +592,7 @@ export const DriveBoardsSection: React.FC<DriveBoardsSectionProps> = ({
                           {displayTitle}
                         </h3>
                         <div className="flex flex-wrap items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 tabular-nums">
-                          <span>{isBoard ? 'Bảng trắng' : 'Ảnh PNG'}</span>
+                          <span>{isBoard ? t('Bảng trắng', 'Whiteboard') : t('Ảnh PNG', 'PNG Image')}</span>
                           {file.modifiedTime && (
                             <>
                               <span aria-hidden="true">·</span>
@@ -559,7 +609,7 @@ export const DriveBoardsSection: React.FC<DriveBoardsSectionProps> = ({
                             <>
                               <span aria-hidden="true">·</span>
                               <span className="text-emerald-600 dark:text-emerald-400 font-medium">
-                                Đang mở
+                                {t('Đang mở', 'Open')}
                               </span>
                             </>
                           )}
@@ -579,7 +629,7 @@ export const DriveBoardsSection: React.FC<DriveBoardsSectionProps> = ({
                             ) : (
                               <FolderOpen className="w-3.5 h-3.5" />
                             )}
-                            <span>{isOpening ? 'Đang mở...' : 'Mở'}</span>
+                            <span>{isOpening ? t('Đang mở...', 'Opening...') : t('Mở', 'Open')}</span>
                           </button>
                         ) : file.webViewLink ? (
                           <a
@@ -589,7 +639,7 @@ export const DriveBoardsSection: React.FC<DriveBoardsSectionProps> = ({
                             className="h-8 inline-flex items-center gap-1.5 px-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold transition-colors whitespace-nowrap shrink-0"
                           >
                             <ExternalLink className="w-3.5 h-3.5" />
-                            <span>Xem ảnh</span>
+                            <span>{t('Xem ảnh', 'View image')}</span>
                           </a>
                         ) : (
                           <span />
@@ -600,8 +650,8 @@ export const DriveBoardsSection: React.FC<DriveBoardsSectionProps> = ({
                             type="button"
                             disabled={Boolean(drive.busyAction)}
                             onClick={() => setRenameTarget(file)}
-                            aria-label={`Đổi tên ${displayTitle}`}
-                            title="Đổi tên"
+                            aria-label={t(`Đổi tên ${displayTitle}`, `Rename ${displayTitle}`)}
+                            title={t('Đổi tên', 'Rename')}
                             className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer disabled:opacity-50"
                           >
                             <Pencil className="w-3.5 h-3.5" />
@@ -610,8 +660,8 @@ export const DriveBoardsSection: React.FC<DriveBoardsSectionProps> = ({
                             type="button"
                             disabled={Boolean(drive.busyAction)}
                             onClick={() => setDeleteTarget(file)}
-                            aria-label={`Xóa ${displayTitle}`}
-                            title="Xóa khỏi Google Drive"
+                            aria-label={t(`Xóa ${displayTitle}`, `Delete ${displayTitle}`)}
+                            title={t('Xóa khỏi Google Drive', 'Delete from Google Drive')}
                             className="w-8 h-8 rounded-lg flex items-center justify-center text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/50 transition-colors cursor-pointer disabled:opacity-50"
                           >
                             {isDeleting ? (
@@ -661,12 +711,12 @@ export const DriveBoardsSection: React.FC<DriveBoardsSectionProps> = ({
                           {displayTitle}
                         </div>
                         <div className="text-[11px] text-slate-500 dark:text-slate-400 tabular-nums truncate">
-                          {isBoard ? 'Bảng trắng' : 'Ảnh PNG'}
+                          {isBoard ? t('Bảng trắng', 'Whiteboard') : t('Ảnh PNG', 'PNG Image')}
                           {file.modifiedTime
                             ? ` · ${formatDriveModifiedTime(file.modifiedTime)}`
                             : ''}
                           {sizeNum > 0 ? ` · ${formatFileSize(sizeNum)}` : ''}
-                          {isCurrent ? ' · Đang mở' : ''}
+                          {isCurrent ? ` · ${t('Đang mở', 'Open')}` : ''}
                         </div>
                       </div>
                     </div>
@@ -684,7 +734,7 @@ export const DriveBoardsSection: React.FC<DriveBoardsSectionProps> = ({
                           ) : (
                             <FolderOpen className="w-3.5 h-3.5" />
                           )}
-                          <span>Mở</span>
+                          <span>{t('Mở', 'Open')}</span>
                         </button>
                       ) : (
                         file.webViewLink && (
@@ -695,7 +745,7 @@ export const DriveBoardsSection: React.FC<DriveBoardsSectionProps> = ({
                             className="h-8 inline-flex items-center gap-1.5 px-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold transition-colors whitespace-nowrap shrink-0"
                           >
                             <ExternalLink className="w-3.5 h-3.5" />
-                            <span>Xem</span>
+                            <span>{t('Xem', 'View')}</span>
                           </a>
                         )
                       )}
@@ -703,7 +753,7 @@ export const DriveBoardsSection: React.FC<DriveBoardsSectionProps> = ({
                         type="button"
                         disabled={Boolean(drive.busyAction)}
                         onClick={() => setRenameTarget(file)}
-                        aria-label={`Đổi tên ${displayTitle}`}
+                        aria-label={t(`Đổi tên ${displayTitle}`, `Rename ${displayTitle}`)}
                         className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
                       >
                         <Pencil className="w-3.5 h-3.5" />
@@ -712,7 +762,7 @@ export const DriveBoardsSection: React.FC<DriveBoardsSectionProps> = ({
                         type="button"
                         disabled={Boolean(drive.busyAction)}
                         onClick={() => setDeleteTarget(file)}
-                        aria-label={`Xóa ${displayTitle}`}
+                        aria-label={t(`Xóa ${displayTitle}`, `Delete ${displayTitle}`)}
                         className="w-8 h-8 rounded-lg flex items-center justify-center text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/50 transition-colors cursor-pointer"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -728,13 +778,13 @@ export const DriveBoardsSection: React.FC<DriveBoardsSectionProps> = ({
 
       <RenameBoardModal
         isOpen={Boolean(renameTarget)}
-        title="Đổi tên tệp trên Google Drive"
+        title={t('Đổi tên tệp trên Google Drive', 'Rename file on Google Drive')}
         initialValue={renameTarget ? getDisplayBoardTitle(renameTarget) : ''}
         isSubmitting={Boolean(drive.busyAction)}
         submittingLabel={
           renameTarget && drive.busyAction === `rename:${renameTarget.id}`
-            ? 'Đang lưu...'
-            : 'Lưu tên mới'
+            ? t('Đang lưu...', 'Saving...')
+            : t('Lưu tên mới', 'Save name')
         }
         titleId="rename-board-title"
         inputId="rename-board-input"
@@ -744,12 +794,20 @@ export const DriveBoardsSection: React.FC<DriveBoardsSectionProps> = ({
 
       <DeleteBoardConfirmModal
         isOpen={Boolean(deleteTarget)}
-        title="Xóa tệp khỏi Google Drive?"
+        title={t('Xóa tệp khỏi Google Drive?', 'Delete file from Google Drive?')}
         description={
           deleteTarget ? (
-            <>
-              Bạn có chắc muốn xóa vĩnh viễn &ldquo;{deleteTarget.name}&rdquo; khỏi Google Drive? Thao tác này không thể hoàn tác.
-            </>
+            language === 'en' ? (
+              <>
+                Are you sure you want to permanently delete &ldquo;{deleteTarget.name}&rdquo; from
+                Google Drive? This action cannot be undone.
+              </>
+            ) : (
+              <>
+                Bạn có chắc muốn xóa vĩnh viễn &ldquo;{deleteTarget.name}&rdquo; khỏi Google Drive?
+                Thao tác này không thể hoàn tác.
+              </>
+            )
           ) : null
         }
         isSubmitting={Boolean(drive.busyAction)}

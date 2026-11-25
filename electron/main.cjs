@@ -11,6 +11,8 @@ const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 const GITHUB_LATEST_DOWNLOAD = 'https://github.com/ankkiet/whiteboard_fz/releases/latest/download';
 let mainWindow = null;
 let isDownloadingUpdate = false;
+let activeUpdateAbortController = null;
+let activeUpdateCancelReason = null;
 
 function getAuthSessionFilePath() {
   return path.join(app.getPath('userData'), 'auth-session.bin');
@@ -78,6 +80,9 @@ function getPlatformInstallerFileName() {
   if (process.platform === 'darwin') {
     return process.arch === 'arm64' ? 'fzInK-macOS-arm64.dmg' : 'fzInK-macOS-x64.dmg';
   }
+  if (process.env.PORTABLE_EXECUTABLE_FILE) {
+    return 'fzInK-Portable.exe';
+  }
   return 'fzInK-Setup.exe';
 }
 
@@ -87,11 +92,41 @@ function sendUpdaterProgress(payload) {
   }
 }
 
+function moveDownloadedInstaller(tempPath, destPath) {
+  try {
+    fs.renameSync(tempPath, destPath);
+    return destPath;
+  } catch (err) {
+    if (err && (err.code === 'EBUSY' || err.code === 'EPERM' || err.code === 'EACCES')) {
+      const parsed = path.parse(destPath);
+      const fallbackPath = path.join(parsed.dir, `${parsed.name}-${Date.now()}${parsed.ext}`);
+      fs.renameSync(tempPath, fallbackPath);
+      return fallbackPath;
+    }
+    throw err;
+  }
+}
+
+const UPDATE_IDLE_TIMEOUT_MS = 20000;
+const UPDATE_PROGRESS_THROTTLE_MS = 120;
+
+ipcMain.handle('fzink:updater:cancel', () => {
+  if (isDownloadingUpdate && activeUpdateAbortController) {
+    activeUpdateCancelReason = 'user';
+    activeUpdateAbortController.abort();
+    return { ok: true };
+  }
+  return { ok: false };
+});
+
 ipcMain.handle('fzink:updater:download-and-install', async () => {
   if (isDownloadingUpdate) {
     return { ok: false, error: 'Đang tải bản cập nhật, vui lòng chờ hoàn tất.' };
   }
   isDownloadingUpdate = true;
+  activeUpdateAbortController = new AbortController();
+  activeUpdateCancelReason = null;
+
   const fileName = getPlatformInstallerFileName();
   const downloadUrl = `${GITHUB_LATEST_DOWNLOAD}/${fileName}`;
   const targetDir = (() => {
@@ -104,55 +139,174 @@ ipcMain.handle('fzink:updater:download-and-install', async () => {
   const destPath = path.join(targetDir, fileName);
   const tempPath = `${destPath}.downloading`;
 
+  let idleTimer = null;
+  const clearIdleTimer = () => {
+    if (idleTimer) {
+      clearTimeout(idleTimer);
+      idleTimer = null;
+    }
+  };
+  const resetIdleTimer = () => {
+    clearIdleTimer();
+    idleTimer = setTimeout(() => {
+      if (activeUpdateAbortController && !activeUpdateAbortController.signal.aborted) {
+        activeUpdateCancelReason = 'timeout';
+        activeUpdateAbortController.abort();
+      }
+    }, UPDATE_IDLE_TIMEOUT_MS);
+  };
+
   try {
-    sendUpdaterProgress({ phase: 'downloading', percent: 0, fileName });
-    const response = await net.fetch(downloadUrl, { redirect: 'follow' });
+    if (fs.existsSync(tempPath)) {
+      fs.unlinkSync(tempPath);
+    }
+    sendUpdaterProgress({ phase: 'preparing', percent: 0, fileName });
+    resetIdleTimer();
+
+    const response = await net.fetch(downloadUrl, {
+      redirect: 'follow',
+      signal: activeUpdateAbortController.signal,
+    });
     if (!response.ok || !response.body) {
       throw new Error(`Máy chủ tải về trả về mã lỗi ${response.status}.`);
     }
 
     const totalBytes = Number(response.headers.get('content-length') || 0);
     let receivedBytes = 0;
+    let speedWindowStart = Date.now();
+    let speedWindowBytes = 0;
+    let lastSpeedBps = 0;
+    let lastSentAt = 0;
+    let lastSentPercent = -2;
+
     const writeStream = fs.createWriteStream(tempPath);
     const reader = response.body.getReader();
 
+    sendUpdaterProgress({
+      phase: 'downloading',
+      percent: totalBytes > 0 ? 0 : -1,
+      receivedBytes: 0,
+      totalBytes,
+      speedBps: 0,
+      fileName,
+    });
+
     try {
       while (true) {
+        resetIdleTimer();
         const { done, value } = await reader.read();
         if (done) break;
         if (value && value.byteLength > 0) {
-          writeStream.write(Buffer.from(value));
+          const canContinue = writeStream.write(Buffer.from(value));
+          if (!canContinue) {
+            await new Promise((resolve) => writeStream.once('drain', resolve));
+          }
           receivedBytes += value.byteLength;
+          speedWindowBytes += value.byteLength;
+
+          const now = Date.now();
+          const windowElapsed = now - speedWindowStart;
+          if (windowElapsed >= 500) {
+            lastSpeedBps = Math.round((speedWindowBytes * 1000) / windowElapsed);
+            speedWindowStart = now;
+            speedWindowBytes = 0;
+          } else if (lastSpeedBps === 0 && windowElapsed > 80) {
+            lastSpeedBps = Math.round((speedWindowBytes * 1000) / windowElapsed);
+          }
+
           const percent = totalBytes > 0 ? Math.min(99, Math.round((receivedBytes / totalBytes) * 100)) : -1;
-          sendUpdaterProgress({ phase: 'downloading', percent, receivedBytes, totalBytes, fileName });
+          if (
+            now - lastSentAt >= UPDATE_PROGRESS_THROTTLE_MS ||
+            (percent === 99 && lastSentPercent !== 99)
+          ) {
+            lastSentAt = now;
+            lastSentPercent = percent;
+            sendUpdaterProgress({
+              phase: 'downloading',
+              percent,
+              receivedBytes,
+              totalBytes,
+              speedBps: lastSpeedBps,
+              fileName,
+            });
+          }
         }
       }
     } finally {
+      clearIdleTimer();
       await new Promise((resolve, reject) => {
         writeStream.end((err) => (err ? reject(err) : resolve()));
       });
     }
 
-    fs.renameSync(tempPath, destPath);
-    sendUpdaterProgress({ phase: 'launching', percent: 100, fileName });
+    const finalPath = moveDownloadedInstaller(tempPath, destPath);
+    sendUpdaterProgress({
+      phase: 'launching',
+      percent: 100,
+      receivedBytes,
+      totalBytes: totalBytes || receivedBytes,
+      speedBps: lastSpeedBps,
+      fileName,
+    });
 
-    const openErr = await shell.openPath(destPath);
-    if (openErr) {
-      shell.showItemInFolder(destPath);
-      return { ok: true, fileName, destPath, launched: false };
+    if (process.platform === 'win32') {
+      app.releaseSingleInstanceLock();
     }
 
-    return { ok: true, fileName, destPath, launched: true };
+    const openErr = await shell.openPath(finalPath);
+    if (openErr) {
+      shell.showItemInFolder(finalPath);
+      return {
+        ok: true,
+        fileName,
+        destPath: finalPath,
+        launched: false,
+        platform: process.platform,
+      };
+    }
+
+    if (process.platform === 'win32') {
+      // Allow IPC reply to reach renderer before quitting so NSIS Setup / Portable can proceed cleanly
+      setTimeout(() => {
+        app.quit();
+      }, 450);
+    }
+
+    return {
+      ok: true,
+      fileName,
+      destPath: finalPath,
+      launched: true,
+      platform: process.platform,
+    };
   } catch (err) {
+    clearIdleTimer();
     try {
       if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
     } catch {}
+
+    if (activeUpdateCancelReason === 'user') {
+      sendUpdaterProgress({ phase: 'cancelled', percent: 0, fileName });
+      return { ok: false, cancelled: true, fileName };
+    }
+
+    const errorMessage =
+      activeUpdateCancelReason === 'timeout'
+        ? 'Kết nối tải bản cập nhật bị gián đoạn quá lâu (hết thời gian chờ).'
+        : err && err.message
+        ? err.message
+        : 'Không thể tải tệp cập nhật.';
+
     sendUpdaterProgress({ phase: 'error', percent: 0, fileName });
     return {
       ok: false,
-      error: err && err.message ? err.message : 'Không thể tải tệp cập nhật.',
+      fileName,
+      error: errorMessage,
     };
   } finally {
+    clearIdleTimer();
+    activeUpdateAbortController = null;
+    activeUpdateCancelReason = null;
     isDownloadingUpdate = false;
   }
 });

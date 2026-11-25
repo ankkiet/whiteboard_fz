@@ -4,7 +4,7 @@ import { DriveSyncStatus } from '../../services/driveSyncUtils';
 import { BoardType, ToolType } from '../../types/board';
 import {
   getNotebookConfig,
-  NOTEBOOK_PAPER_STYLES,
+  getNotebookPaperStyles,
   normalizeNotebookPaperStyle,
 } from '../../engine/notebookEngine';
 import {
@@ -16,15 +16,16 @@ import {
   MIN_STROKE_WIDTH,
 } from '../../engine/drawingUtils';
 import {
-  ERASER_SIZES,
-  HIGHLIGHTER_COLORS,
-  INK_COLORS,
-  NOTEBOOK_PAPER_OPTIONS,
-  PATTERNS,
-  STICKY_COLORS,
-  STROKE_WIDTHS,
-  TOOLS,
+  getEraserSizes,
+  getHighlighterColors,
+  getInkColors,
+  getNotebookPaperOptions,
+  getPatterns,
+  getStickyColors,
+  getStrokeWidths,
+  getTools,
 } from './toolbarConfig';
+import { useI18n } from '../../i18n/useI18n';
 import {
   BookOpen,
   Check,
@@ -86,6 +87,7 @@ export const TopBarFlyout: React.FC<TopBarFlyoutProps> = ({
   onToggleFocusMode,
   onToggleMathPanel,
 }) => {
+  const { language, setLanguage, t } = useI18n();
   const clearBoard = useBoardStore((s) => s.clearBoard);
   const elementCount = useBoardStore((s) => s.elements.length);
   const currentTool = useBoardStore((s) => s.currentTool);
@@ -142,12 +144,22 @@ export const TopBarFlyout: React.FC<TopBarFlyoutProps> = ({
     return () => document.removeEventListener('mousedown', onOutside);
   }, [showPatternMenu, showPaperSizeMenu]);
 
+  const tools = getTools(language);
+  const inkColors = getInkColors(language);
+  const highlighterColors = getHighlighterColors(language);
+  const stickyColors = getStickyColors(language);
+  const eraserSizes = getEraserSizes(language);
+  const strokeWidths = getStrokeWidths(language);
+  const patterns = getPatterns(language);
+  const notebookPaperStyles = getNotebookPaperStyles(language);
+  const notebookPaperOptions = getNotebookPaperOptions(language);
+
   const currentPalette =
     currentTool === 'highlighter'
-      ? HIGHLIGHTER_COLORS
+      ? highlighterColors
       : currentTool === 'sticky'
-      ? STICKY_COLORS
-      : INK_COLORS;
+      ? stickyColors
+      : inkColors;
 
   const activeColor =
     currentTool === 'highlighter'
@@ -168,7 +180,7 @@ export const TopBarFlyout: React.FC<TopBarFlyoutProps> = ({
 
   return (
     <section
-      aria-label="Khay công cụ mở rộng"
+      aria-label={t('Khay công cụ mở rộng', 'Expanded tool tray')}
       style={flyoutMarginStyle}
       className="pointer-events-auto mt-2 w-full max-w-[720px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-lg dark:shadow-none rounded-2xl p-4 flex flex-col gap-3 text-slate-800 dark:text-slate-100 overflow-x-auto scrollbar-none"
     >
@@ -176,7 +188,7 @@ export const TopBarFlyout: React.FC<TopBarFlyoutProps> = ({
       <div>
         <div className="flex items-center justify-between mb-2">
           <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
-            Công cụ vẽ & ghi chú
+            {t('Công cụ vẽ & ghi chú', 'Drawing & note tools')}
           </span>
           <div className="flex items-center gap-2">
             <button
@@ -184,8 +196,8 @@ export const TopBarFlyout: React.FC<TopBarFlyoutProps> = ({
               onClick={onTogglePin}
               title={
                 isPinned
-                  ? 'Đang ghim mở cố định — Bấm để tự thu gọn khi viết'
-                  : 'Ghim khay công cụ luôn mở'
+                  ? t('Đang ghim mở cố định — Bấm để tự thu gọn khi viết', 'Pinned open — Click to auto-collapse while writing')
+                  : t('Ghim khay công cụ luôn mở', 'Keep tool tray pinned open')
               }
               aria-pressed={isPinned}
               className={`h-7 flex items-center gap-1.5 px-2 rounded-lg text-xs font-medium transition-colors duration-150 cursor-pointer ${
@@ -199,7 +211,7 @@ export const TopBarFlyout: React.FC<TopBarFlyoutProps> = ({
               ) : (
                 <PinOff className="w-3.5 h-3.5" strokeWidth={1.75} />
               )}
-              <span>{isPinned ? 'Đã ghim mở' : 'Tự thu gọn'}</span>
+              <span>{isPinned ? t('Đã ghim mở', 'Pinned open') : t('Tự thu gọn', 'Auto-collapse')}</span>
             </button>
           </div>
         </div>
@@ -211,33 +223,35 @@ export const TopBarFlyout: React.FC<TopBarFlyoutProps> = ({
               key={groupId}
               className="flex items-center gap-1 p-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200/70 dark:border-slate-700/60"
             >
-              {TOOLS.filter((t) => t.group === groupId).map((tool) => {
-                const Icon = tool.icon;
-                const isActive = currentTool === tool.id;
-                return (
-                  <button
-                    key={tool.id}
-                    type="button"
-                    onClick={() => onSelectTool(tool.id)}
-                    title={`${tool.label} (${tool.shortcut})`}
-                    aria-label={`${tool.label} (${tool.shortcut})`}
-                    aria-pressed={isActive}
-                    className={`relative w-9 h-9 rounded-lg flex items-center justify-center transition-colors duration-150 cursor-pointer ${
-                      isActive
-                        ? 'bg-indigo-600 text-white'
-                        : 'hover:bg-slate-200/70 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200'
-                    }`}
-                  >
-                    <Icon className="w-4 h-4" />
-                    {tool.id === 'pen' && inkDotColor && (
-                      <span
-                        className="absolute bottom-1 right-1 w-2 h-2 rounded-full ring-1 ring-white"
-                        style={{ backgroundColor: inkDotColor }}
-                      />
-                    )}
-                  </button>
-                );
-              })}
+              {tools
+                .filter((item) => item.group === groupId)
+                .map((tool) => {
+                  const Icon = tool.icon;
+                  const isActive = currentTool === tool.id;
+                  return (
+                    <button
+                      key={tool.id}
+                      type="button"
+                      onClick={() => onSelectTool(tool.id)}
+                      title={`${tool.label} (${tool.shortcut})`}
+                      aria-label={`${tool.label} (${tool.shortcut})`}
+                      aria-pressed={isActive}
+                      className={`relative w-9 h-9 rounded-lg flex items-center justify-center transition-colors duration-150 cursor-pointer ${
+                        isActive
+                          ? 'bg-indigo-600 text-white'
+                          : 'hover:bg-slate-200/70 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200'
+                      }`}
+                    >
+                      <Icon className="w-4 h-4" />
+                      {tool.id === 'pen' && inkDotColor && (
+                        <span
+                          className="absolute bottom-1 right-1 w-2 h-2 rounded-full ring-1 ring-white"
+                          style={{ backgroundColor: inkDotColor }}
+                        />
+                      )}
+                    </button>
+                  );
+                })}
             </div>
           ))}
         </div>
@@ -247,7 +261,7 @@ export const TopBarFlyout: React.FC<TopBarFlyoutProps> = ({
       <div className="border-t border-slate-100 dark:border-slate-800 pt-3">
         <div className="flex items-center justify-between mb-2">
           <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
-            Màu sắc & thuộc tính nét
+            {t('Màu sắc & thuộc tính nét', 'Colors & stroke properties')}
           </span>
           {currentTool === 'eraser' && (
             <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg">
@@ -260,7 +274,7 @@ export const TopBarFlyout: React.FC<TopBarFlyoutProps> = ({
                     : 'text-slate-600 dark:text-slate-300'
                 }`}
               >
-                Xóa nét
+                {t('Xóa nét', 'Stroke eraser')}
               </button>
               <button
                 type="button"
@@ -271,7 +285,7 @@ export const TopBarFlyout: React.FC<TopBarFlyoutProps> = ({
                     : 'text-slate-600 dark:text-slate-300'
                 }`}
               >
-                Xóa vùng
+                {t('Xóa vùng', 'Area eraser')}
               </button>
             </div>
           )}
@@ -288,7 +302,7 @@ export const TopBarFlyout: React.FC<TopBarFlyoutProps> = ({
                     type="button"
                     onClick={() => handleColorSelect(item.hex)}
                     title={item.label}
-                    aria-label={`Màu ${item.label}`}
+                    aria-label={t(`Màu ${item.label}`, `Color ${item.label}`)}
                     className={`w-7 h-7 rounded-full border border-black/10 dark:border-white/15 transition-shadow duration-150 cursor-pointer ${
                       isSelected
                         ? 'ring-2 ring-slate-900 dark:ring-slate-100 ring-offset-2 dark:ring-offset-slate-900'
@@ -304,13 +318,13 @@ export const TopBarFlyout: React.FC<TopBarFlyoutProps> = ({
                 value={activeColor.startsWith('#') && activeColor.length === 7 ? activeColor : '#4f46e5'}
                 onChange={(e) => handleColorSelect(e.target.value)}
                 className="sr-only"
-                aria-label="Chọn màu tùy chỉnh"
+                aria-label={t('Chọn màu tùy chỉnh', 'Choose custom color')}
               />
               <button
                 type="button"
                 onClick={() => customColorInputRef.current?.click()}
-                title="Màu tùy chỉnh"
-                aria-label="Chọn màu tùy chỉnh"
+                title={t('Màu tùy chỉnh', 'Custom color')}
+                aria-label={t('Chọn màu tùy chỉnh', 'Choose custom color')}
                 className="w-7 h-7 rounded-full border border-dashed border-slate-300 dark:border-slate-600 hover:border-slate-500 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors duration-150 cursor-pointer"
               >
                 <Pipette className="w-3.5 h-3.5" strokeWidth={1.75} />
@@ -318,17 +332,19 @@ export const TopBarFlyout: React.FC<TopBarFlyoutProps> = ({
             </div>
           ) : currentTool === 'eraser' ? (
             <div className="flex items-center gap-2">
-              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Cỡ đầu tẩy</span>
+              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                {t('Cỡ đầu tẩy', 'Eraser size')}
+              </span>
               <div className="flex items-center gap-1">
-                {ERASER_SIZES.map((sz) => {
+                {eraserSizes.map((sz) => {
                   const isActive = eraserSize === sz.value;
                   return (
                     <button
                       key={sz.value}
                       type="button"
                       onClick={() => setEraserSize(sz.value)}
-                      title={`Cỡ tẩy: ${sz.label} (${sz.value}px)`}
-                      aria-label={`Cỡ tẩy ${sz.label}`}
+                      title={t(`Cỡ tẩy: ${sz.label} (${sz.value}px)`, `Eraser size: ${sz.label} (${sz.value}px)`)}
+                      aria-label={t(`Cỡ tẩy ${sz.label}`, `Eraser size ${sz.label}`)}
                       className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors duration-150 cursor-pointer ${
                         isActive
                           ? 'bg-indigo-600 text-white'
@@ -351,7 +367,7 @@ export const TopBarFlyout: React.FC<TopBarFlyoutProps> = ({
                 value={eraserSize}
                 onChange={(e) => setEraserSize(clampEraserSize(Number(e.target.value)))}
                 className="w-20 accent-indigo-600 cursor-pointer"
-                aria-label="Thanh trượt kích cỡ đầu tẩy"
+                aria-label={t('Thanh trượt kích cỡ đầu tẩy', 'Eraser size slider')}
               />
               <span className="text-xs font-mono text-slate-500 dark:text-slate-400 tabular-nums">
                 {eraserSize}px
@@ -359,23 +375,25 @@ export const TopBarFlyout: React.FC<TopBarFlyoutProps> = ({
             </div>
           ) : (
             <div className="text-xs text-slate-500 dark:text-slate-400">
-              Bút tia laser dùng để chỉ điểm khi trình chiếu
+              {t('Bút tia laser dùng để chỉ điểm khi trình chiếu', 'Laser pointer highlights points during presentation')}
             </div>
           )}
 
           {currentTool !== 'eraser' && currentTool !== 'laser' && (
             <div className="flex items-center gap-2">
-              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Cỡ nét</span>
+              <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                {t('Cỡ nét', 'Stroke width')}
+              </span>
               <div className="flex items-center gap-1">
-                {STROKE_WIDTHS.map((sw) => {
+                {strokeWidths.map((sw) => {
                   const isActive = strokeWidth === sw.value;
                   return (
                     <button
                       key={sw.value}
                       type="button"
                       onClick={() => setStrokeWidth(sw.value)}
-                      title={`Cỡ nét ${sw.label} (${sw.value}px)`}
-                      aria-label={`Cỡ nét ${sw.label}`}
+                      title={t(`Cỡ nét ${sw.label} (${sw.value}px)`, `Stroke width ${sw.label} (${sw.value}px)`)}
+                      aria-label={t(`Cỡ nét ${sw.label}`, `Stroke width ${sw.label}`)}
                       className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors duration-150 cursor-pointer ${
                         isActive
                           ? 'bg-indigo-600 text-white'
@@ -398,7 +416,7 @@ export const TopBarFlyout: React.FC<TopBarFlyoutProps> = ({
                 value={strokeWidth}
                 onChange={(e) => setStrokeWidth(clampStrokeWidth(Number(e.target.value)))}
                 className="w-16 accent-indigo-600 cursor-pointer hidden sm:block"
-                aria-label="Thanh trượt cỡ nét"
+                aria-label={t('Thanh trượt cỡ nét', 'Stroke width slider')}
               />
               <span className="text-xs font-mono text-slate-500 dark:text-slate-400 tabular-nums">
                 {strokeWidth}px
@@ -412,7 +430,7 @@ export const TopBarFlyout: React.FC<TopBarFlyoutProps> = ({
       <div className="border-t border-slate-100 dark:border-slate-800 pt-3">
         <div className="flex items-center justify-between mb-2">
           <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
-            Tiện ích bảng
+            {t('Tiện ích bảng', 'Board utilities')}
           </span>
         </div>
 
@@ -428,16 +446,16 @@ export const TopBarFlyout: React.FC<TopBarFlyoutProps> = ({
                       setShowPaperSizeMenu(false);
                       setShowPatternMenu((v) => !v);
                     }}
-                    aria-label="Chọn loại giấy viết"
+                    aria-label={t('Chọn loại giấy viết', 'Choose paper style')}
                     aria-expanded={showPatternMenu}
                     className="h-8 flex items-center gap-1.5 px-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-medium transition-colors duration-150 cursor-pointer"
                   >
                     <Grid className="w-4 h-4 text-slate-500 dark:text-slate-400" strokeWidth={1.75} />
                     <span>
-                      Giấy:{' '}
-                      {NOTEBOOK_PAPER_STYLES.find(
+                      {t('Giấy:', 'Paper:')}{' '}
+                      {notebookPaperStyles.find(
                         (s) => s.id === normalizeNotebookPaperStyle(boardPattern)
-                      )?.shortLabel || 'Kẻ ngang'}
+                      )?.shortLabel || t('Kẻ ngang', 'Lined')}
                     </span>
                     <ChevronDown className="w-3.5 h-3.5 text-slate-400" strokeWidth={1.75} />
                   </button>
@@ -445,9 +463,9 @@ export const TopBarFlyout: React.FC<TopBarFlyoutProps> = ({
                   {showPatternMenu && (
                     <div className="absolute left-0 bottom-full mb-2 w-56 bg-white dark:bg-slate-900 rounded-xl shadow-lg dark:shadow-none border border-slate-200 dark:border-slate-800 p-1.5 z-40">
                       <div className="text-xs font-medium px-2.5 py-1 text-slate-500 dark:text-slate-400">
-                        Loại giấy viết
+                        {t('Loại giấy viết', 'Paper style')}
                       </div>
-                      {NOTEBOOK_PAPER_STYLES.map((style) => {
+                      {notebookPaperStyles.map((style) => {
                         const isSelected = normalizeNotebookPaperStyle(boardPattern) === style.id;
                         return (
                           <button
@@ -484,21 +502,21 @@ export const TopBarFlyout: React.FC<TopBarFlyoutProps> = ({
                       setShowPatternMenu(false);
                       setShowPaperSizeMenu((v) => !v);
                     }}
-                    aria-label="Chọn khổ giấy vở ghi chú"
+                    aria-label={t('Chọn khổ giấy vở ghi chú', 'Choose notebook paper size')}
                     aria-expanded={showPaperSizeMenu}
                     className="h-8 flex items-center gap-1.5 px-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-medium transition-colors duration-150 cursor-pointer"
                   >
                     <BookOpen className="w-4 h-4 text-slate-500 dark:text-slate-400" strokeWidth={1.75} />
-                    <span>{getNotebookConfig(notebookPaperSize).label}</span>
+                    <span>{getNotebookConfig(notebookPaperSize, language).label}</span>
                     <ChevronDown className="w-3.5 h-3.5 text-slate-400" strokeWidth={1.75} />
                   </button>
 
                   {showPaperSizeMenu && (
                     <div className="absolute left-0 bottom-full mb-2 w-48 bg-white dark:bg-slate-900 rounded-xl shadow-lg dark:shadow-none border border-slate-200 dark:border-slate-800 p-1.5 z-40">
                       <div className="text-xs font-medium px-2.5 py-1 text-slate-500 dark:text-slate-400">
-                        Khổ giấy vở ghi chú
+                        {t('Khổ giấy vở ghi chú', 'Notebook paper size')}
                       </div>
-                      {NOTEBOOK_PAPER_OPTIONS.map((paper) => {
+                      {notebookPaperOptions.map((paper) => {
                         const isSelected = notebookPaperSize === paper.id;
                         return (
                           <button
@@ -536,13 +554,16 @@ export const TopBarFlyout: React.FC<TopBarFlyoutProps> = ({
                   className="h-8 flex items-center gap-1.5 px-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-medium transition-colors duration-150 cursor-pointer"
                 >
                   <Grid className="w-4 h-4 text-slate-500 dark:text-slate-400" strokeWidth={1.75} />
-                  <span>Nền: {PATTERNS.find((p) => p.id === boardPattern)?.label || 'Ô ly'}</span>
+                  <span>
+                    {t('Nền:', 'Background:')}{' '}
+                    {patterns.find((p) => p.id === boardPattern)?.label || t('Ô ly', 'Grid')}
+                  </span>
                   <ChevronDown className="w-3.5 h-3.5 text-slate-400" strokeWidth={1.75} />
                 </button>
 
                 {showPatternMenu && (
                   <div className="absolute left-0 bottom-full mb-2 w-44 bg-white dark:bg-slate-900 rounded-xl shadow-lg dark:shadow-none border border-slate-200 dark:border-slate-800 p-1.5 z-40">
-                    {PATTERNS.map((pat) => (
+                    {patterns.map((pat) => (
                       <button
                         key={pat.id}
                         type="button"
@@ -569,8 +590,12 @@ export const TopBarFlyout: React.FC<TopBarFlyoutProps> = ({
             <button
               type="button"
               onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
-              title={theme === 'light' ? 'Chuyển sang giao diện tối' : 'Chuyển sang giao diện sáng'}
-              aria-label="Giao diện sáng tối"
+              title={
+                theme === 'light'
+                  ? t('Chuyển sang giao diện tối', 'Switch to dark theme')
+                  : t('Chuyển sang giao diện sáng', 'Switch to light theme')
+              }
+              aria-label={t('Giao diện sáng tối', 'Light/dark theme')}
               className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center transition-colors duration-150 cursor-pointer"
             >
               {theme === 'light' ? (
@@ -580,13 +605,25 @@ export const TopBarFlyout: React.FC<TopBarFlyoutProps> = ({
               )}
             </button>
 
+            {/* Ngôn ngữ VI / EN */}
+            <button
+              type="button"
+              onClick={() => setLanguage(language === 'vi' ? 'en' : 'vi')}
+              title={t('Chuyển sang English', 'Switch to Tiếng Việt')}
+              aria-label={t('Ngôn ngữ hiển thị', 'Display language')}
+              data-testid="topbar-language-toggle"
+              className="h-8 px-2 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold tracking-wide flex items-center justify-center transition-colors duration-150 cursor-pointer"
+            >
+              {language === 'vi' ? 'VI' : 'EN'}
+            </button>
+
             {/* Thu phóng +/- */}
             <div className="h-8 flex items-center gap-0.5 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg">
               <button
                 type="button"
                 onClick={onZoomOut}
-                title="Thu nhỏ (Ctrl -)"
-                aria-label="Thu nhỏ"
+                title={t('Thu nhỏ (Ctrl -)', 'Zoom out (Ctrl -)')}
+                aria-label={t('Thu nhỏ', 'Zoom out')}
                 className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors duration-150 cursor-pointer"
               >
                 <ZoomOut className="w-4 h-4" strokeWidth={1.75} />
@@ -594,8 +631,8 @@ export const TopBarFlyout: React.FC<TopBarFlyoutProps> = ({
               <button
                 type="button"
                 onClick={onZoomIn}
-                title="Phóng to (Ctrl +)"
-                aria-label="Phóng to"
+                title={t('Phóng to (Ctrl +)', 'Zoom in (Ctrl +)')}
+                aria-label={t('Phóng to', 'Zoom in')}
                 className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors duration-150 cursor-pointer"
               >
                 <ZoomIn className="w-4 h-4" strokeWidth={1.75} />
@@ -603,8 +640,8 @@ export const TopBarFlyout: React.FC<TopBarFlyoutProps> = ({
               <button
                 type="button"
                 onClick={onFitToScreen}
-                title="Vừa màn hình"
-                aria-label="Vừa màn hình"
+                title={t('Vừa màn hình', 'Fit to screen')}
+                aria-label={t('Vừa màn hình', 'Fit to screen')}
                 className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors duration-150 cursor-pointer"
               >
                 <Maximize2 className="w-4 h-4" strokeWidth={1.75} />
@@ -625,7 +662,7 @@ export const TopBarFlyout: React.FC<TopBarFlyoutProps> = ({
                 }`}
               >
                 <Sigma className="w-4 h-4" strokeWidth={1.75} />
-                <span>Bảng toán</span>
+                <span>{t('Bảng toán', 'Math panel')}</span>
               </button>
             )}
 
@@ -643,11 +680,11 @@ export const TopBarFlyout: React.FC<TopBarFlyoutProps> = ({
               )}
               <span>
                 {!isDriveConnected
-                  ? 'Lưu Drive'
+                  ? t('Lưu Drive', 'Save to Drive')
                   : syncStatus === 'saving'
-                  ? 'Đang lưu'
+                  ? t('Đang lưu', 'Saving')
                   : syncStatus === 'saved'
-                  ? 'Đã lưu'
+                  ? t('Đã lưu', 'Saved')
                   : 'Drive'}
               </span>
             </button>
@@ -658,7 +695,7 @@ export const TopBarFlyout: React.FC<TopBarFlyoutProps> = ({
               className="h-8 flex items-center gap-1.5 px-3 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs transition-colors duration-150 cursor-pointer"
             >
               <Download className="w-4 h-4" strokeWidth={1.75} />
-              <span>Xuất tệp</span>
+              <span>{t('Xuất tệp', 'Export')}</span>
             </button>
 
             <button
@@ -667,14 +704,14 @@ export const TopBarFlyout: React.FC<TopBarFlyoutProps> = ({
               className="h-8 flex items-center gap-1.5 px-3 rounded-lg bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-white text-xs font-medium transition-colors duration-150 cursor-pointer"
             >
               <Presentation className="w-4 h-4" strokeWidth={1.75} />
-              <span>Trình chiếu</span>
+              <span>{t('Trình chiếu', 'Present')}</span>
             </button>
 
             <button
               type="button"
               onClick={onToggleFocusMode}
-              title="Chế độ tập trung (F)"
-              aria-label="Chế độ tập trung (F)"
+              title={t('Chế độ tập trung (F)', 'Focus mode (F)')}
+              aria-label={t('Chế độ tập trung (F)', 'Focus mode (F)')}
               className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center transition-colors duration-150 cursor-pointer"
             >
               <Focus className="w-4 h-4" strokeWidth={1.75} />
@@ -685,8 +722,8 @@ export const TopBarFlyout: React.FC<TopBarFlyoutProps> = ({
                 <button
                   type="button"
                   onClick={() => setConfirmClear((v) => !v)}
-                  title="Xóa toàn bộ bảng"
-                  aria-label="Xóa toàn bộ bảng"
+                  title={t('Xóa toàn bộ bảng', 'Clear entire board')}
+                  aria-label={t('Xóa toàn bộ bảng', 'Clear entire board')}
                   className="w-8 h-8 rounded-lg bg-red-50 dark:bg-red-950/50 hover:bg-red-100 dark:hover:bg-red-950/80 text-red-600 dark:text-red-400 flex items-center justify-center transition-colors duration-150 cursor-pointer"
                 >
                   <Trash2 className="w-4 h-4" strokeWidth={1.75} />
@@ -695,10 +732,10 @@ export const TopBarFlyout: React.FC<TopBarFlyoutProps> = ({
                 {confirmClear && (
                   <div className="absolute right-0 bottom-full mb-2 w-64 bg-white dark:bg-slate-900 rounded-xl shadow-lg dark:shadow-none border border-slate-200 dark:border-slate-800 p-3 z-40">
                     <p className="text-xs font-medium text-slate-900 dark:text-slate-100 mb-1">
-                      Xóa toàn bộ bảng trắng?
+                      {t('Xóa toàn bộ bảng trắng?', 'Clear entire whiteboard?')}
                     </p>
                     <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
-                      Bạn vẫn có thể nhấn Hoàn tác (Ctrl+Z) sau khi xóa.
+                      {t('Bạn vẫn có thể nhấn Hoàn tác (Ctrl+Z) sau khi xóa.', 'You can still press Undo (Ctrl+Z) afterward.')}
                     </p>
                     <div className="flex items-center justify-end gap-2">
                       <button
@@ -706,7 +743,7 @@ export const TopBarFlyout: React.FC<TopBarFlyoutProps> = ({
                         onClick={() => setConfirmClear(false)}
                         className="h-8 px-3 text-xs rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
                       >
-                        Hủy
+                        {t('Hủy', 'Cancel')}
                       </button>
                       <button
                         type="button"
@@ -716,7 +753,7 @@ export const TopBarFlyout: React.FC<TopBarFlyoutProps> = ({
                         }}
                         className="h-8 px-3 text-xs font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 cursor-pointer"
                       >
-                        Xóa tất cả
+                        {t('Xóa tất cả', 'Clear all')}
                       </button>
                     </div>
                   </div>

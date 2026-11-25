@@ -8,6 +8,7 @@ import {
 } from '../../engine/documentProcessor';
 import { formatFileSize } from '../../engine/documentUtils';
 import { FileCardElement } from '../../types/board';
+import { useI18n } from '../../i18n/useI18n';
 import { Download, FileText, Layers, Loader2, X } from 'lucide-react';
 
 export const DocumentPreviewModal: React.FC = () => {
@@ -17,6 +18,7 @@ export const DocumentPreviewModal: React.FC = () => {
   const assets = useBoardStore((s) => s.assets);
   const insertDocumentPages = useBoardStore((s) => s.insertDocumentPages);
   const addToast = useBoardStore((s) => s.addToast);
+  const { t } = useI18n();
 
   const [pdfPreviewPages, setPdfPreviewPages] = useState<RenderedPageAsset[]>([]);
   const [isLoadingPdf, setIsLoadingPdf] = useState(false);
@@ -70,14 +72,20 @@ export const DocumentPreviewModal: React.FC = () => {
 
   const handleDownload = () => {
     if (!assetDataUrl) {
-      addToast('Không tìm thấy dữ liệu tệp để tải xuống.', 'error');
+      addToast(
+        t('Không tìm thấy dữ liệu tệp để tải xuống.', 'File data not found for download.'),
+        'error'
+      );
       return;
     }
     const link = document.createElement('a');
     link.href = assetDataUrl;
     link.download = fileCard.fileName;
     link.click();
-    addToast(`Đang tải xuống "${fileCard.fileName}"`, 'success');
+    addToast(
+      t(`Đang tải xuống "${fileCard.fileName}"`, `Downloading "${fileCard.fileName}"`),
+      'success'
+    );
   };
 
   const handleSpreadToBoard = async () => {
@@ -104,7 +112,10 @@ export const DocumentPreviewModal: React.FC = () => {
         setPreviewFileCardId(null);
       }
     } catch {
-      addToast('Không thể trải trang từ tài liệu này.', 'error');
+      addToast(
+        t('Không thể trải trang từ tài liệu này.', 'Unable to spread pages from this document.'),
+        'error'
+      );
     }
   };
 
@@ -137,7 +148,9 @@ export const DocumentPreviewModal: React.FC = () => {
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 {formatFileSize(fileCard.fileSize)}
-                {fileCard.pageCount ? ` · ${fileCard.pageCount} trang` : ''}
+                {fileCard.pageCount
+                  ? ` · ${fileCard.pageCount} ${t('trang', fileCard.pageCount === 1 ? 'page' : 'pages')}`
+                  : ''}
               </p>
             </div>
           </div>
@@ -150,7 +163,7 @@ export const DocumentPreviewModal: React.FC = () => {
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold transition-colors whitespace-nowrap"
               >
                 <Layers className="w-3.5 h-3.5" />
-                <span>Trải lên bảng</span>
+                <span>{t('Trải lên bảng', 'Spread onto board')}</span>
               </button>
             )}
             <button
@@ -159,12 +172,12 @@ export const DocumentPreviewModal: React.FC = () => {
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-medium transition-colors whitespace-nowrap"
             >
               <Download className="w-3.5 h-3.5" />
-              <span>Tải xuống</span>
+              <span>{t('Tải xuống', 'Download')}</span>
             </button>
             <button
               type="button"
               onClick={() => setPreviewFileCardId(null)}
-              aria-label="Đóng trình xem tài liệu"
+              aria-label={t('Đóng trình xem tài liệu', 'Close document preview')}
               className="p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-500"
             >
               <X className="w-4 h-4" />
@@ -178,7 +191,9 @@ export const DocumentPreviewModal: React.FC = () => {
             isLoadingPdf ? (
               <div className="py-16 flex flex-col items-center justify-center gap-2 text-slate-500">
                 <Loader2 className="w-6 h-6 animate-spin text-indigo-600" />
-                <span className="text-xs">Đang hiển thị các trang PDF...</span>
+                <span className="text-xs">
+                  {t('Đang hiển thị các trang PDF...', 'Rendering PDF pages...')}
+                </span>
               </div>
             ) : pdfPreviewPages.length > 0 ? (
               <div className="space-y-4 flex flex-col items-center">
@@ -189,7 +204,7 @@ export const DocumentPreviewModal: React.FC = () => {
                   >
                     <img
                       src={pg.dataUrl}
-                      alt={`${fileCard.fileName} - Trang ${pg.pageNumber}`}
+                      alt={`${fileCard.fileName} - ${t('Trang', 'Page')} ${pg.pageNumber}`}
                       className="w-full h-auto block"
                     />
                   </div>
@@ -197,7 +212,10 @@ export const DocumentPreviewModal: React.FC = () => {
               </div>
             ) : (
               <p className="text-center text-xs text-slate-500 py-12">
-                Không thể hiển thị xem trước PDF. Bạn có thể bấm nút Tải xuống ở trên.
+                {t(
+                  'Không thể hiển thị xem trước PDF. Bạn có thể bấm nút Tải xuống ở trên.',
+                  'Unable to preview this PDF. You can click Download above.'
+                )}
               </p>
             )
           ) : paragraphs.length > 0 ? (
@@ -211,10 +229,13 @@ export const DocumentPreviewModal: React.FC = () => {
           ) : (
             <div className="py-14 text-center space-y-2">
               <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-                Tệp đính kèm sẵn sàng tải xuống
+                {t('Tệp đính kèm sẵn sàng tải xuống', 'Attachment ready to download')}
               </p>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Định dạng tệp này không hỗ trợ xem trước văn bản trực tiếp. Bấm &quot;Tải xuống&quot; để mở trên thiết bị của bạn.
+                {t(
+                  'Định dạng tệp này không hỗ trợ xem trước văn bản trực tiếp. Bấm "Tải xuống" để mở trên thiết bị của bạn.',
+                  'Inline text preview is not available for this file type. Click "Download" to open it on your device.'
+                )}
               </p>
             </div>
           )}

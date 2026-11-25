@@ -1,5 +1,6 @@
 import React from 'react';
 import { Loader2 } from 'lucide-react';
+import { useI18n } from '../../i18n/useI18n';
 
 interface GoogleSignInButtonProps {
   onClick: () => void;
@@ -11,9 +12,11 @@ interface GoogleSignInButtonProps {
 export const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
   onClick,
   isLoading = false,
-  label = 'Đăng nhập bằng Google',
+  label,
   testId = 'google-signin-button',
 }) => {
+  const { t } = useI18n();
+  const resolvedLabel = label ?? t('Đăng nhập bằng Google', 'Sign in with Google');
   return (
     <button
       type="button"
@@ -51,7 +54,7 @@ export const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
           <path fill="none" d="M0 0h48v48H0z" />
         </svg>
       )}
-      <span>{isLoading ? 'Đang kết nối Google' : label}</span>
+      <span>{isLoading ? t('Đang kết nối Google', 'Connecting to Google') : resolvedLabel}</span>
     </button>
   );
 };

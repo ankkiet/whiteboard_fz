@@ -11,6 +11,7 @@ import { GoogleDriveModal } from '../components/modals/GoogleDriveModal';
 import type { PendingDocumentImport } from '../components/modals/DocumentImportModal';
 import { VirtualGeometryToolsOverlay } from '../components/math/VirtualGeometryToolsOverlay';
 import { PinnedProblemBar } from '../components/math/PinnedProblemBar';
+import { useI18n } from '../i18n/useI18n';
 import { Minimize2 } from 'lucide-react';
 
 // Lazy-loaded heavy feature chunks (only downloaded when opened)
@@ -48,6 +49,7 @@ export const EditorPage: React.FC<EditorPageProps> = ({
   onReturnHome,
   onOpenAuthBridgeClick,
 }) => {
+  const { t } = useI18n();
   const insertImageFromDataUrl = useBoardStore((s) => s.insertImageFromDataUrl);
   const insertFileCard = useBoardStore((s) => s.insertFileCard);
   const addToast = useBoardStore((s) => s.addToast);
@@ -107,7 +109,12 @@ export const EditorPage: React.FC<EditorPageProps> = ({
         if (kind === 'image') {
           void readFileAsDataUrl(file)
             .then((dataUrl) => insertImageFromDataUrl(dataUrl, file.name, offsetPoint))
-            .catch(() => addToast(`Không thể đọc ảnh "${file.name}".`, 'error'));
+            .catch(() =>
+              addToast(
+                t(`Không thể đọc ảnh "${file.name}".`, `Could not read image "${file.name}".`),
+                'error'
+              )
+            );
         } else if ((kind === 'pdf' || kind === 'word' || kind === 'text') && !openedDocModal) {
           openedDocModal = true;
           setPendingDoc({ file, worldDropPoint: offsetPoint });
@@ -123,11 +130,16 @@ export const EditorPage: React.FC<EditorPageProps> = ({
                 worldDropPoint: offsetPoint,
               })
             )
-            .catch(() => addToast(`Không thể đọc tệp "${file.name}".`, 'error'));
+            .catch(() =>
+              addToast(
+                t(`Không thể đọc tệp "${file.name}".`, `Could not read file "${file.name}".`),
+                'error'
+              )
+            );
         }
       });
     },
-    [addToast, insertFileCard, insertImageFromDataUrl]
+    [addToast, insertFileCard, insertImageFromDataUrl, t]
   );
 
   const handleFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -191,12 +203,12 @@ export const EditorPage: React.FC<EditorPageProps> = ({
         <button
           type="button"
           onClick={handleToggleFocusMode}
-          title="Thoát chế độ tập trung (F)"
-          aria-label="Thoát chế độ tập trung (F)"
+          title={t('Thoát chế độ tập trung (F)', 'Exit focus mode (F)')}
+          aria-label={t('Thoát chế độ tập trung (F)', 'Exit focus mode (F)')}
           className="absolute top-4 right-4 z-30 flex items-center gap-2 px-3 py-2 rounded-lg bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-xs font-medium text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-800 shadow-sm dark:shadow-none transition-colors duration-150 whitespace-nowrap cursor-pointer"
         >
           <Minimize2 className="w-4 h-4 text-slate-500 dark:text-slate-400" strokeWidth={1.75} />
-          <span>Thoát tập trung</span>
+          <span>{t('Thoát tập trung', 'Exit focus')}</span>
           <kbd className="kbd-keycap">F</kbd>
         </button>
       )}

@@ -1,4 +1,5 @@
 import { FileCategory } from '../types/board';
+import { tr } from '../i18n';
 
 export type IncomingFileKind = 'image' | FileCategory;
 
@@ -103,7 +104,7 @@ export function paginatePlainText(
   linesPerPage = 32
 ): string[][] {
   const normalized = text.replace(/\r\n/g, '\n').trim();
-  if (!normalized) return [['(Tài liệu không có nội dung văn bản)']];
+  if (!normalized) return [[tr('(Tài liệu không có nội dung văn bản)', '(Document contains no text content)')]];
 
   const wrappedLines: string[] = [];
   const paragraphs = normalized.split('\n');
@@ -140,7 +141,7 @@ export function readFileAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result || ''));
-    reader.onerror = () => reject(new Error('Không thể đọc tệp từ máy tính.'));
+    reader.onerror = () => reject(new Error(tr('Không thể đọc tệp từ máy tính.', 'Could not read file from computer.')));
     reader.readAsDataURL(file);
   });
 }

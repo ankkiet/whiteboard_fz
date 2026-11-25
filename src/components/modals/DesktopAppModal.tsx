@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { detectUserOS, usePWAInstall } from '../../hooks/usePWAInstall';
 import { detectMacArchitecture, MacArch } from '../../engine/macArch';
 import { useBoardStore } from '../../store/useBoardStore';
+import { useI18n } from '../../i18n/useI18n';
 import { AppLogo } from '../ui/AppLogo';
 import {
   DESKTOP_RELEASES_PAGE,
@@ -45,6 +46,7 @@ const AppleLogoIcon: React.FC<{ className?: string }> = ({ className = 'w-5 h-5'
 
 export const DesktopAppModal: React.FC<DesktopAppModalProps> = ({ isOpen, onClose }) => {
   const addToast = useBoardStore((s) => s.addToast);
+  const { t } = useI18n();
   const { isInstallable, install } = usePWAInstall();
   const os = detectUserOS();
   const [macArch, setMacArch] = useState<MacArch>('arm64');
@@ -79,25 +81,40 @@ export const DesktopAppModal: React.FC<DesktopAppModalProps> = ({ isOpen, onClos
   };
 
   const handleDownloadWindowsSetup = () => {
-    addToast('Đang tải bộ cài đặt fzInK-Setup.exe', 'info');
+    addToast(
+      t('Đang tải bộ cài đặt fzInK-Setup.exe', 'Downloading fzInK-Setup.exe installer'),
+      'info'
+    );
     triggerDirectDownload(DOWNLOAD_LINKS.windowsSetup, 'fzInK-Setup.exe');
     markDesktopAppAsDownloaded();
   };
 
   const handleDownloadWindowsPortable = () => {
-    addToast('Đang tải bản Portable (fzInK-Portable.exe)', 'info');
+    addToast(
+      t(
+        'Đang tải bản Portable (fzInK-Portable.exe)',
+        'Downloading Portable build (fzInK-Portable.exe)'
+      ),
+      'info'
+    );
     triggerDirectDownload(DOWNLOAD_LINKS.windowsPortable, 'fzInK-Portable.exe');
     markDesktopAppAsDownloaded();
   };
 
   const handleDownloadMacDmg = () => {
-    addToast(`Đang tải ứng dụng macOS (${macDmgFileName})`, 'info');
+    addToast(
+      t(`Đang tải ứng dụng macOS (${macDmgFileName})`, `Downloading macOS app (${macDmgFileName})`),
+      'info'
+    );
     triggerDirectDownload(macDmgUrl, macDmgFileName);
     markDesktopAppAsDownloaded();
   };
 
   const handleDownloadMacZip = () => {
-    addToast(`Đang tải bản nén macOS (${macZipFileName})`, 'info');
+    addToast(
+      t(`Đang tải bản nén macOS (${macZipFileName})`, `Downloading macOS archive (${macZipFileName})`),
+      'info'
+    );
     triggerDirectDownload(macZipUrl, macZipFileName);
     markDesktopAppAsDownloaded();
   };
@@ -105,7 +122,10 @@ export const DesktopAppModal: React.FC<DesktopAppModalProps> = ({ isOpen, onClos
   const handleInstallPWA = async () => {
     const success = await install();
     if (success) {
-      addToast('Đã bắt đầu cài đặt ứng dụng vào máy tính', 'success');
+      addToast(
+        t('Đã bắt đầu cài đặt ứng dụng vào máy tính', 'Started installing desktop web app'),
+        'success'
+      );
       markDesktopAppAsDownloaded();
       onClose();
     }
@@ -116,7 +136,7 @@ export const DesktopAppModal: React.FC<DesktopAppModalProps> = ({ isOpen, onClos
       data-testid="desktop-app-modal"
       role="dialog"
       aria-modal="true"
-      aria-label="Tải ứng dụng máy tính"
+      aria-label={t('Tải ứng dụng máy tính', 'Download desktop app')}
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs select-text"
       onClick={onClose}
     >
@@ -130,10 +150,13 @@ export const DesktopAppModal: React.FC<DesktopAppModalProps> = ({ isOpen, onClos
             <AppLogo size={40} className="rounded-xl" />
             <div>
               <h2 className="text-base font-medium text-slate-900 dark:text-slate-100">
-                Tải ứng dụng máy tính
+                {t('Tải ứng dụng máy tính', 'Download desktop app')}
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Ứng dụng độc lập cho Windows và macOS, hoạt động hoàn toàn ngoại tuyến
+                {t(
+                  'Ứng dụng độc lập cho Windows và macOS, hoạt động hoàn toàn ngoại tuyến',
+                  'Standalone app for Windows and macOS, works completely offline'
+                )}
               </p>
             </div>
           </div>
@@ -141,7 +164,7 @@ export const DesktopAppModal: React.FC<DesktopAppModalProps> = ({ isOpen, onClos
             type="button"
             data-testid="close-desktop-app-modal-button"
             onClick={onClose}
-            aria-label="Đóng"
+            aria-label={t('Đóng', 'Close')}
             className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors duration-150 cursor-pointer shrink-0"
           >
             <X className="w-4 h-4" strokeWidth={1.75} />
@@ -166,7 +189,7 @@ export const DesktopAppModal: React.FC<DesktopAppModalProps> = ({ isOpen, onClos
                   </div>
                   {os !== 'macos' && (
                     <span className="text-xs font-medium text-indigo-600 dark:text-indigo-400">
-                      Hệ điều hành của bạn
+                      {t('Hệ điều hành của bạn', 'Your OS')}
                     </span>
                   )}
                 </div>
@@ -181,7 +204,10 @@ export const DesktopAppModal: React.FC<DesktopAppModalProps> = ({ isOpen, onClos
                 </div>
 
                 <div className="mt-3 p-2.5 rounded-lg bg-slate-100/80 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/70 text-xs text-slate-600 dark:text-slate-400 leading-snug">
-                  Gồm bản cài đặt tự tạo biểu tượng màn hình và bản Portable chạy ngay
+                  {t(
+                    'Gồm bản cài đặt tự tạo biểu tượng màn hình và bản Portable chạy ngay',
+                    'Includes a standard desktop installer and a zero-install Portable version'
+                  )}
                 </div>
               </div>
 
@@ -193,14 +219,14 @@ export const DesktopAppModal: React.FC<DesktopAppModalProps> = ({ isOpen, onClos
                   className="w-full h-10 px-4 rounded-lg bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] text-white font-medium text-xs inline-flex items-center justify-center gap-2 transition-[background-color,transform] duration-150 cursor-pointer"
                 >
                   <Download className="w-4 h-4 shrink-0" strokeWidth={1.75} />
-                  <span>Tải bộ cài đặt (.exe Setup)</span>
+                  <span>{t('Tải bộ cài đặt (.exe Setup)', 'Download installer (.exe Setup)')}</span>
                 </button>
                 <button
                   type="button"
                   onClick={handleDownloadWindowsPortable}
                   className="w-full h-8 px-3 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium text-xs inline-flex items-center justify-center gap-1.5 transition-colors duration-150 cursor-pointer"
                 >
-                  <span>Bản chạy ngay (.exe Portable)</span>
+                  <span>{t('Bản chạy ngay (.exe Portable)', 'Portable build (.exe)')}</span>
                 </button>
                 <div className="text-xs font-mono text-center text-slate-400 dark:text-slate-500">
                   fzInK-Setup.exe
@@ -223,7 +249,7 @@ export const DesktopAppModal: React.FC<DesktopAppModalProps> = ({ isOpen, onClos
                   </div>
                   {os === 'macos' && (
                     <span className="text-xs font-medium text-indigo-600 dark:text-indigo-400">
-                      Hệ điều hành của bạn
+                      {t('Hệ điều hành của bạn', 'Your OS')}
                     </span>
                   )}
                 </div>
@@ -234,14 +260,20 @@ export const DesktopAppModal: React.FC<DesktopAppModalProps> = ({ isOpen, onClos
                   </h3>
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                     {os === 'macos' && detectedMacArch
-                      ? `Tự nhận diện: ${detectedMacArch === 'arm64' ? 'Apple Silicon (M1–M4)' : 'chip Intel (x64)'}`
-                      : 'macOS 11 trở lên · Apple Silicon & Intel'}
+                      ? t(
+                          `Tự nhận diện: ${detectedMacArch === 'arm64' ? 'Apple Silicon (M1–M4)' : 'chip Intel (x64)'}`,
+                          `Detected: ${detectedMacArch === 'arm64' ? 'Apple Silicon (M1–M4)' : 'Intel (x64)'}`
+                        )
+                      : t(
+                          'macOS 11 trở lên · Apple Silicon & Intel',
+                          'macOS 11+ · Apple Silicon & Intel'
+                        )}
                   </p>
                 </div>
 
                 <div
                   role="radiogroup"
-                  aria-label="Chọn kiến trúc chip macOS"
+                  aria-label={t('Chọn kiến trúc chip macOS', 'Select macOS chip architecture')}
                   className="mt-3 grid grid-cols-2 gap-1 p-1 rounded-lg bg-slate-100 dark:bg-slate-800/80 border border-slate-200/70 dark:border-slate-700/70"
                 >
                   {[
@@ -270,13 +302,15 @@ export const DesktopAppModal: React.FC<DesktopAppModalProps> = ({ isOpen, onClos
                           </span>
                           {isAutoMatched && (
                             <span
-                              title="Phù hợp với máy Mac của bạn"
+                              title={t('Phù hợp với máy Mac của bạn', 'Matches your Mac')}
                               className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"
                             />
                           )}
                         </div>
                         <div className="text-xs font-mono text-slate-400 dark:text-slate-500 leading-tight mt-0.5">
-                          {isAutoMatched ? `${option.sub} · Máy này` : option.sub}
+                          {isAutoMatched
+                            ? `${option.sub} · ${t('Máy này', 'This Mac')}`
+                            : option.sub}
                         </div>
                       </button>
                     );
@@ -292,14 +326,14 @@ export const DesktopAppModal: React.FC<DesktopAppModalProps> = ({ isOpen, onClos
                   className="w-full h-10 px-4 rounded-lg bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 active:scale-[0.98] text-white font-medium text-xs inline-flex items-center justify-center gap-2 transition-[background-color,transform] duration-150 cursor-pointer"
                 >
                   <Download className="w-4 h-4 shrink-0" strokeWidth={1.75} />
-                  <span>Tải gói cài đặt (.dmg)</span>
+                  <span>{t('Tải gói cài đặt (.dmg)', 'Download installer (.dmg)')}</span>
                 </button>
                 <button
                   type="button"
                   onClick={handleDownloadMacZip}
                   className="w-full h-8 px-3 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium text-xs inline-flex items-center justify-center gap-1.5 transition-colors duration-150 cursor-pointer"
                 >
-                  <span>Gói ứng dụng (.zip)</span>
+                  <span>{t('Gói ứng dụng (.zip)', 'App archive (.zip)')}</span>
                 </button>
                 <div className="text-xs font-mono text-center text-slate-400 dark:text-slate-500 truncate">
                   {macDmgFileName}
@@ -313,7 +347,10 @@ export const DesktopAppModal: React.FC<DesktopAppModalProps> = ({ isOpen, onClos
               <div className="flex items-center gap-2">
                 <Laptop className="w-4 h-4 text-slate-500 dark:text-slate-400 shrink-0" strokeWidth={1.75} />
                 <span className="text-slate-700 dark:text-slate-300">
-                  Dùng ngay không cần tải bộ cài đặt lớn?
+                  {t(
+                    'Dùng ngay không cần tải bộ cài đặt lớn?',
+                    'Want instant installation without a large download?'
+                  )}
                 </span>
               </div>
               <button
@@ -321,7 +358,7 @@ export const DesktopAppModal: React.FC<DesktopAppModalProps> = ({ isOpen, onClos
                 onClick={() => void handleInstallPWA()}
                 className="h-8 px-3 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs inline-flex items-center justify-center gap-1.5 transition-colors duration-150 cursor-pointer shrink-0 whitespace-nowrap"
               >
-                <span>Cài đặt nhanh (PWA)</span>
+                <span>{t('Cài đặt nhanh (PWA)', 'Quick install (PWA)')}</span>
               </button>
             </div>
           )}
@@ -329,7 +366,12 @@ export const DesktopAppModal: React.FC<DesktopAppModalProps> = ({ isOpen, onClos
           <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400">
             <div className="flex items-center gap-2 min-w-0">
               <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" strokeWidth={1.75} />
-              <span className="truncate">Ứng dụng độc lập · Lưu cục bộ · Hoạt động ngoại tuyến</span>
+              <span className="truncate">
+                {t(
+                  'Ứng dụng độc lập · Lưu cục bộ · Hoạt động ngoại tuyến',
+                  'Standalone app · Local storage · Works offline'
+                )}
+              </span>
             </div>
             <a
               href={DESKTOP_RELEASES_PAGE}

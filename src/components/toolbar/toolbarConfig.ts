@@ -1,5 +1,6 @@
 import React from 'react';
 import { BoardPattern, NotebookPaperSize, ToolType } from '../../types/board';
+import { AppLanguage, getAppLanguage, tr } from '../../i18n';
 import {
   ArrowUpRight,
   Circle,
@@ -23,77 +24,112 @@ export interface ToolItem {
   group: number;
 }
 
-export const TOOLS: ToolItem[] = [
-  { id: 'select', label: 'Chọn', shortcut: 'V', icon: MousePointer2, group: 0 },
-  { id: 'hand', label: 'Kéo bảng', shortcut: 'H', icon: Hand, group: 0 },
-  { id: 'pen', label: 'Bút vẽ', shortcut: 'P', icon: PenTool, group: 1 },
-  { id: 'highlighter', label: 'Bút dạ quang', shortcut: 'M', icon: Highlighter, group: 1 },
-  { id: 'eraser', label: 'Tẩy', shortcut: 'E', icon: Eraser, group: 1 },
-  { id: 'laser', label: 'Bút tia laser', shortcut: 'L', icon: Wand2, group: 1 },
-  { id: 'rectangle', label: 'Hình chữ nhật', shortcut: 'R', icon: Square, group: 2 },
-  { id: 'ellipse', label: 'Hình tròn', shortcut: 'O', icon: Circle, group: 2 },
-  { id: 'arrow', label: 'Mũi tên', shortcut: 'A', icon: ArrowUpRight, group: 2 },
-  { id: 'text', label: 'Văn bản', shortcut: 'T', icon: Type, group: 3 },
-  { id: 'sticky', label: 'Ghi chú dán', shortcut: 'S', icon: StickyNote, group: 3 },
-  { id: 'image', label: 'Chèn ảnh / tệp', shortcut: 'I', icon: ImageIcon, group: 3 },
-];
+export function getTools(lang: AppLanguage = getAppLanguage()): ToolItem[] {
+  return [
+    { id: 'select', label: tr('Chọn', 'Select', lang), shortcut: 'V', icon: MousePointer2, group: 0 },
+    { id: 'hand', label: tr('Kéo bảng', 'Pan canvas', lang), shortcut: 'H', icon: Hand, group: 0 },
+    { id: 'pen', label: tr('Bút vẽ', 'Pen', lang), shortcut: 'P', icon: PenTool, group: 1 },
+    { id: 'highlighter', label: tr('Bút dạ quang', 'Highlighter', lang), shortcut: 'M', icon: Highlighter, group: 1 },
+    { id: 'eraser', label: tr('Tẩy', 'Eraser', lang), shortcut: 'E', icon: Eraser, group: 1 },
+    { id: 'laser', label: tr('Bút tia laser', 'Laser pointer', lang), shortcut: 'L', icon: Wand2, group: 1 },
+    { id: 'rectangle', label: tr('Hình chữ nhật', 'Rectangle', lang), shortcut: 'R', icon: Square, group: 2 },
+    { id: 'ellipse', label: tr('Hình tròn', 'Ellipse', lang), shortcut: 'O', icon: Circle, group: 2 },
+    { id: 'arrow', label: tr('Mũi tên', 'Arrow', lang), shortcut: 'A', icon: ArrowUpRight, group: 2 },
+    { id: 'text', label: tr('Văn bản', 'Text', lang), shortcut: 'T', icon: Type, group: 3 },
+    { id: 'sticky', label: tr('Ghi chú dán', 'Sticky note', lang), shortcut: 'S', icon: StickyNote, group: 3 },
+    { id: 'image', label: tr('Chèn ảnh / tệp', 'Insert image / file', lang), shortcut: 'I', icon: ImageIcon, group: 3 },
+  ];
+}
 
-export const INK_COLORS = [
-  { hex: '#1e293b', label: 'Mực chuẩn' },
-  { hex: '#4f46e5', label: 'Chàm' },
-  { hex: '#2563eb', label: 'Xanh dương' },
-  { hex: '#059669', label: 'Xanh lá' },
-  { hex: '#d97706', label: 'Hổ phách' },
-  { hex: '#e11d48', label: 'Đỏ hồng' },
-  { hex: '#7c3aed', label: 'Tím' },
-  { hex: '#64748b', label: 'Xám đá' },
-];
+export const TOOLS: ToolItem[] = getTools('vi');
 
-export const HIGHLIGHTER_COLORS = [
-  { hex: '#fde047', label: 'Vàng chanh' },
-  { hex: '#86efac', label: 'Xanh bạc hà' },
-  { hex: '#7dd3fc', label: 'Xanh trời' },
-  { hex: '#f9a8d4', label: 'Hồng phấn' },
-  { hex: '#fdba74', label: 'Cam nhạt' },
-  { hex: '#c4b5fd', label: 'Tím nhạt' },
-];
+export function getInkColors(lang: AppLanguage = getAppLanguage()) {
+  return [
+    { hex: '#1e293b', label: tr('Mực chuẩn', 'Standard ink', lang) },
+    { hex: '#4f46e5', label: tr('Chàm', 'Indigo', lang) },
+    { hex: '#2563eb', label: tr('Xanh dương', 'Blue', lang) },
+    { hex: '#059669', label: tr('Xanh lá', 'Green', lang) },
+    { hex: '#d97706', label: tr('Hổ phách', 'Amber', lang) },
+    { hex: '#e11d48', label: tr('Đỏ hồng', 'Rose', lang) },
+    { hex: '#7c3aed', label: tr('Tím', 'Purple', lang) },
+    { hex: '#64748b', label: tr('Xám đá', 'Slate', lang) },
+  ];
+}
 
-export const STICKY_COLORS = [
-  { hex: '#fef08a', label: 'Vàng nhạt' },
-  { hex: '#bbf7d0', label: 'Xanh lá nhạt' },
-  { hex: '#bae6fd', label: 'Xanh dương nhạt' },
-  { hex: '#fbcfe8', label: 'Hồng nhạt' },
-  { hex: '#fed7aa', label: 'Cam đào' },
-  { hex: '#e9d5ff', label: 'Tím oải hương' },
-];
+export const INK_COLORS = getInkColors('vi');
 
-export const STROKE_WIDTHS = [
-  { value: 2, label: 'Mảnh', dot: 4 },
-  { value: 4, label: 'Vừa', dot: 7 },
-  { value: 7, label: 'Đậm', dot: 10 },
-  { value: 12, label: 'Rất đậm', dot: 14 },
-];
+export function getHighlighterColors(lang: AppLanguage = getAppLanguage()) {
+  return [
+    { hex: '#fde047', label: tr('Vàng chanh', 'Yellow', lang) },
+    { hex: '#86efac', label: tr('Xanh bạc hà', 'Mint green', lang) },
+    { hex: '#7dd3fc', label: tr('Xanh trời', 'Sky blue', lang) },
+    { hex: '#f9a8d4', label: tr('Hồng phấn', 'Pink', lang) },
+    { hex: '#fdba74', label: tr('Cam nhạt', 'Light orange', lang) },
+    { hex: '#c4b5fd', label: tr('Tím nhạt', 'Light purple', lang) },
+  ];
+}
 
-export const ERASER_SIZES = [
-  { value: 14, label: 'Nhỏ', dot: 6 },
-  { value: 24, label: 'Vừa', dot: 10 },
-  { value: 40, label: 'Lớn', dot: 14 },
-  { value: 64, label: 'Rất lớn', dot: 18 },
-];
+export const HIGHLIGHTER_COLORS = getHighlighterColors('vi');
 
-export const PATTERNS: { id: BoardPattern; label: string }[] = [
-  { id: 'plain', label: 'Trắng trơn' },
-  { id: 'grid', label: 'Lưới ô ly' },
-  { id: 'coordinate', label: 'Trục tọa độ Oxy' },
-  { id: 'isometric', label: 'Lưới tam giác 3D' },
-  { id: 'polar', label: 'Lưới tọa độ cực' },
-  { id: 'dots', label: 'Chấm bi' },
-  { id: 'lined', label: 'Dòng kẻ' },
-];
+export function getStickyColors(lang: AppLanguage = getAppLanguage()) {
+  return [
+    { hex: '#fef08a', label: tr('Vàng nhạt', 'Light yellow', lang) },
+    { hex: '#bbf7d0', label: tr('Xanh lá nhạt', 'Light green', lang) },
+    { hex: '#bae6fd', label: tr('Xanh dương nhạt', 'Light blue', lang) },
+    { hex: '#fbcfe8', label: tr('Hồng nhạt', 'Light pink', lang) },
+    { hex: '#fed7aa', label: tr('Cam đào', 'Peach', lang) },
+    { hex: '#e9d5ff', label: tr('Tím oải hương', 'Lavender', lang) },
+  ];
+}
 
-export const NOTEBOOK_PAPER_OPTIONS: { id: NotebookPaperSize; label: string; desc: string }[] = [
-  { id: 'a4', label: 'Khổ A4', desc: '210 × 297 mm' },
-  { id: 'a3', label: 'Khổ A3', desc: '297 × 420 mm' },
-  { id: 'b5', label: 'Khổ B5', desc: '176 × 250 mm' },
-  { id: 'letter', label: 'Khổ Letter', desc: '216 × 279 mm' },
-];
+export const STICKY_COLORS = getStickyColors('vi');
+
+export function getStrokeWidths(lang: AppLanguage = getAppLanguage()) {
+  return [
+    { value: 2, label: tr('Mảnh', 'Thin', lang), dot: 4 },
+    { value: 4, label: tr('Vừa', 'Medium', lang), dot: 7 },
+    { value: 7, label: tr('Đậm', 'Thick', lang), dot: 10 },
+    { value: 12, label: tr('Rất đậm', 'Extra thick', lang), dot: 14 },
+  ];
+}
+
+export const STROKE_WIDTHS = getStrokeWidths('vi');
+
+export function getEraserSizes(lang: AppLanguage = getAppLanguage()) {
+  return [
+    { value: 14, label: tr('Nhỏ', 'Small', lang), dot: 6 },
+    { value: 24, label: tr('Vừa', 'Medium', lang), dot: 10 },
+    { value: 40, label: tr('Lớn', 'Large', lang), dot: 14 },
+    { value: 64, label: tr('Rất lớn', 'Extra large', lang), dot: 18 },
+  ];
+}
+
+export const ERASER_SIZES = getEraserSizes('vi');
+
+export function getPatterns(lang: AppLanguage = getAppLanguage()): { id: BoardPattern; label: string }[] {
+  return [
+    { id: 'plain', label: tr('Trắng trơn', 'Blank', lang) },
+    { id: 'grid', label: tr('Lưới ô ly', 'Square grid', lang) },
+    { id: 'coordinate', label: tr('Trục tọa độ Oxy', 'Oxy coordinate axes', lang) },
+    { id: 'isometric', label: tr('Lưới tam giác 3D', '3D isometric grid', lang) },
+    { id: 'polar', label: tr('Lưới tọa độ cực', 'Polar grid', lang) },
+    { id: 'dots', label: tr('Chấm bi', 'Dot grid', lang) },
+    { id: 'lined', label: tr('Dòng kẻ', 'Lined', lang) },
+  ];
+}
+
+export const PATTERNS: { id: BoardPattern; label: string }[] = getPatterns('vi');
+
+export function getNotebookPaperOptions(
+  lang: AppLanguage = getAppLanguage()
+): { id: NotebookPaperSize; label: string; desc: string }[] {
+  return [
+    { id: 'a4', label: tr('Khổ A4', 'A4 size', lang), desc: '210 × 297 mm' },
+    { id: 'a3', label: tr('Khổ A3', 'A3 size', lang), desc: '297 × 420 mm' },
+    { id: 'b5', label: tr('Khổ B5', 'B5 size', lang), desc: '176 × 250 mm' },
+    { id: 'letter', label: tr('Khổ Letter', 'Letter size', lang), desc: '216 × 279 mm' },
+  ];
+}
+
+export const NOTEBOOK_PAPER_OPTIONS: { id: NotebookPaperSize; label: string; desc: string }[] =
+  getNotebookPaperOptions('vi');

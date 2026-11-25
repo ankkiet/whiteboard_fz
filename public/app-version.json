@@ -1,6 +1,6 @@
 {
-  "version": "v_fz.1.1.1.1.10",
-  "buildId": "cd42b2d56895",
-  "notes": "Bản cập nhật fzInK (Sửa lỗi chèn PDF trên app desktop và tối ưu mượt khi chèn nhiều trang PDF)",
+  "version": "v_fz.1.1.1.1.11",
+  "buildId": "aa30c1a5edee",
+  "notes": "Bản cập nhật fzInK (Thêm màn hình cập nhật chuyên biệt, chống treo mạng, hiển thị MB/tốc độ, tự thoát app khi cài)",
   "updateOrigin": "https://whiteboardfz.pages.dev"
 }

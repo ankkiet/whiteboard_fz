@@ -38,6 +38,7 @@ import {
   transposeMatrix,
 } from '../../engine/casio580Engine';
 import { FormulaElement } from '../../types/board';
+import { useI18n } from '../../i18n/useI18n';
 import { MathTex } from './MathTex';
 import {
   CasioDistScreen,
@@ -142,6 +143,7 @@ function loadPersistedCasioState(): PersistedCasioState {
 }
 
 export const FloatingCalculator: React.FC = () => {
+  const { t } = useI18n();
   const isOpen = useBoardStore((s) => s.isCalculatorOpen);
   const setIsOpen = useBoardStore((s) => s.setIsCalculatorOpen);
   const isMinimized = useBoardStore((s) => s.isCalculatorMinimized);
@@ -1663,10 +1665,10 @@ export const FloatingCalculator: React.FC = () => {
       setIsEvaluated(true);
       setInfoBanner(
         solvedAll.roots.length === 1
-          ? 'SOLVE: 1 nghiệm thực (L − R = 0)'
+          ? t('SOLVE: 1 nghiệm thực (L − R = 0)', 'SOLVE: 1 real root (L − R = 0)')
           : solvedAll.hasMoreRoots
-            ? `SOLVE: ${solvedAll.roots.length} nghiệm thực gần nhất`
-            : `SOLVE: ${solvedAll.roots.length} nghiệm thực`
+            ? t(`SOLVE: ${solvedAll.roots.length} nghiệm thực gần nhất`, `SOLVE: ${solvedAll.roots.length} nearest real roots`)
+            : t(`SOLVE: ${solvedAll.roots.length} nghiệm thực`, `SOLVE: ${solvedAll.roots.length} real roots`)
       );
       setPreAns(lastResult.numeric);
       setLastResult({
@@ -1745,10 +1747,10 @@ export const FloatingCalculator: React.FC = () => {
     setIsEvaluated(true);
     setInfoBanner(
       solvedAll.roots.length === 1
-        ? 'SOLVE (x): 1 nghiệm thực (L − R = 0)'
+        ? t('SOLVE (x): 1 nghiệm thực (L − R = 0)', 'SOLVE (x): 1 real root (L − R = 0)')
         : solvedAll.hasMoreRoots
-          ? `SOLVE (x): ${solvedAll.roots.length} nghiệm thực gần nhất`
-          : `SOLVE (x): ${solvedAll.roots.length} nghiệm thực`
+          ? t(`SOLVE (x): ${solvedAll.roots.length} nghiệm thực gần nhất`, `SOLVE (x): ${solvedAll.roots.length} nearest real roots`)
+          : t(`SOLVE (x): ${solvedAll.roots.length} nghiệm thực`, `SOLVE (x): ${solvedAll.roots.length} real roots`)
     );
     setPreAns(lastResult.numeric);
     setLastResult({
@@ -1768,7 +1770,7 @@ export const FloatingCalculator: React.FC = () => {
       : lastResult.numeric;
     const factLatex = factorizeIntegerLatex(targetVal);
     if (!factLatex) {
-      setErrorMsg('FACT: Cần số nguyên');
+      setErrorMsg(t('FACT: Cần số nguyên', 'FACT: Integer required'));
       setIsEvaluated(false);
       return;
     }
@@ -1830,10 +1832,10 @@ export const FloatingCalculator: React.FC = () => {
         fullLatex = `\\begin{cases} ${sys2[0]}x + (${sys2[1]})y = ${sys2[2]} \\\\ ${sys2[3]}x + (${sys2[4]})y = ${sys2[5]} \\end{cases} \\Rightarrow ${res.summaryLatex}`;
         boxHeight = 86;
       } else if (eqSubMode === 'sys3') {
-        fullLatex = `\\text{Hệ 3 ẩn} \\Rightarrow ${res.summaryLatex}`;
+        fullLatex = `\\text{${t('Hệ 3 ẩn', '3-var system')}} \\Rightarrow ${res.summaryLatex}`;
         boxHeight = 68;
       } else if (eqSubMode === 'sys4') {
-        fullLatex = `\\text{Hệ 4 ẩn} \\Rightarrow ${res.summaryLatex}`;
+        fullLatex = `\\text{${t('Hệ 4 ẩn', '4-var system')}} \\Rightarrow ${res.summaryLatex}`;
         boxHeight = 68;
       } else if (eqSubMode === 'quad') {
         fullLatex = `${qa}x^2 + (${qb})x + (${qc}) = 0 \\Rightarrow ${res.summaryLatex}`;
@@ -1891,7 +1893,7 @@ export const FloatingCalculator: React.FC = () => {
         p: parseCasioCoeff(distP),
         lambda: parseCasioCoeff(distLambda),
       });
-      fullLatex = res ? res.summaryLatex : '\\text{Phân phối xác suất}';
+      fullLatex = res ? res.summaryLatex : `\\text{${t('Phân phối xác suất', 'Probability distribution')}}`;
     } else if (mode === 'ineq') {
       const opTex = ineqOp === '>=' ? '\\ge' : ineqOp === '<=' ? '\\le' : ineqOp;
       if (ineqDegree === 3) {
@@ -1987,7 +1989,10 @@ export const FloatingCalculator: React.FC = () => {
       zIndex: maxZ + 1,
     };
     addElement(el, true);
-    addToast('Đã dán kết quả từ Casio fx-580VN X lên bảng', 'success');
+    addToast(
+      t('Đã dán kết quả từ Casio fx-580VN X lên bảng', 'Pinned result from Casio fx-580VN X to board'),
+      'success'
+    );
   };
 
   const runKey = (onNormal: () => void, onShift?: () => void, onAlpha?: () => void) => {
@@ -2013,7 +2018,7 @@ export const FloatingCalculator: React.FC = () => {
       labelLatex: '\\frac{\\square}{\\square}',
       shiftLabel: '■a/b',
       alphaLabel: '÷R',
-      title: 'Phân số (SHIFT: Hỗn số, ALPHA: Chia có dư ÷R)',
+      title: t('Phân số (SHIFT: Hỗn số, ALPHA: Chia có dư ÷R)', 'Fraction (SHIFT: Mixed fraction, ALPHA: Remainder division ÷R)'),
       onPress: handleInsertSmartFraction,
       onShiftPress: () => insertTokenToActiveField('mixfrac(;;)', 8),
       onAlphaPress: () => insertTokenToActiveField(' ÷R '),
@@ -2024,7 +2029,7 @@ export const FloatingCalculator: React.FC = () => {
       labelLatex: '\\sqrt{\\square}',
       shiftLabel: '³√□',
       alphaLabel: '(■)',
-      title: 'Căn bậc hai (SHIFT: Căn bậc ba, ALPHA: Số thập phân tuần hoàn)',
+      title: t('Căn bậc hai (SHIFT: Căn bậc ba, ALPHA: Số thập phân tuần hoàn)', 'Square root (SHIFT: Cube root, ALPHA: Repeating decimal)'),
       onPress: () => insertTokenToActiveField('sqrt()', 5),
       onShiftPress: () => insertTokenToActiveField('cbrt()', 5),
       onAlphaPress: () => insertTokenToActiveField('()', 1),
@@ -2035,7 +2040,7 @@ export const FloatingCalculator: React.FC = () => {
       labelLatex: 'x^{2}',
       shiftLabel: 'x³',
       alphaLabel: 'DEC',
-      title: 'Bình phương (SHIFT: lập phương, Mode 3 Base-N: DEC)',
+      title: t('Bình phương (SHIFT: lập phương, Mode 3 Base-N: DEC)', 'Square (SHIFT: Cube, Mode 3 Base-N: DEC)'),
       onPress: () => {
         if (mode === 'basen') {
           const cur = evaluateCasioBaseN(baseExpr, baseMode);
@@ -2054,7 +2059,7 @@ export const FloatingCalculator: React.FC = () => {
       labelLatex: 'x^{\\square}',
       shiftLabel: 'ˣ√□',
       alphaLabel: 'HEX',
-      title: 'Lũy thừa (SHIFT: căn bậc n, Mode 3 Base-N: HEX, ALPHA: cot)',
+      title: t('Lũy thừa (SHIFT: căn bậc n, Mode 3 Base-N: HEX, ALPHA: cot)', 'Power (SHIFT: nth root, Mode 3 Base-N: HEX, ALPHA: cot)'),
       onPress: () => {
         if (mode === 'basen') {
           const cur = evaluateCasioBaseN(baseExpr, baseMode);
@@ -2073,7 +2078,7 @@ export const FloatingCalculator: React.FC = () => {
       labelLatex: '\\log_{\\square}\\square',
       shiftLabel: '10^□',
       alphaLabel: 'BIN',
-      title: 'Logarit cơ số bất kỳ (SHIFT: 10^x, Mode 3 Base-N: BIN, ALPHA: cot⁻¹)',
+      title: t('Logarit cơ số bất kỳ (SHIFT: 10^x, Mode 3 Base-N: BIN, ALPHA: cot⁻¹)', 'Logarithm base (SHIFT: 10^x, Mode 3 Base-N: BIN, ALPHA: cot⁻¹)'),
       onPress: () => {
         if (mode === 'basen') {
           const cur = evaluateCasioBaseN(baseExpr, baseMode);
@@ -2091,7 +2096,7 @@ export const FloatingCalculator: React.FC = () => {
       label: 'ln',
       shiftLabel: 'e^□',
       alphaLabel: 'OCT',
-      title: 'Logarit tự nhiên ln (SHIFT: e^x, Mode 3 Base-N: OCT)',
+      title: t('Logarit tự nhiên ln (SHIFT: e^x, Mode 3 Base-N: OCT)', 'Natural logarithm ln (SHIFT: e^x, Mode 3 Base-N: OCT)'),
       onPress: () => {
         if (mode === 'basen') {
           const cur = evaluateCasioBaseN(baseExpr, baseMode);
@@ -2111,7 +2116,7 @@ export const FloatingCalculator: React.FC = () => {
       label: '(−)',
       shiftLabel: 'log',
       alphaLabel: 'A',
-      title: 'Dấu âm (SHIFT: log10, ALPHA: biến A · MENU A: bất PT · HEX: A)',
+      title: t('Dấu âm (SHIFT: log10, ALPHA: biến A · MENU A: bất PT · HEX: A)', 'Negative sign (SHIFT: log10, ALPHA: var A · MENU A: Inequality · HEX: A)'),
       onPress: () => {
         if (trySelectMenuByKey('A')) return;
         if (mode === 'basen' && baseMode === 'HEX') {
@@ -2128,7 +2133,7 @@ export const FloatingCalculator: React.FC = () => {
       label: `° ' "`,
       shiftLabel: 'FACT',
       alphaLabel: 'B',
-      title: `Độ phút giây (SHIFT: phân tích thừa số NT FACT, ALPHA: biến B · MENU B: đúng/sai · HEX: B)`,
+      title: t(`Độ phút giây (SHIFT: phân tích thừa số NT FACT, ALPHA: biến B · MENU B: đúng/sai · HEX: B)`, `Degrees minutes seconds (SHIFT: Prime factorization FACT, ALPHA: var B · MENU B: Verify · HEX: B)`),
       onPress: () => {
         if (trySelectMenuByKey('B')) return;
         if (mode === 'basen' && baseMode === 'HEX') {
@@ -2147,7 +2152,7 @@ export const FloatingCalculator: React.FC = () => {
       labelLatex: 'x^{-1}',
       shiftLabel: 'x!',
       alphaLabel: 'C',
-      title: 'Nghịch đảo (SHIFT: giai thừa !, ALPHA: biến C · MENU C: tỉ lệ thức · HEX: C)',
+      title: t('Nghịch đảo (SHIFT: giai thừa !, ALPHA: biến C · MENU C: tỉ lệ thức · HEX: C)', 'Reciprocal (SHIFT: factorial !, ALPHA: var C · MENU C: Ratio · HEX: C)'),
       onPress: () => {
         if (trySelectMenuByKey('C')) return;
         if (mode === 'basen' && baseMode === 'HEX') {
@@ -2164,7 +2169,7 @@ export const FloatingCalculator: React.FC = () => {
       label: 'sin',
       shiftLabel: 'sin⁻¹',
       alphaLabel: 'D',
-      title: 'Sin (SHIFT: sin⁻¹, ALPHA: biến D · HEX: D)',
+      title: t('Sin (SHIFT: sin⁻¹, ALPHA: biến D · HEX: D)', 'Sin (SHIFT: sin⁻¹, ALPHA: var D · HEX: D)'),
       onPress: () => {
         if (mode === 'basen' && baseMode === 'HEX') {
           insertTokenToActiveField('D');
@@ -2180,7 +2185,7 @@ export const FloatingCalculator: React.FC = () => {
       label: 'cos',
       shiftLabel: 'cos⁻¹',
       alphaLabel: 'E',
-      title: 'Cos (SHIFT: cos⁻¹, ALPHA: biến T / HEX: E)',
+      title: t('Cos (SHIFT: cos⁻¹, ALPHA: biến T / HEX: E)', 'Cos (SHIFT: cos⁻¹, ALPHA: var T / HEX: E)'),
       onPress: () => {
         if (mode === 'basen' && baseMode === 'HEX') {
           insertTokenToActiveField('E');
@@ -2196,7 +2201,7 @@ export const FloatingCalculator: React.FC = () => {
       label: 'tan',
       shiftLabel: 'tan⁻¹',
       alphaLabel: 'F',
-      title: 'Tan (SHIFT: tan⁻¹, ALPHA: biến F · HEX: F)',
+      title: t('Tan (SHIFT: tan⁻¹, ALPHA: biến F · HEX: F)', 'Tan (SHIFT: tan⁻¹, ALPHA: var F · HEX: F)'),
       onPress: () => {
         if (mode === 'basen' && baseMode === 'HEX') {
           insertTokenToActiveField('F');
@@ -2214,12 +2219,12 @@ export const FloatingCalculator: React.FC = () => {
       id: 'sto',
       label: 'STO',
       shiftLabel: 'RECALL',
-      title: 'Lưu giá trị vào biến (SHIFT: Xem tất cả biến nhớ)',
+      title: t('Lưu giá trị vào biến (SHIFT: Xem tất cả biến nhớ)', 'Store value to variable (SHIFT: Recall all variables)'),
       onPress: () => {
         setStoActive((v) => !v);
         setAlphaActive(true);
         setShiftActive(false);
-        setInfoBanner('STO: Bấm phím biến (A..F, x, y, z, M)');
+        setInfoBanner(t('STO: Bấm phím biến (A..F, x, y, z, M)', 'STO: Press variable key (A..F, x, y, z, M)'));
       },
       onShiftPress: () => setOverlay((o) => (o === 'recall' ? null : 'recall')),
     },
@@ -2228,7 +2233,7 @@ export const FloatingCalculator: React.FC = () => {
       label: 'ENG',
       shiftLabel: '∠',
       alphaLabel: 'i',
-      title: 'Ký hiệu kỹ thuật ENG (SHIFT: Góc phức ∠, ALPHA: Đơn vị ảo i)',
+      title: t('Ký hiệu kỹ thuật ENG (SHIFT: Góc phức ∠, ALPHA: Đơn vị ảo i)', 'Engineering notation ENG (SHIFT: Complex angle ∠, ALPHA: Imaginary unit i)'),
       onPress: () => setDisplayFormat((f) => (f === 'eng' ? 'exact' : 'eng')),
       onShiftPress: () => {
         if (mode !== 'complex') setMode('complex');
@@ -2244,7 +2249,7 @@ export const FloatingCalculator: React.FC = () => {
       label: '(',
       shiftLabel: 'Abs',
       alphaLabel: 'x',
-      title: 'Mở ngoặc (SHIFT: Giá trị tuyệt đối Abs, ALPHA: Biến x)',
+      title: t('Mở ngoặc (SHIFT: Giá trị tuyệt đối Abs, ALPHA: Biến x)', 'Left parenthesis (SHIFT: Absolute value Abs, ALPHA: Variable x)'),
       onPress: () => insertTokenToActiveField('('),
       onShiftPress: () => insertTokenToActiveField('abs('),
       onAlphaPress: () => insertTokenToActiveField('x'),
@@ -2254,7 +2259,7 @@ export const FloatingCalculator: React.FC = () => {
       label: ')',
       shiftLabel: ';',
       alphaLabel: 'y',
-      title: 'Đóng ngoặc',
+      title: t('Đóng ngoặc', 'Right parenthesis'),
       onPress: () => insertTokenToActiveField(')'),
       onShiftPress: () => {
         if (mode === 'calc' && overlay === null) handleDpadHorizontal(1);
@@ -2267,7 +2272,7 @@ export const FloatingCalculator: React.FC = () => {
       label: 'S⇔D',
       shiftLabel: 'a b/c⇔d/c',
       alphaLabel: 'z',
-      title: 'Chuyển đổi Phân số/Căn ↔ Thập phân',
+      title: t('Chuyển đổi Phân số/Căn ↔ Thập phân', 'Toggle Fraction/Surd ↔ Decimal'),
       onPress: handleToggleSD,
       onShiftPress: handleToggleMixed,
       onAlphaPress: () => insertTokenToActiveField('z'),
@@ -2277,7 +2282,7 @@ export const FloatingCalculator: React.FC = () => {
       label: 'M+',
       shiftLabel: 'M−',
       alphaLabel: 'M',
-      title: 'Cộng bộ nhớ M (SHIFT: Trừ M, ALPHA: Biến M)',
+      title: t('Cộng bộ nhớ M (SHIFT: Trừ M, ALPHA: Biến M)', 'Add to memory M (SHIFT: Subtract from M, ALPHA: Variable M)'),
       onPress: () => {
         if (Number.isFinite(lastResult.numeric)) {
           setVars((v) => ({ ...v, M: (v.M ?? 0) + lastResult.numeric }));
@@ -2301,7 +2306,7 @@ export const FloatingCalculator: React.FC = () => {
         id: 'k7',
         label: '7',
         shiftLabel: 'CONST',
-        title: 'Số 7 (SHIFT: Hằng số khoa học CONST)',
+        title: t('Số 7 (SHIFT: Hằng số khoa học CONST)', 'Digit 7 (SHIFT: Scientific constants CONST)'),
         onPress: () => insertTokenToActiveField('7'),
         onShiftPress: () => setOverlay((o) => (o === 'const' ? null : 'const')),
       },
@@ -2309,7 +2314,7 @@ export const FloatingCalculator: React.FC = () => {
         id: 'k8',
         label: '8',
         shiftLabel: 'CONV',
-        title: 'Số 8 (SHIFT: Đổi đơn vị CONV)',
+        title: t('Số 8 (SHIFT: Đổi đơn vị CONV)', 'Digit 8 (SHIFT: Unit conversion CONV)'),
         onPress: () => insertTokenToActiveField('8'),
         onShiftPress: () => setOverlay((o) => (o === 'conv' ? null : 'conv')),
       },
@@ -2318,7 +2323,7 @@ export const FloatingCalculator: React.FC = () => {
         label: '9',
         shiftLabel: 'Limit',
         alphaLabel: '∞',
-        title: 'Số 9 (SHIFT: Giới hạn Limit, ALPHA: Vô cực ∞)',
+        title: t('Số 9 (SHIFT: Giới hạn Limit, ALPHA: Vô cực ∞)', 'Digit 9 (SHIFT: Limit, ALPHA: Infinity ∞)'),
         onPress: () => insertTokenToActiveField('9'),
         onShiftPress: () => insertTokenToActiveField('lim(;)', 4),
         onAlphaPress: () => insertTokenToActiveField('∞'),
@@ -2328,7 +2333,7 @@ export const FloatingCalculator: React.FC = () => {
         label: 'DEL',
         shiftLabel: 'INS',
         alphaLabel: 'UNDO',
-        title: 'Xóa ký tự (ALPHA: Hoàn tác UNDO)',
+        title: t('Xóa ký tự (ALPHA: Hoàn tác UNDO)', 'Delete character (ALPHA: Undo)'),
         variant: 'blue',
         testId: 'casio-del-key',
         onPress: handleDeleteChar,
@@ -2339,7 +2344,7 @@ export const FloatingCalculator: React.FC = () => {
         id: 'ac',
         label: 'AC',
         shiftLabel: 'OFF',
-        title: 'Xóa toàn bộ (SHIFT: Đóng máy tính)',
+        title: t('Xóa toàn bộ (SHIFT: Đóng máy tính)', 'All clear (SHIFT: Turn off calculator)'),
         variant: 'blue',
         testId: 'casio-ac-key',
         onPress: handleAllClear,
@@ -2352,7 +2357,7 @@ export const FloatingCalculator: React.FC = () => {
         label: '4',
         shiftLabel: 'MATRIX',
         alphaLabel: '▦',
-        title: 'Số 4 (SHIFT: chế độ ma trận)',
+        title: t('Số 4 (SHIFT: chế độ ma trận)', 'Digit 4 (SHIFT: Matrix mode)'),
         onPress: () => insertTokenToActiveField('4'),
         onShiftPress: () => {
           setOverlay(null);
@@ -2367,7 +2372,7 @@ export const FloatingCalculator: React.FC = () => {
         id: 'k5',
         label: '5',
         shiftLabel: 'VECTOR',
-        title: 'Số 5 (SHIFT: chế độ vectơ)',
+        title: t('Số 5 (SHIFT: chế độ vectơ)', 'Digit 5 (SHIFT: Vector mode)'),
         onPress: () => insertTokenToActiveField('5'),
         onShiftPress: () => {
           setOverlay(null);
@@ -2378,7 +2383,7 @@ export const FloatingCalculator: React.FC = () => {
         id: 'k6',
         label: '6',
         shiftLabel: 'STAT',
-        title: 'Số 6 (SHIFT: chế độ thống kê)',
+        title: t('Số 6 (SHIFT: chế độ thống kê)', 'Digit 6 (SHIFT: Statistics mode)'),
         onPress: () => insertTokenToActiveField('6'),
         onShiftPress: () => {
           setOverlay(null);
@@ -2390,7 +2395,7 @@ export const FloatingCalculator: React.FC = () => {
         label: '×',
         shiftLabel: 'nPr',
         alphaLabel: 'GCD',
-        title: 'Nhân (SHIFT: Chỉnh hợp P, ALPHA: ƯCLN GCD)',
+        title: t('Nhân (SHIFT: Chỉnh hợp P, ALPHA: ƯCLN GCD)', 'Multiply (SHIFT: Permutation nPr, ALPHA: GCD)'),
         onPress: () => insertTokenToActiveField('×'),
         onShiftPress: () => insertTokenToActiveField('P'),
         onAlphaPress: () => insertTokenToActiveField('GCD(;)', 4),
@@ -2400,32 +2405,32 @@ export const FloatingCalculator: React.FC = () => {
         label: '÷',
         shiftLabel: 'nCr',
         alphaLabel: 'LCM',
-        title: 'Chia (SHIFT: Tổ hợp C, ALPHA: BCNN LCM)',
+        title: t('Chia (SHIFT: Tổ hợp C, ALPHA: BCNN LCM)', 'Divide (SHIFT: Combination nCr, ALPHA: LCM)'),
         onPress: () => insertTokenToActiveField('÷'),
         onShiftPress: () => insertTokenToActiveField('C'),
         onAlphaPress: () => insertTokenToActiveField('LCM(;)', 4),
       },
     ],
     [
-      { id: 'k1', label: '1', title: 'Số 1', onPress: () => insertTokenToActiveField('1') },
+      { id: 'k1', label: '1', title: t('Số 1', 'Digit 1'), onPress: () => insertTokenToActiveField('1') },
       {
         id: 'k2',
         label: '2',
         shiftLabel: 'CMPLX',
-        title: 'Số 2 (SHIFT: Chế độ Số phức)',
+        title: t('Số 2 (SHIFT: Chế độ Số phức)', 'Digit 2 (SHIFT: Complex mode)'),
         onPress: () => insertTokenToActiveField('2'),
         onShiftPress: () => {
           setOverlay(null);
           setMode('complex');
         },
       },
-      { id: 'k3', label: '3', title: 'Số 3', onPress: () => insertTokenToActiveField('3') },
+      { id: 'k3', label: '3', title: t('Số 3', 'Digit 3'), onPress: () => insertTokenToActiveField('3') },
       {
         id: 'plus',
         label: '+',
         shiftLabel: 'Pol',
         alphaLabel: 'Ceil',
-        title: 'Cộng (SHIFT: Tọa độ cực Pol, ALPHA: Làm tròn lên Ceil)',
+        title: t('Cộng (SHIFT: Tọa độ cực Pol, ALPHA: Làm tròn lên Ceil)', 'Add (SHIFT: Polar coordinates Pol, ALPHA: Ceiling)'),
         onPress: () => insertTokenToActiveField('+'),
         onShiftPress: () => insertTokenToActiveField('Pol(;)', 4),
         onAlphaPress: () => insertTokenToActiveField('Ceil('),
@@ -2435,20 +2440,20 @@ export const FloatingCalculator: React.FC = () => {
         label: '−',
         shiftLabel: 'Rec',
         alphaLabel: 'Intg',
-        title: 'Trừ (SHIFT: Tọa độ Descartes Rec, ALPHA: Phần nguyên Intg)',
+        title: t('Trừ (SHIFT: Tọa độ Descartes Rec, ALPHA: Phần nguyên Intg)', 'Subtract (SHIFT: Rectangular coordinates Rec, ALPHA: Integer part Intg)'),
         onPress: () => insertTokenToActiveField('−'),
         onShiftPress: () => insertTokenToActiveField('Rec(;)', 4),
         onAlphaPress: () => insertTokenToActiveField('Intg('),
       },
     ],
     [
-      { id: 'k0', label: '0', title: 'Số 0', onPress: () => insertTokenToActiveField('0') },
+      { id: 'k0', label: '0', title: t('Số 0', 'Digit 0'), onPress: () => insertTokenToActiveField('0') },
       {
         id: 'dot',
         label: '.',
         shiftLabel: 'Ran#',
         alphaLabel: 'RanInt',
-        title: 'Dấu thập phân (SHIFT: Số ngẫu nhiên Ran#, ALPHA: RanInt#)',
+        title: t('Dấu thập phân (SHIFT: Số ngẫu nhiên Ran#, ALPHA: RanInt#)', 'Decimal point (SHIFT: Random Ran#, ALPHA: RanInt#)'),
         onPress: () => insertTokenToActiveField('.'),
         onShiftPress: () => insertTokenToActiveField('Ran()'),
         onAlphaPress: () => insertTokenToActiveField('RanInt(;)', 7),
@@ -2458,7 +2463,7 @@ export const FloatingCalculator: React.FC = () => {
         label: '×10ˣ',
         shiftLabel: 'π',
         alphaLabel: 'e',
-        title: 'Nhân 10 mũ x (SHIFT: số π, ALPHA: số e)',
+        title: t('Nhân 10 mũ x (SHIFT: số π, ALPHA: số e)', 'Multiply by 10^x (SHIFT: π, ALPHA: e)'),
         onPress: () => insertTokenToActiveField('×10^'),
         onShiftPress: () => insertTokenToActiveField('π'),
         onAlphaPress: () => insertTokenToActiveField('e'),
@@ -2468,7 +2473,7 @@ export const FloatingCalculator: React.FC = () => {
         label: 'Ans',
         shiftLabel: '%',
         alphaLabel: 'PreAns',
-        title: 'Kết quả trước Ans (SHIFT: %, ALPHA: PreAns)',
+        title: t('Kết quả trước Ans (SHIFT: %, ALPHA: PreAns)', 'Previous answer Ans (SHIFT: %, ALPHA: PreAns)'),
         onPress: () => insertTokenToActiveField('Ans'),
         onShiftPress: () => insertTokenToActiveField('/100'),
         onAlphaPress: () => insertTokenToActiveField('PreAns'),
@@ -2477,7 +2482,7 @@ export const FloatingCalculator: React.FC = () => {
         id: 'eq',
         label: '=',
         shiftLabel: '≈',
-        title: 'Tính toán (SHIFT: Kết quả thập phân xấp xỉ ≈)',
+        title: t('Tính toán (SHIFT: Kết quả thập phân xấp xỉ ≈)', 'Evaluate (SHIFT: Decimal approximation ≈)'),
         testId: 'casio-equals-key',
         onPress: () => evaluateNow(false),
         onShiftPress: () => evaluateNow(true),
@@ -2486,19 +2491,19 @@ export const FloatingCalculator: React.FC = () => {
   ];
 
   const modeBadgeLabel: Record<CasioMainMode, string> = {
-    calc: '1: Tính toán',
-    complex: '2: Số phức',
-    basen: '3: Cơ số n',
-    matrix: '4: Ma trận',
-    vector: '5: Vectơ',
-    stats: '6: Thống kê',
-    dist: '7: Phân phối',
-    table: '8: Bảng f(x)',
-    equation: '9: Phương trình',
-    ineq: 'A: Bất PT',
-    verify: 'B: Đúng / Sai',
-    ratio: 'C: Tỉ lệ thức',
-    menu: 'Menu chính (1–9, A–C)',
+    calc: t('1: Tính toán', '1: Calculate'),
+    complex: t('2: Số phức', '2: Complex'),
+    basen: t('3: Cơ số n', '3: Base-N'),
+    matrix: t('4: Ma trận', '4: Matrix'),
+    vector: t('5: Vectơ', '5: Vector'),
+    stats: t('6: Thống kê', '6: Statistics'),
+    dist: t('7: Phân phối', '7: Distribution'),
+    table: t('8: Bảng f(x)', '8: Table'),
+    equation: t('9: Phương trình', '9: Equation/Func'),
+    ineq: t('A: Bất PT', 'A: Inequality'),
+    verify: t('B: Đúng / Sai', 'B: Verify'),
+    ratio: t('C: Tỉ lệ thức', 'C: Ratio'),
+    menu: t('Menu chính (1–9, A–C)', 'Main menu (1–9, A–C)'),
   };
 
   const chassisClass =
@@ -2637,10 +2642,13 @@ export const FloatingCalculator: React.FC = () => {
             onClick={() => setIsMinimized(!isMinimized)}
             title={
               isMinimized
-                ? 'Mở rộng bàn phím Casio'
-                : 'Thu gọn chỉ hiện màn hình LCD (vẫn gõ trực tiếp vào ô từ bàn phím)'
+                ? t('Mở rộng bàn phím Casio', 'Expand Casio keypad')
+                : t(
+                    'Thu gọn chỉ hiện màn hình LCD (vẫn gõ trực tiếp vào ô từ bàn phím)',
+                    'Minimize to LCD only (still accepts keyboard input)'
+                  )
             }
-            aria-label={isMinimized ? 'Mở rộng bàn phím Casio' : 'Thu gọn máy tính Casio'}
+            aria-label={isMinimized ? t('Mở rộng bàn phím Casio', 'Expand Casio keypad') : t('Thu gọn máy tính Casio', 'Minimize Casio calculator')}
             className="w-5.5 h-5.5 rounded-full bg-white/10 hover:bg-indigo-500/80 text-slate-200 flex items-center justify-center transition-colors cursor-pointer"
           >
             {isMinimized ? <Maximize2 className="w-3 h-3" /> : <Minimize2 className="w-3 h-3" />}
@@ -2649,7 +2657,7 @@ export const FloatingCalculator: React.FC = () => {
             type="button"
             onPointerDown={(e) => e.stopPropagation()}
             onClick={() => setIsOpen(false)}
-            aria-label="Đóng máy tính Casio"
+            aria-label={t('Đóng máy tính Casio', 'Close Casio calculator')}
             className="w-5.5 h-5.5 rounded-full bg-white/10 hover:bg-rose-500/80 text-slate-200 flex items-center justify-center transition-colors cursor-pointer"
           >
             <X className="w-3.5 h-3.5" />
@@ -2695,7 +2703,10 @@ export const FloatingCalculator: React.FC = () => {
                   </span>
                 )}
                 {mode === 'calc' && history.length > 1 && (
-                  <span className="text-[7.5px] text-[#1e345a]/70 leading-tight shrink-0" title="Có lịch sử (bấm ▲/▼)">
+                  <span
+                    className="text-[7.5px] text-[#1e345a]/70 leading-tight shrink-0"
+                    title={t('Có lịch sử (bấm ▲/▼)', 'Has history (press ▲/▼)')}
+                  >
                     ▲▼
                   </span>
                 )}
@@ -2704,11 +2715,11 @@ export const FloatingCalculator: React.FC = () => {
               <button
                 type="button"
                 onClick={handleStampToBoard}
-                title="Dán kết quả này lên bảng trắng (SHIFT + OPTN)"
+                title={t('Dán kết quả này lên bảng trắng (SHIFT + OPTN)', 'Pin this result to board (SHIFT + OPTN)')}
                 className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-[#1e345a] hover:bg-indigo-700 text-[#eef5ea] text-[8.5px] font-sans font-semibold cursor-pointer shrink-0"
               >
                 <Share2 className="w-2.5 h-2.5" />
-                <span>Lên bảng</span>
+                <span>{t('Lên bảng', 'To board')}</span>
               </button>
             </div>
 
@@ -2968,7 +2979,7 @@ export const FloatingCalculator: React.FC = () => {
           <button
             type="button"
             onClick={() => setAngleUnit((u) => (u === 'D' ? 'R' : u === 'R' ? 'G' : 'D'))}
-            title="Chuyển đổi Độ (DEG) ↔ Radian (RAD) ↔ Gradian (GRAD)"
+            title={t('Chuyển đổi Độ (DEG) ↔ Radian (RAD) ↔ Gradian (GRAD)', 'Switch Degrees (DEG) ↔ Radians (RAD) ↔ Gradians (GRAD)')}
             className="px-1.5 py-0.5 rounded bg-white/10 hover:bg-white/20 border border-white/15 text-slate-200 cursor-pointer"
           >
             {angleUnit === 'D' ? 'DEG' : angleUnit === 'R' ? 'RAD' : 'GRAD'}
@@ -2979,7 +2990,7 @@ export const FloatingCalculator: React.FC = () => {
               const order: CasioDisplayFormat[] = ['exact', 'decimal', 'mixed', 'dms', 'eng'];
               setDisplayFormat(order[(order.indexOf(displayFormat) + 1) % order.length]);
             }}
-            title="Định dạng hiển thị kết quả"
+            title={t('Định dạng hiển thị kết quả', 'Result display format')}
             className="px-1.5 py-0.5 rounded bg-white/10 hover:bg-white/20 border border-white/15 text-slate-200 cursor-pointer"
           >
             {displayFormatLabel[displayFormat]}
@@ -2990,7 +3001,7 @@ export const FloatingCalculator: React.FC = () => {
               const order: CasioNormMode[] = ['NORM', 'FIX', 'SCI'];
               setNormMode(order[(order.indexOf(normMode) + 1) % order.length]);
             }}
-            title="Chế độ làm tròn NORM / FIX / SCI"
+            title={t('Chế độ làm tròn NORM / FIX / SCI', 'Rounding mode NORM / FIX / SCI')}
             className="px-1.5 py-0.5 rounded bg-white/10 hover:bg-white/20 border border-white/15 text-slate-200 cursor-pointer"
           >
             {normMode}
@@ -2998,18 +3009,18 @@ export const FloatingCalculator: React.FC = () => {
           <button
             type="button"
             onClick={() => setIsMinimized(!isMinimized)}
-            title={isMinimized ? 'Hiện bàn phím Casio' : 'Ẩn bàn phím Casio để rộng bảng vẽ'}
+            title={isMinimized ? t('Hiện bàn phím Casio', 'Show Casio keypad') : t('Ẩn bàn phím Casio để rộng bảng vẽ', 'Hide Casio keypad for more canvas space')}
             className="px-1.5 py-0.5 rounded bg-indigo-500/25 hover:bg-indigo-500/40 border border-indigo-400/40 text-indigo-200 cursor-pointer"
           >
-            {isMinimized ? 'Mở phím' : 'Thu phím'}
+            {isMinimized ? t('Mở phím', 'Expand') : t('Thu phím', 'Collapse')}
           </button>
         </div>
         <div className="flex items-center gap-1">
           <button
             type="button"
             onClick={() => setOverlay((o) => (o === 'help' ? null : 'help'))}
-            aria-label="Hướng dẫn phím Casio"
-            title="Hướng dẫn phím Casio"
+            aria-label={t('Hướng dẫn phím Casio', 'Casio key guide')}
+            title={t('Hướng dẫn phím Casio', 'Casio key guide')}
             className="w-5 h-5 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-slate-300 cursor-pointer"
           >
             <HelpCircle className="w-3 h-3" />
@@ -3019,8 +3030,8 @@ export const FloatingCalculator: React.FC = () => {
             onClick={() =>
               setChassisTheme((t) => (t === 'carbon' ? 'navy' : t === 'navy' ? 'silver' : 'carbon'))
             }
-            aria-label="Đổi màu vỏ máy tính"
-            title="Đổi màu vỏ máy tính"
+            aria-label={t('Đổi màu vỏ máy tính', 'Switch calculator body theme')}
+            title={t('Đổi màu vỏ máy tính', 'Switch calculator body theme')}
             className="w-5 h-5 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-slate-300 cursor-pointer"
           >
             <Palette className="w-3 h-3" />
@@ -3078,7 +3089,10 @@ export const FloatingCalculator: React.FC = () => {
                 <span className="h-2.5 text-[7px] font-bold text-amber-400 leading-none">QR</span>
                 <button
                   type="button"
-                  title="Tùy chọn nhanh OPTN (SHIFT: QR — dán kết quả lên bảng trắng)"
+                  title={t(
+                    'Tùy chọn nhanh OPTN (SHIFT: QR — dán kết quả lên bảng trắng)',
+                    'Quick options OPTN (SHIFT: QR — pin result to board)'
+                  )}
                   onClick={() =>
                     runKey(
                       () => setOverlay((o) => (o === 'optn' ? null : 'optn')),
@@ -3098,7 +3112,10 @@ export const FloatingCalculator: React.FC = () => {
                 </div>
                 <button
                   type="button"
-                  title="Thế giá trị biến CALC (SHIFT: Giải PT SOLVE, ALPHA: Dấu =)"
+                  title={t(
+                    'Thế giá trị biến CALC (SHIFT: Giải PT SOLVE, ALPHA: Dấu =)',
+                    'Evaluate variables CALC (SHIFT: Solve equation SOLVE, ALPHA: Equals =)'
+                  )}
                   onClick={() =>
                     runKey(
                       () => setOverlay((o) => (o === 'calcPrompt' ? null : 'calcPrompt')),
@@ -3118,7 +3135,7 @@ export const FloatingCalculator: React.FC = () => {
               <div className="w-full h-full rounded-full bg-gradient-to-b from-[#353b48] to-[#1e222b] relative flex items-center justify-center">
                 <button
                   type="button"
-                  aria-label="Lịch sử trước"
+                  aria-label={t('Lịch sử trước', 'Previous history')}
                   onClick={() => handleDpadVertical('up')}
                   className="absolute top-0.5 left-1/2 -translate-x-1/2 text-slate-300 hover:text-white cursor-pointer"
                 >
@@ -3126,7 +3143,7 @@ export const FloatingCalculator: React.FC = () => {
                 </button>
                 <button
                   type="button"
-                  aria-label="Lịch sử sau"
+                  aria-label={t('Lịch sử sau', 'Next history')}
                   onClick={() => handleDpadVertical('down')}
                   className="absolute bottom-0.5 left-1/2 -translate-x-1/2 text-slate-300 hover:text-white cursor-pointer"
                 >
@@ -3134,8 +3151,8 @@ export const FloatingCalculator: React.FC = () => {
                 </button>
                 <button
                   type="button"
-                  aria-label="Sang trái"
-                  title="Di chuyển con trỏ sang trái / Ô trước"
+                  aria-label={t('Sang trái', 'Move left')}
+                  title={t('Di chuyển con trỏ sang trái / Ô trước', 'Move cursor left / Previous field')}
                   onClick={() => handleDpadHorizontal(-1)}
                   className="absolute left-1 top-1/2 -translate-y-1/2 text-slate-300 hover:text-white cursor-pointer"
                 >
@@ -3143,8 +3160,11 @@ export const FloatingCalculator: React.FC = () => {
                 </button>
                 <button
                   type="button"
-                  aria-label="Sang phải"
-                  title="Di chuyển con trỏ sang phải / Nhảy qua dấu ; / Ô tiếp theo"
+                  aria-label={t('Sang phải', 'Move right')}
+                  title={t(
+                    'Di chuyển con trỏ sang phải / Nhảy qua dấu ; / Ô tiếp theo',
+                    'Move cursor right / Jump past ; / Next field'
+                  )}
                   onClick={() => handleDpadHorizontal(1)}
                   className="absolute right-1 top-1/2 -translate-y-1/2 text-slate-300 hover:text-white cursor-pointer"
                 >
@@ -3166,7 +3186,7 @@ export const FloatingCalculator: React.FC = () => {
                 <button
                   type="button"
                   data-testid="casio-menu-key"
-                  title="MENU các chế độ (SHIFT: Cài đặt SETUP)"
+                  title={t('MENU các chế độ (SHIFT: Cài đặt SETUP)', 'Mode MENU (SHIFT: SETUP settings)')}
                   onClick={() =>
                     runKey(
                       () => {
@@ -3186,8 +3206,8 @@ export const FloatingCalculator: React.FC = () => {
                 <span className="h-2.5" />
                 <button
                   type="button"
-                  title="Cài đặt nhanh góc, làm tròn, màu máy"
-                  aria-label="Cài đặt Casio"
+                  title={t('Cài đặt nhanh góc, làm tròn, màu máy', 'Quick setup: angle unit, rounding, body color')}
+                  aria-label={t('Cài đặt Casio', 'Casio settings')}
                   onClick={() => setOverlay((o) => (o === 'setup' ? null : 'setup'))}
                   className="w-full h-5.5 rounded-md bg-[#2e3440] hover:bg-[#3a4252] border border-slate-600 text-slate-100 flex items-center justify-center cursor-pointer"
                 >
@@ -3202,7 +3222,10 @@ export const FloatingCalculator: React.FC = () => {
                 </div>
                 <button
                   type="button"
-                  title="Tích phân xác định ∫(f(x); a; b) (SHIFT: Đạo hàm d/dx(f(x); a), ALPHA: Dấu ;)"
+                  title={t(
+                    'Tích phân xác định ∫(f(x); a; b) (SHIFT: Đạo hàm d/dx(f(x); a), ALPHA: Dấu ;)',
+                    'Definite integral ∫(f(x); a; b) (SHIFT: Derivative d/dx(f(x); a), ALPHA: ;)'
+                  )}
                   onClick={() =>
                     runKey(
                       () => insertTokenToActiveField('int(;;;x)', 4),
@@ -3226,7 +3249,10 @@ export const FloatingCalculator: React.FC = () => {
                 </div>
                 <button
                   type="button"
-                  title="Biến x (SHIFT: Tổng Σ(f(x); a; b), ALPHA: Tích Π(f(x); a; b))"
+                  title={t(
+                    'Biến x (SHIFT: Tổng Σ(f(x); a; b), ALPHA: Tích Π(f(x); a; b))',
+                    'Variable x (SHIFT: Summation Σ(f(x); a; b), ALPHA: Product Π(f(x); a; b))'
+                  )}
                   onClick={() =>
                     runKey(
                       () => insertTokenToActiveField('x'),

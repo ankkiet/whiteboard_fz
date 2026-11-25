@@ -9,6 +9,7 @@ import {
 } from '../../engine/renderer';
 import { subscribeImageCache } from '../../engine/imageCache';
 import { Camera, LaserPoint } from '../../types/board';
+import { useI18n } from '../../i18n/useI18n';
 import { X, Wand2, Maximize2 } from 'lucide-react';
 
 interface PresentModeProps {
@@ -17,6 +18,7 @@ interface PresentModeProps {
 }
 
 export const PresentMode: React.FC<PresentModeProps> = ({ isOpen, onClose }) => {
+  const { t } = useI18n();
   const elements = useBoardStore((s) => s.elements);
   const assets = useBoardStore((s) => s.assets);
   const isDarkMode = useBoardStore((s) => s.isDarkMode);
@@ -139,7 +141,7 @@ export const PresentMode: React.FC<PresentModeProps> = ({ isOpen, onClose }) => 
     <div
       role="dialog"
       aria-modal="true"
-      aria-label="Chế độ trình bày bảng trắng"
+      aria-label={t('Chế độ trình bày bảng trắng', 'Whiteboard presentation mode')}
       className={`fixed inset-0 z-50 overflow-hidden ${laserEnabled ? 'cursor-laser' : 'cursor-default'}`}
       onPointerDown={(e) => {
         if (!laserEnabled || (e.target as HTMLElement).closest('[data-present-hud]')) return;
@@ -162,7 +164,10 @@ export const PresentMode: React.FC<PresentModeProps> = ({ isOpen, onClose }) => 
       {elements.length === 0 && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
           <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
-            Bảng hiện đang trống. Thoát trình bày để thêm nội dung.
+            {t(
+              'Bảng hiện đang trống. Thoát trình bày để thêm nội dung.',
+              'The board is currently empty. Exit presentation to add content.'
+            )}
           </p>
         </div>
       )}
@@ -185,14 +190,14 @@ export const PresentMode: React.FC<PresentModeProps> = ({ isOpen, onClose }) => 
           }`}
         >
           <Wand2 className="w-4 h-4" strokeWidth={1.75} />
-          <span>Tia laser</span>
+          <span>{t('Tia laser', 'Laser')}</span>
           <kbd className={`kbd-keycap ${laserEnabled ? '!bg-red-700 !border-red-400/40 !text-white' : ''}`}>L</kbd>
         </button>
         <button
           type="button"
           onClick={fitContent}
-          title="Căn vừa màn hình"
-          aria-label="Căn vừa màn hình"
+          title={t('Căn vừa màn hình', 'Fit to screen')}
+          aria-label={t('Căn vừa màn hình', 'Fit to screen')}
           className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors duration-150 cursor-pointer"
         >
           <Maximize2 className="w-4 h-4" strokeWidth={1.75} />
@@ -200,12 +205,12 @@ export const PresentMode: React.FC<PresentModeProps> = ({ isOpen, onClose }) => 
         <button
           type="button"
           onClick={onClose}
-          title="Thoát trình bày (Esc)"
-          aria-label="Thoát trình bày"
+          title={t('Thoát trình bày (Esc)', 'Exit presentation (Esc)')}
+          aria-label={t('Thoát trình bày', 'Exit presentation')}
           className="h-8 flex items-center gap-1.5 px-3 rounded-lg bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-white text-xs font-medium transition-colors duration-150 whitespace-nowrap cursor-pointer"
         >
           <X className="w-4 h-4" strokeWidth={1.75} />
-          <span>Thoát</span>
+          <span>{t('Thoát', 'Exit')}</span>
         </button>
       </div>
     </div>

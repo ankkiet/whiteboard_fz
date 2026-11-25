@@ -1,5 +1,6 @@
 import { evaluateMathExpression } from './mathUtils';
 import { formatPrimeFactorizationLatex, friendlyMathToLatex } from './mathDisplay';
+import { AppLanguage, getAppLanguage, tr } from '../i18n';
 
 export type CasioAngleUnit = 'D' | 'R' | 'G';
 export type CasioNormMode = 'NORM' | 'FIX' | 'SCI';
@@ -188,27 +189,35 @@ export interface CasioConversionItem {
   convert: (v: number) => number;
 }
 
-export const CASIO_CONSTANTS: CasioConstantItem[] = [
-  { id: 'c', symbol: 'c₀', latex: 'c_0', name: 'Tốc độ ánh sáng chân không', value: 299792458, token: '299792458', unit: 'm/s' },
-  { id: 'g', symbol: 'g', latex: 'g', name: 'Gia tốc trọng trường chuẩn', value: 9.80665, token: '9.80665', unit: 'm/s²' },
-  { id: 'h', symbol: 'h', latex: 'h', name: 'Hằng số Planck', value: 6.62607015e-34, token: '(6.62607015*10^-34)', unit: 'J·s' },
-  { id: 'na', symbol: 'Nₐ', latex: 'N_A', name: 'Hằng số Avogadro', value: 6.02214076e23, token: '(6.02214076*10^23)', unit: 'mol⁻¹' },
-  { id: 'r', symbol: 'R', latex: 'R', name: 'Hằng số khí lý tưởng', value: 8.314462618, token: '8.314462618', unit: 'J/(mol·K)' },
-  { id: 'e0', symbol: 'e', latex: 'e_0', name: 'Điện tích nguyên tố', value: 1.602176634e-19, token: '(1.602176634*10^-19)', unit: 'C' },
-  { id: 'me', symbol: 'mₑ', latex: 'm_e', name: 'Khối lượng electron', value: 9.1093837015e-31, token: '(9.1093837015*10^-31)', unit: 'kg' },
-  { id: 'G', symbol: 'G', latex: 'G', name: 'Hằng số hấp dẫn', value: 6.6743e-11, token: '(6.6743*10^-11)', unit: 'N·m²/kg²' },
-];
+export function getCasioConstants(lang: AppLanguage = getAppLanguage()): CasioConstantItem[] {
+  return [
+    { id: 'c', symbol: 'c₀', latex: 'c_0', name: tr('Tốc độ ánh sáng chân không', 'Speed of light in vacuum', lang), value: 299792458, token: '299792458', unit: 'm/s' },
+    { id: 'g', symbol: 'g', latex: 'g', name: tr('Gia tốc trọng trường chuẩn', 'Standard gravity', lang), value: 9.80665, token: '9.80665', unit: 'm/s²' },
+    { id: 'h', symbol: 'h', latex: 'h', name: tr('Hằng số Planck', 'Planck constant', lang), value: 6.62607015e-34, token: '(6.62607015*10^-34)', unit: 'J·s' },
+    { id: 'na', symbol: 'Nₐ', latex: 'N_A', name: tr('Hằng số Avogadro', 'Avogadro constant', lang), value: 6.02214076e23, token: '(6.02214076*10^23)', unit: 'mol⁻¹' },
+    { id: 'r', symbol: 'R', latex: 'R', name: tr('Hằng số khí lý tưởng', 'Ideal gas constant', lang), value: 8.314462618, token: '8.314462618', unit: 'J/(mol·K)' },
+    { id: 'e0', symbol: 'e', latex: 'e_0', name: tr('Điện tích nguyên tố', 'Elementary charge', lang), value: 1.602176634e-19, token: '(1.602176634*10^-19)', unit: 'C' },
+    { id: 'me', symbol: 'mₑ', latex: 'm_e', name: tr('Khối lượng electron', 'Electron mass', lang), value: 9.1093837015e-31, token: '(9.1093837015*10^-31)', unit: 'kg' },
+    { id: 'G', symbol: 'G', latex: 'G', name: tr('Hằng số hấp dẫn', 'Gravitational constant', lang), value: 6.6743e-11, token: '(6.6743*10^-11)', unit: 'N·m²/kg²' },
+  ];
+}
 
-export const CASIO_CONVERSIONS: CasioConversionItem[] = [
-  { id: 'deg2rad', label: 'Độ → Radian', fromUnit: '°', toUnit: 'rad', convert: (v) => (v * Math.PI) / 180 },
-  { id: 'rad2deg', label: 'Radian → Độ', fromUnit: 'rad', toUnit: '°', convert: (v) => (v * 180) / Math.PI },
-  { id: 'kmh2ms', label: 'km/h → m/s', fromUnit: 'km/h', toUnit: 'm/s', convert: (v) => v / 3.6 },
-  { id: 'ms2kmh', label: 'm/s → km/h', fromUnit: 'm/s', toUnit: 'km/h', convert: (v) => v * 3.6 },
-  { id: 'inch2cm', label: 'inch → cm', fromUnit: 'in', toUnit: 'cm', convert: (v) => v * 2.54 },
-  { id: 'cm2inch', label: 'cm → inch', fromUnit: 'cm', toUnit: 'in', convert: (v) => v / 2.54 },
-  { id: 'c2f', label: '°C → °F', fromUnit: '°C', toUnit: '°F', convert: (v) => (v * 9) / 5 + 32 },
-  { id: 'f2c', label: '°F → °C', fromUnit: '°F', toUnit: '°C', convert: (v) => ((v - 32) * 5) / 9 },
-];
+export const CASIO_CONSTANTS: CasioConstantItem[] = getCasioConstants('vi');
+
+export function getCasioConversions(lang: AppLanguage = getAppLanguage()): CasioConversionItem[] {
+  return [
+    { id: 'deg2rad', label: tr('Độ → Radian', 'Degree → Radian', lang), fromUnit: '°', toUnit: 'rad', convert: (v) => (v * Math.PI) / 180 },
+    { id: 'rad2deg', label: tr('Radian → Độ', 'Radian → Degree', lang), fromUnit: 'rad', toUnit: '°', convert: (v) => (v * 180) / Math.PI },
+    { id: 'kmh2ms', label: 'km/h → m/s', fromUnit: 'km/h', toUnit: 'm/s', convert: (v) => v / 3.6 },
+    { id: 'ms2kmh', label: 'm/s → km/h', fromUnit: 'm/s', toUnit: 'km/h', convert: (v) => v * 3.6 },
+    { id: 'inch2cm', label: 'inch → cm', fromUnit: 'in', toUnit: 'cm', convert: (v) => v * 2.54 },
+    { id: 'cm2inch', label: 'cm → inch', fromUnit: 'cm', toUnit: 'in', convert: (v) => v / 2.54 },
+    { id: 'c2f', label: '°C → °F', fromUnit: '°C', toUnit: '°F', convert: (v) => (v * 9) / 5 + 32 },
+    { id: 'f2c', label: '°F → °C', fromUnit: '°F', toUnit: '°C', convert: (v) => ((v - 32) * 5) / 9 },
+  ];
+}
+
+export const CASIO_CONVERSIONS: CasioConversionItem[] = getCasioConversions('vi');
 
 export function gcdInt(a: number, b: number): number {
   let x = Math.abs(Math.round(a));
@@ -1658,9 +1667,9 @@ export function solveLinearSystem2x2(
 
   if (Math.abs(det) < 1e-10) {
     if (Math.abs(detX) < 1e-10 && Math.abs(detY) < 1e-10) {
-      return { kind: 'infinite', summaryLatex: '\\text{Hệ vô số nghiệm}' };
+      return { kind: 'infinite', summaryLatex: `\\text{${tr('Hệ vô số nghiệm', 'Infinite solutions')}}` };
     }
-    return { kind: 'none', summaryLatex: '\\text{Hệ vô nghiệm}' };
+    return { kind: 'none', summaryLatex: `\\text{${tr('Hệ vô nghiệm', 'No solution')}}` };
   }
 
   const x = detX / det;
@@ -1683,13 +1692,16 @@ export function solveLinearSystem2x2(
  */
 export function solveLinearSystem3x3(rows: number[][]): CasioSystem3x3Result {
   if (rows.length !== 3 || rows.some((r) => r.length !== 4)) {
-    return { kind: 'degenerate', summaryLatex: '\\text{Dữ liệu không hợp lệ}' };
+    return { kind: 'degenerate', summaryLatex: `\\text{${tr('Dữ liệu không hợp lệ', 'Invalid input data')}}` };
   }
   const mat = rows.map((r) => r.slice(0, 3));
   const rhs = rows.map((r) => r[3]);
   const det = computeMatrixDet(mat);
   if (Math.abs(det) < 1e-10) {
-    return { kind: 'degenerate', summaryLatex: '\\text{Hệ vô nghiệm hoặc vô số nghiệm}' };
+    return {
+      kind: 'degenerate',
+      summaryLatex: `\\text{${tr('Hệ vô nghiệm hoặc vô số nghiệm', 'No unique solution')}}`,
+    };
   }
   const replaceCol = (colIdx: number) =>
     mat.map((row, ri) => row.map((val, ci) => (ci === colIdx ? rhs[ri] : val)));
@@ -1714,7 +1726,7 @@ export function solveLinearSystem3x3(rows: number[][]): CasioSystem3x3Result {
  */
 export function solveCubicEquation(a: number, b: number, c: number, d: number): CasioCubicResult {
   if (Math.abs(a) < 1e-10) {
-    return { roots: [], summaryLatex: '\\text{Cần hệ số } a \\ne 0' };
+    return { roots: [], summaryLatex: `\\text{${tr('Cần hệ số ', 'Need ')} } a \\ne 0` };
   }
   const p = (3 * a * c - b * b) / (3 * a * a);
   const q = (2 * b ** 3 - 9 * a * b * c + 27 * a * a * d) / (27 * a ** 3);
@@ -1754,7 +1766,7 @@ export function solveCubicEquation(a: number, b: number, c: number, d: number): 
 
   return {
     roots,
-    complexNote: roots.length === 1 ? '1 nghiệm thực' : undefined,
+    complexNote: roots.length === 1 ? tr('1 nghiệm thực', '1 real root') : undefined,
     summaryLatex: rootLatex,
   };
 }
@@ -1769,7 +1781,7 @@ export function solveQuadraticInequality(
   op: '>' | '<' | '>=' | '<='
 ): CasioInequalityResult {
   if (Math.abs(a) < 1e-10) {
-    return { summaryLatex: '\\text{Cần } a \\ne 0' };
+    return { summaryLatex: `\\text{${tr('Cần ', 'Need ')} } a \\ne 0` };
   }
   const strict = op === '>' || op === '<';
   const wantPositive = op === '>' || op === '>=';
@@ -1777,7 +1789,7 @@ export function solveQuadraticInequality(
 
   if (delta < -1e-10) {
     const alwaysTrue = (a > 0 && wantPositive) || (a < 0 && !wantPositive);
-    return { summaryLatex: alwaysTrue ? 'x \\in \\mathbb{R}' : '\\text{Vô nghiệm}' };
+    return { summaryLatex: alwaysTrue ? 'x \\in \\mathbb{R}' : `\\text{${tr('Vô nghiệm', 'No solution')}}` };
   }
   if (Math.abs(delta) <= 1e-10) {
     const r0 = formatCasioExact(-b / (2 * a));
@@ -1786,7 +1798,7 @@ export function solveQuadraticInequality(
     if (matchSame) {
       return { summaryLatex: strict ? `x \\ne ${rTex}` : 'x \\in \\mathbb{R}' };
     }
-    return { summaryLatex: strict ? '\\text{Vô nghiệm}' : `x = ${rTex}` };
+    return { summaryLatex: strict ? `\\text{${tr('Vô nghiệm', 'No solution')}}` : `x = ${rTex}` };
   }
 
   const sD = Math.sqrt(delta);
@@ -1804,7 +1816,7 @@ export function solveQuadraticInequality(
   const ge = strict ? '>' : '\\ge';
 
   if (outside) {
-    return { summaryLatex: `x ${le} ${loTex} \\;\\text{hoặc}\\; x ${ge} ${hiTex}` };
+    return { summaryLatex: `x ${le} ${loTex} \\;\\text{${tr('hoặc', 'or')}}\\; x ${ge} ${hiTex}` };
   }
   return { summaryLatex: `${loTex} ${le} x ${le} ${hiTex}` };
 }
@@ -2292,7 +2304,7 @@ export function computeCasioDistribution(input: CasioDistInput): CasioDistResult
  */
 export function solveLinearSystem4x4(rows: number[][]): CasioSystem4x4Result {
   if (rows.length !== 4 || rows.some((r) => r.length !== 5)) {
-    return { kind: 'degenerate', summaryLatex: '\\text{Dữ liệu không hợp lệ}' };
+    return { kind: 'degenerate', summaryLatex: `\\text{${tr('Dữ liệu không hợp lệ', 'Invalid input data')}}` };
   }
   const n = 4;
   const aug = rows.map((r) => [...r]);
@@ -2302,7 +2314,7 @@ export function solveLinearSystem4x4(rows: number[][]): CasioSystem4x4Result {
       if (Math.abs(aug[r][col]) > Math.abs(aug[pivotRow][col])) pivotRow = r;
     }
     if (Math.abs(aug[pivotRow][col]) < 1e-10) {
-      return { kind: 'degenerate', summaryLatex: '\\text{Hệ vô nghiệm hoặc vô số nghiệm}' };
+      return { kind: 'degenerate', summaryLatex: `\\text{${tr('Hệ vô nghiệm hoặc vô số nghiệm', 'No solution or infinite solutions')}}` };
     }
     if (pivotRow !== col) {
       [aug[col], aug[pivotRow]] = [aug[pivotRow], aug[col]];
@@ -2319,14 +2331,14 @@ export function solveLinearSystem4x4(rows: number[][]): CasioSystem4x4Result {
   const xr = formatCasioExact(x);
   const yr = formatCasioExact(y);
   const zr = formatCasioExact(z);
-  const tr = formatCasioExact(t);
+  const tRep = formatCasioExact(t);
   return {
     kind: 'unique',
     x,
     y,
     z,
     t,
-    summaryLatex: `x=${xr.exactLatex},\\; y=${yr.exactLatex},\\; z=${zr.exactLatex},\\; t=${tr.exactLatex}`,
+    summaryLatex: `x=${xr.exactLatex},\\; y=${yr.exactLatex},\\; z=${zr.exactLatex},\\; t=${tRep.exactLatex}`,
   };
 }
 
@@ -2420,7 +2432,7 @@ export function solveQuarticEquation(
   const complexCount = 4 - realRaw.length;
 
   if (uniqueReal.length === 0) {
-    return { roots: [], complexCount: 4, summaryLatex: '\\text{Vô nghiệm thực}' };
+    return { roots: [], complexCount: 4, summaryLatex: `\\text{${tr('Vô nghiệm thực', 'No real roots')}}` };
   }
 
   const summaryLatex = uniqueReal
@@ -2522,9 +2534,9 @@ export function solveCubicInequality(
   }
 
   if (parts.length === 0) {
-    return { summaryLatex: '\\text{Vô nghiệm}' };
+    return { summaryLatex: `\\text{${tr('Vô nghiệm', 'No solution')}}` };
   }
-  return { summaryLatex: parts.join('\\;\\text{hoặc}\\;') };
+  return { summaryLatex: parts.join(`\\;\\text{${tr('hoặc', 'or')}}\\;`) };
 }
 
 /**
@@ -2559,7 +2571,7 @@ export function evaluateCasioVerify(
     rhsVal: rhs.numeric,
     lhsLatex: lhsTex,
     rhsLatex: rhsTex,
-    summaryLatex: `${lhsTex} ${opTex} ${rhsTex} \\Rightarrow \\text{${isTrue ? 'TRUE (Đúng)' : 'FALSE (Sai)'}}`,
+    summaryLatex: `${lhsTex} ${opTex} ${rhsTex} \\Rightarrow \\text{${isTrue ? tr('TRUE (Đúng)', 'TRUE') : tr('FALSE (Sai)', 'FALSE')}}`,
   };
 }
 
@@ -2772,9 +2784,9 @@ export function solveCasioQuadraticFull(a: number, b: number, c: number): CasioE
   if (Math.abs(a) < 1e-12) {
     return {
       kind: 'error',
-      message: 'Cần hệ số a ≠ 0',
+      message: tr('Cần hệ số a ≠ 0', 'Coefficient a ≠ 0 required'),
       steps: [],
-      summaryLatex: '\\text{Cần hệ số } a \\ne 0',
+      summaryLatex: `\\text{${tr('Cần hệ số ', 'Need ')} } a \\ne 0`,
     };
   }
   const disc = b * b - 4 * a * c;
@@ -2800,7 +2812,7 @@ export function solveCasioQuadraticFull(a: number, b: number, c: number): CasioE
   // Authentic fx-580VN X feature: Min/Max vertex of y = ax² + bx + c
   const vx = -b / (2 * a);
   const vy = a * vx * vx + b * vx + c;
-  const extTag = a > 0 ? 'GTNN của y' : 'GTLN của y';
+  const extTag = a > 0 ? tr('GTNN của y', 'Min value of y') : tr('GTLN của y', 'Max value of y');
   steps.push(makeRealStep(`${extTag} · x =`, vx));
   steps.push(makeRealStep(`${extTag} · y =`, vy));
 
@@ -2877,10 +2889,10 @@ export function solveCasioCubicFull(a: number, b: number, c: number, d: number):
     const y2A = 6 * a * xA + 2 * b;
     const xMax = y2A < 0 ? xA : xB;
     const xMin = y2A < 0 ? xB : xA;
-    steps.push(makeRealStep('Cực đại · x =', xMax));
-    steps.push(makeRealStep('Cực đại · y =', evalY(xMax)));
-    steps.push(makeRealStep('Cực tiểu · x =', xMin));
-    steps.push(makeRealStep('Cực tiểu · y =', evalY(xMin)));
+    steps.push(makeRealStep(tr('Cực đại · x =', 'Local max · x ='), xMax));
+    steps.push(makeRealStep(tr('Cực đại · y =', 'Local max · y ='), evalY(xMax)));
+    steps.push(makeRealStep(tr('Cực tiểu · x =', 'Local min · x ='), xMin));
+    steps.push(makeRealStep(tr('Cực tiểu · y =', 'Local min · y ='), evalY(xMin)));
   }
 
   const rootSteps = steps.filter((s) => s.label.startsWith('x'));
@@ -3002,11 +3014,12 @@ export function solveCasioQuarticFull(
 export function solveCasioLinearSystemFull(rows: number[][]): CasioEqFullResult {
   const n = rows.length;
   if (n < 2 || n > 4 || rows.some((r) => r.length !== n + 1)) {
+    const msg = tr('Dữ liệu không hợp lệ', 'Invalid input data');
     return {
       kind: 'error',
-      message: 'Dữ liệu không hợp lệ',
+      message: msg,
       steps: [],
-      summaryLatex: '\\text{Dữ liệu không hợp lệ}',
+      summaryLatex: `\\text{${msg}}`,
     };
   }
 
@@ -3033,21 +3046,23 @@ export function solveCasioLinearSystemFull(rows: number[][]): CasioEqFullResult 
   for (let r = 0; r < n; r += 1) {
     const allZeroCoeff = aug[r].slice(0, n).every((v) => Math.abs(v) < 1e-9);
     if (allZeroCoeff && Math.abs(aug[r][n]) > 1e-8) {
+      const msg = tr('Vô nghiệm', 'No solution');
       return {
         kind: 'none',
-        message: 'Vô nghiệm',
+        message: msg,
         steps: [],
-        summaryLatex: '\\text{Vô nghiệm}',
+        summaryLatex: `\\text{${msg}}`,
       };
     }
   }
 
   if (pivotRow < n) {
+    const msg = tr('Vô số nghiệm', 'Infinite solutions');
     return {
       kind: 'infinite',
-      message: 'Vô số nghiệm',
+      message: msg,
       steps: [],
-      summaryLatex: '\\text{Vô số nghiệm}',
+      summaryLatex: `\\text{${msg}}`,
     };
   }
 

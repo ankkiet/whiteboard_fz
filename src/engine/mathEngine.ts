@@ -13,6 +13,7 @@ import {
   normalizeMathInput,
 } from './mathUtils';
 import { formatPrimeFactorizationLatex } from './mathDisplay';
+import { AppLanguage, getAppLanguage, tr } from '../i18n';
 
 function makeFormula(
   createId: (p: string) => string,
@@ -437,7 +438,7 @@ export function buildFeatureAnnotationElements(options: {
       makeLine(createId, { x: wx, y: -10 * unitPx }, { x: wx, y: 10 * unitPx }, '#e11d48', 1.8, groupId, nextZ(), {
         dashed: true,
       }),
-      makeText(createId, wx + 6, -9 * unitPx, `TCĐ: x = ${vx}`, '#e11d48', 12, groupId, nextZ())
+      makeText(createId, wx + 6, -9 * unitPx, `${tr('TCĐ', 'VA')}: x = ${vx}`, '#e11d48', 12, groupId, nextZ())
     );
   }
 
@@ -452,7 +453,7 @@ export function buildFeatureAnnotationElements(options: {
         createId,
         xMax * unitPx - 95,
         wy - 22,
-        `TCN: y = ${analysis.horizontalAsymptote}`,
+        `${tr('TCN', 'HA')}: y = ${analysis.horizontalAsymptote}`,
         '#0284c7',
         12,
         groupId,
@@ -471,7 +472,7 @@ export function buildFeatureAnnotationElements(options: {
         createId,
         wx + 8,
         pt.kind === 'max' ? wy - 24 : wy + 6,
-        `${pt.kind === 'max' ? 'CĐ' : 'CT'}(${pt.x}; ${pt.y})`,
+        `${pt.kind === 'max' ? tr('CĐ', 'Max') : tr('CT', 'Min')}(${pt.x}; ${pt.y})`,
         color,
         12,
         groupId,
@@ -782,7 +783,10 @@ export function buildBase10Elements(
       createId,
       center.x - 160,
       baseY + 84,
-      `Tổng = ${total} (${counts.hundreds} trăm, ${counts.tens} chục, ${counts.ones} đơn vị)`,
+      tr(
+        `Tổng = ${total} (${counts.hundreds} trăm, ${counts.tens} chục, ${counts.ones} đơn vị)`,
+        `Total = ${total} (${counts.hundreds} hundreds, ${counts.tens} tens, ${counts.ones} ones)`
+      ),
       '#1e293b',
       15,
       groupId,
@@ -830,7 +834,7 @@ export function buildVerticalArithmeticElements(
         createId,
         x0 + 16,
         y0 + 54,
-        `Dư ${remainder}`,
+        tr(`Dư ${remainder}`, `Rem ${remainder}`),
         '#64748b',
         16,
         groupId,
@@ -907,8 +911,8 @@ export function buildBarModelElements(
 
   // Labels
   els.push(
-    makeText(createId, left - 96, yA - 12, options.labelA || 'Số bé', color, 15, groupId, nextZ(), 86),
-    makeText(createId, left - 96, yB - 12, options.labelB || 'Số lớn', color, 15, groupId, nextZ(), 86)
+    makeText(createId, left - 96, yA - 12, options.labelA || tr('Số bé', 'Smaller'), color, 15, groupId, nextZ(), 86),
+    makeText(createId, left - 96, yB - 12, options.labelB || tr('Số lớn', 'Larger'), color, 15, groupId, nextZ(), 86)
   );
 
   // Row A segments
@@ -927,7 +931,7 @@ export function buildBarModelElements(
     makeLine(createId, { x: maxX, y: yA - 14 }, { x: maxX + 10, y: yA - 14 }, color, 2, groupId, nextZ()),
     makeLine(createId, { x: maxX + 10, y: yA - 14 }, { x: maxX + 10, y: yB + 14 }, color, 2, groupId, nextZ()),
     makeLine(createId, { x: maxX, y: yB + 14 }, { x: maxX + 10, y: yB + 14 }, color, 2, groupId, nextZ()),
-    makeText(createId, maxX + 18, (yA + yB) / 2 - 12, options.summaryLabel || 'Tổng = ?', '#4f46e5', 15, groupId, nextZ(), 90)
+    makeText(createId, maxX + 18, (yA + yB) / 2 - 12, options.summaryLabel || tr('Tổng = ?', 'Sum = ?'), '#4f46e5', 15, groupId, nextZ(), 90)
   );
 
   return els;
@@ -1213,18 +1217,40 @@ export function solveQuadratic(a: number, b: number, c: number): {
 } {
   if (Math.abs(a) < 1e-12) {
     if (Math.abs(b) < 1e-12) {
-      return { delta: 0, summary: Math.abs(c) < 1e-12 ? 'Vô số nghiệm' : 'Vô nghiệm', roots: [] };
+      return {
+        delta: 0,
+        summary: Math.abs(c) < 1e-12 ? tr('Vô số nghiệm', 'Infinite solutions') : tr('Vô nghiệm', 'No solution'),
+        roots: [],
+      };
     }
     const r = -c / b;
-    return { delta: 0, summary: `Nghiệm bậc nhất: x = ${Number(r.toFixed(4))}`, roots: [r] };
+    return {
+      delta: 0,
+      summary: tr(`Nghiệm bậc nhất: x = ${Number(r.toFixed(4))}`, `Linear root: x = ${Number(r.toFixed(4))}`),
+      roots: [r],
+    };
   }
   const delta = b * b - 4 * a * c;
   if (delta < -1e-12) {
-    return { delta, summary: `Δ = ${Number(delta.toFixed(3))} < 0 → Phương trình vô nghiệm thực`, roots: [] };
+    return {
+      delta,
+      summary: tr(
+        `Δ = ${Number(delta.toFixed(3))} < 0 → Phương trình vô nghiệm thực`,
+        `Δ = ${Number(delta.toFixed(3))} < 0 → No real roots`
+      ),
+      roots: [],
+    };
   }
   if (Math.abs(delta) <= 1e-12) {
     const r = -b / (2 * a);
-    return { delta: 0, summary: `Δ = 0 → Nghiệm kép x₁ = x₂ = ${Number(r.toFixed(4))}`, roots: [r] };
+    return {
+      delta: 0,
+      summary: tr(
+        `Δ = 0 → Nghiệm kép x₁ = x₂ = ${Number(r.toFixed(4))}`,
+        `Δ = 0 → Double root x₁ = x₂ = ${Number(r.toFixed(4))}`
+      ),
+      roots: [r],
+    };
   }
   const sqrtD = Math.sqrt(delta);
   const x1 = (-b - sqrtD) / (2 * a);
@@ -1333,7 +1359,10 @@ const EXACT_TRIG_TABLE: Record<number, { rad: string; cos: string; sin: string; 
   360: { rad: '2π', cos: '1', sin: '0', tan: '0' },
 };
 
-export function getExactTrigInfo(degInput: number): {
+export function getExactTrigInfo(
+  degInput: number,
+  lang: AppLanguage = getAppLanguage()
+): {
   deg: number;
   radLabel: string;
   cosLabel: string;
@@ -1342,6 +1371,7 @@ export function getExactTrigInfo(degInput: number): {
   cosVal: number;
   sinVal: number;
 } {
+  const undef = tr('KXĐ', 'Undef', lang);
   const deg = ((Math.round(degInput) % 360) + 360) % 360;
   const rad = (deg * Math.PI) / 180;
   const cosVal = Math.cos(rad);
@@ -1353,7 +1383,7 @@ export function getExactTrigInfo(degInput: number): {
       radLabel: exact.rad,
       cosLabel: exact.cos,
       sinLabel: exact.sin,
-      tanLabel: exact.tan,
+      tanLabel: exact.tan === 'KXĐ' ? undef : exact.tan,
       cosVal,
       sinVal,
     };
@@ -1363,7 +1393,7 @@ export function getExactTrigInfo(degInput: number): {
     radLabel: `${(deg / 180).toFixed(2)}π`,
     cosLabel: cosVal.toFixed(3),
     sinLabel: sinVal.toFixed(3),
-    tanLabel: Math.abs(cosVal) < 1e-4 ? 'KXĐ' : (sinVal / cosVal).toFixed(3),
+    tanLabel: Math.abs(cosVal) < 1e-4 ? undef : (sinVal / cosVal).toFixed(3),
     cosVal,
     sinVal,
   };
@@ -1537,8 +1567,8 @@ export function buildVennDiagramElements(
   return [
     makeEllipse(createId, center.x - shift, center.y, r, r, '#2563eb', '#3b82f61e', 2.4, groupId, nextZ()),
     makeEllipse(createId, center.x + shift, center.y, r, r, '#059669', '#10b9811e', 2.4, groupId, nextZ()),
-    makeText(createId, center.x - shift - 48, center.y - 12, labelA || 'Tập A', '#2563eb', 16, groupId, nextZ(), 64),
-    makeText(createId, center.x + shift + 8, center.y - 12, labelB || 'Tập B', '#059669', 16, groupId, nextZ(), 64),
+    makeText(createId, center.x - shift - 48, center.y - 12, labelA || tr('Tập A', 'Set A'), '#2563eb', 16, groupId, nextZ(), 64),
+    makeText(createId, center.x + shift + 8, center.y - 12, labelB || tr('Tập B', 'Set B'), '#059669', 16, groupId, nextZ(), 64),
     makeText(createId, center.x - 18, center.y - 12, 'A∩B', '#4f46e5', 14, groupId, nextZ(), 42),
   ];
 }
@@ -1630,17 +1660,21 @@ export interface Solid3DDefinition {
   supportsUnfold: boolean;
 }
 
-export const SOLID_3D_CATALOG: Solid3DDefinition[] = [
-  { id: 'square-pyramid', label: 'Chóp tứ giác đều S.ABCD', supportsUnfold: true },
-  { id: 'tetrahedron', label: 'Chóp tam giác S.ABC', supportsUnfold: true },
-  { id: 'cube', label: 'Hình lập phương', supportsUnfold: true },
-  { id: 'cuboid', label: 'Hình hộp chữ nhật', supportsUnfold: false },
-  { id: 'triangular-prism', label: 'Lăng trụ đứng tam giác', supportsUnfold: false },
-  { id: 'cylinder', label: 'Hình trụ tròn xoay', supportsUnfold: false },
-  { id: 'cone', label: 'Hình nón tròn xoay', supportsUnfold: false },
-  { id: 'sphere', label: 'Hình cầu tâm O', supportsUnfold: false },
-  { id: 'oxyz', label: 'Hệ trục tọa độ Oxyz', supportsUnfold: false },
-];
+export function getSolid3DCatalog(lang: AppLanguage = getAppLanguage()): Solid3DDefinition[] {
+  return [
+    { id: 'square-pyramid', label: tr('Chóp tứ giác đều S.ABCD', 'Regular square pyramid S.ABCD', lang), supportsUnfold: true },
+    { id: 'tetrahedron', label: tr('Chóp tam giác S.ABC', 'Triangular pyramid S.ABC', lang), supportsUnfold: true },
+    { id: 'cube', label: tr('Hình lập phương', 'Cube', lang), supportsUnfold: true },
+    { id: 'cuboid', label: tr('Hình hộp chữ nhật', 'Rectangular prism (Cuboid)', lang), supportsUnfold: false },
+    { id: 'triangular-prism', label: tr('Lăng trụ đứng tam giác', 'Right triangular prism', lang), supportsUnfold: false },
+    { id: 'cylinder', label: tr('Hình trụ tròn xoay', 'Right cylinder', lang), supportsUnfold: false },
+    { id: 'cone', label: tr('Hình nón tròn xoay', 'Right cone', lang), supportsUnfold: false },
+    { id: 'sphere', label: tr('Hình cầu tâm O', 'Sphere (center O)', lang), supportsUnfold: false },
+    { id: 'oxyz', label: tr('Hệ trục tọa độ Oxyz', '3D coordinate axes Oxyz', lang), supportsUnfold: false },
+  ];
+}
+
+export const SOLID_3D_CATALOG: Solid3DDefinition[] = getSolid3DCatalog('vi');
 
 export interface Vec3 {
   x: number;
@@ -1755,17 +1789,17 @@ function projectUnfoldedNet(solidType: Solid3DType, unfoldT: number, scale: numb
     const angle = (Math.PI / 2) * (1 - t); // 0 = flat net, pi/2 = folded
     // Draw clean 2D cross net with subtle fold-angle perspective foreshortening
     const foreshorten = Math.cos(angle * 0.65);
-    const rects: [number, number, string][] = [
-      [0, 0, 'Đáy'],
-      [0, -s * foreshorten, 'Sau'],
-      [0, s * foreshorten, 'Trước'],
-      [-s * foreshorten, 0, 'Trái'],
-      [s * foreshorten, 0, 'Phải'],
-      [0, s * foreshorten * 2, 'Nắp'],
+    const rects: { cx: number; cy: number; lbl: string; sideX?: boolean; baseOrSide?: boolean }[] = [
+      { cx: 0, cy: 0, lbl: tr('Đáy', 'Base'), baseOrSide: true },
+      { cx: 0, cy: -s * foreshorten, lbl: tr('Sau', 'Back') },
+      { cx: 0, cy: s * foreshorten, lbl: tr('Trước', 'Front') },
+      { cx: -s * foreshorten, cy: 0, lbl: tr('Trái', 'Left'), sideX: true, baseOrSide: true },
+      { cx: s * foreshorten, cy: 0, lbl: tr('Phải', 'Right'), sideX: true, baseOrSide: true },
+      { cx: 0, cy: s * foreshorten * 2, lbl: tr('Nắp', 'Top') },
     ];
-    for (const [cx, cy, lbl] of rects) {
-      const hw = (lbl === 'Trái' || lbl === 'Phải' ? s * foreshorten : s) / 2;
-      const hh = (lbl === 'Trái' || lbl === 'Phải' || lbl === 'Đáy' ? s : s * foreshorten) / 2;
+    for (const { cx, cy, lbl, sideX, baseOrSide } of rects) {
+      const hw = (sideX ? s * foreshorten : s) / 2;
+      const hh = (baseOrSide ? s : s * foreshorten) / 2;
       const p1 = { x: cx - hw, y: cy - hh };
       const p2 = { x: cx + hw, y: cy - hh };
       const p3 = { x: cx + hw, y: cy + hh };

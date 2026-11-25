@@ -1,6 +1,7 @@
 import { BoardElement, FormulaElement, Point, ShapeElement, StrokeElement, TextElement } from '../types/board';
 import { getElementBounds } from './geometry';
 import { friendlyMathToLatex } from './mathDisplay';
+import { AppLanguage, getAppLanguage, tr } from '../i18n';
 
 /** 1 mathematical unit = 40 world pixels on the Oxy coordinate plane */
 export const MATH_UNIT_PX = 40;
@@ -444,38 +445,44 @@ export interface MathGeometryPreset {
   description: string;
 }
 
-export const MATH_GEOMETRY_PRESETS: MathGeometryPreset[] = [
-  {
-    id: 'right-triangle',
-    label: 'Tam giác vuông',
-    description: 'Đỉnh A, B, C kèm ký hiệu góc vuông 90°',
-  },
-  {
-    id: 'equilateral-triangle',
-    label: 'Tam giác đều',
-    description: 'Ba cạnh bằng nhau chuẩn tỷ lệ hình học',
-  },
-  {
-    id: 'circle-radius',
-    label: 'Đường tròn tâm O',
-    description: 'Hình tròn kèm tâm O và bán kính R',
-  },
-  {
-    id: 'oxy-axes',
-    label: 'Hệ trục Oxy di động',
-    description: 'Cặp trục tọa độ có thể di chuyển & nhóm',
-  },
-  {
-    id: 'parallelogram',
-    label: 'Hình bình hành',
-    description: 'Bốn đỉnh A, B, C, D song song đối xứng',
-  },
-  {
-    id: 'number-line',
-    label: 'Trục số (-4 đến 4)',
-    description: 'Trục số chia đều có vạch nguyên',
-  },
-];
+export function getMathGeometryPresets(
+  lang: AppLanguage = getAppLanguage()
+): MathGeometryPreset[] {
+  return [
+    {
+      id: 'right-triangle',
+      label: tr('Tam giác vuông', 'Right triangle', lang),
+      description: tr('Đỉnh A, B, C kèm ký hiệu góc vuông 90°', 'Vertices A, B, C with 90° right-angle mark', lang),
+    },
+    {
+      id: 'equilateral-triangle',
+      label: tr('Tam giác đều', 'Equilateral triangle', lang),
+      description: tr('Ba cạnh bằng nhau chuẩn tỷ lệ hình học', 'Three equal sides in accurate proportion', lang),
+    },
+    {
+      id: 'circle-radius',
+      label: tr('Đường tròn tâm O', 'Circle (center O)', lang),
+      description: tr('Hình tròn kèm tâm O và bán kính R', 'Circle with center O and radius R', lang),
+    },
+    {
+      id: 'oxy-axes',
+      label: tr('Hệ trục Oxy di động', 'Movable Oxy axes', lang),
+      description: tr('Cặp trục tọa độ có thể di chuyển & nhóm', 'Movable and groupable coordinate axes', lang),
+    },
+    {
+      id: 'parallelogram',
+      label: tr('Hình bình hành', 'Parallelogram', lang),
+      description: tr('Bốn đỉnh A, B, C, D song song đối xứng', 'Four vertices A, B, C, D with parallel sides', lang),
+    },
+    {
+      id: 'number-line',
+      label: tr('Trục số (-4 đến 4)', 'Number line (-4 to 4)', lang),
+      description: tr('Trục số chia đều có vạch nguyên', 'Evenly spaced number line with integer ticks', lang),
+    },
+  ];
+}
+
+export const MATH_GEOMETRY_PRESETS: MathGeometryPreset[] = getMathGeometryPresets('vi');
 
 function makeLine(
   createId: (p: string) => string,
@@ -708,14 +715,18 @@ export const MATH_SYMBOLS = [
   'ⁿ',
 ];
 
-export const MATH_FORMULA_TEMPLATES = [
-  { label: 'Biệt thức Δ', formula: 'Δ = b² - 4ac' },
-  { label: 'Nghiệm bậc 2', formula: 'x = (-b ± √Δ) / (2a)' },
-  { label: 'Pytago', formula: 'a² + b² = c²' },
-  { label: 'Lượng giác', formula: 'sin²α + cos²α = 1' },
-  { label: 'Diện tích tròn', formula: 'S = π · r²' },
-  { label: 'Tích phân', formula: '∫ f(x) dx = F(x) + C' },
-];
+export function getMathFormulaTemplates(lang: AppLanguage = getAppLanguage()) {
+  return [
+    { label: tr('Biệt thức Δ', 'Discriminant Δ', lang), formula: 'Δ = b² - 4ac' },
+    { label: tr('Nghiệm bậc 2', 'Quadratic root', lang), formula: 'x = (-b ± √Δ) / (2a)' },
+    { label: tr('Pytago', 'Pythagoras', lang), formula: 'a² + b² = c²' },
+    { label: tr('Lượng giác', 'Trigonometry', lang), formula: 'sin²α + cos²α = 1' },
+    { label: tr('Diện tích tròn', 'Circle area', lang), formula: 'S = π · r²' },
+    { label: tr('Tích phân', 'Integral', lang), formula: '∫ f(x) dx = F(x) + C' },
+  ];
+}
+
+export const MATH_FORMULA_TEMPLATES = getMathFormulaTemplates('vi');
 
 export const MATH_GRAPH_PRESETS = [
   { label: 'y = x²', expr: '0.25*x^2 - 2', color: '#4f46e5' },

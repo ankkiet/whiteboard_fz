@@ -8,6 +8,7 @@ import {
 } from '../../services/authBridge';
 import { getGoogleAccessToken } from '../../services/googleAuth';
 import { GoogleSignInButton } from '../home/GoogleSignInButton';
+import { useI18n } from '../../i18n/useI18n';
 import {
   X,
   ExternalLink,
@@ -39,6 +40,7 @@ export const AuthBridgeModal: React.FC<AuthBridgeModalProps> = ({
   drive,
   initialMode,
 }) => {
+  const { t } = useI18n();
   const isFileProtocol = typeof window !== 'undefined' && window.location.protocol === 'file:';
   const effectiveMode = initialMode || (isFileProtocol ? 'connect' : 'export');
 
@@ -130,12 +132,19 @@ export const AuthBridgeModal: React.FC<AuthBridgeModalProps> = ({
         } else {
           appliedRef.current = false;
           setConnectStatus('error');
-          setErrorMessage('Không thể thiết lập phiên kết nối Google Drive với mã này.');
+          setErrorMessage(
+            t(
+              'Không thể thiết lập phiên kết nối Google Drive với mã này.',
+              'Could not initialize the Google Drive connection session with this code.'
+            )
+          );
         }
       }, 600);
     } catch (err) {
       setConnectStatus('error');
-      setErrorMessage(err instanceof Error ? err.message : 'Mã kết nối không hợp lệ.');
+      setErrorMessage(
+        err instanceof Error ? err.message : t('Mã kết nối không hợp lệ.', 'Invalid connection code.')
+      );
     }
   };
 
@@ -197,17 +206,29 @@ export const AuthBridgeModal: React.FC<AuthBridgeModalProps> = ({
     setErrorMessage(null);
     try {
       if (!navigator.clipboard?.readText) {
-        throw new Error('Trình duyệt không cho phép đọc bộ nhớ tạm. Hãy dán thủ công bằng phím Ctrl + V.');
+        throw new Error(
+          t(
+            'Trình duyệt không cho phép đọc bộ nhớ tạm. Hãy dán thủ công bằng phím Ctrl + V.',
+            'Browser clipboard read access is blocked. Please paste manually with Ctrl + V.'
+          )
+        );
       }
       const text = await navigator.clipboard.readText();
       const trimmed = text.trim();
       if (!trimmed) {
-        throw new Error('Bộ nhớ tạm đang trống. Hãy sao chép mã từ trình duyệt trước.');
+        throw new Error(
+          t(
+            'Bộ nhớ tạm đang trống. Hãy sao chép mã từ trình duyệt trước.',
+            'Clipboard is empty. Please copy the code from your browser first.'
+          )
+        );
       }
       setInputToken(trimmed);
       handleApplyToken(trimmed);
     } catch (err) {
-      setErrorMessage(err instanceof Error ? err.message : 'Không thể đọc bộ nhớ tạm.');
+      setErrorMessage(
+        err instanceof Error ? err.message : t('Không thể đọc bộ nhớ tạm.', 'Could not read clipboard.')
+      );
     }
   };
 
@@ -299,7 +320,7 @@ export const AuthBridgeModal: React.FC<AuthBridgeModalProps> = ({
     <div
       role="dialog"
       aria-modal="true"
-      aria-label="Cầu nối xác thực tài khoản Google"
+      aria-label={t('Cầu nối xác thực tài khoản Google', 'Google account authentication bridge')}
       className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4 select-text"
       onClick={onClose}
     >
@@ -316,13 +337,16 @@ export const AuthBridgeModal: React.FC<AuthBridgeModalProps> = ({
             <div className="min-w-0">
               <h2 className="text-base font-bold truncate">
                 {effectiveMode === 'connect'
-                  ? 'Đăng nhập Google cho ứng dụng máy tính'
-                  : 'Cầu nối đăng nhập cho ứng dụng máy tính'}
+                  ? t('Đăng nhập Google cho ứng dụng máy tính', 'Sign in with Google for desktop app')
+                  : t('Cầu nối đăng nhập cho ứng dụng máy tính', 'Desktop app sign-in bridge')}
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
                 {effectiveMode === 'connect'
-                  ? 'Đồng bộ Google Drive an toàn thông qua trình duyệt'
-                  : 'Cấp quyền truy cập Google Drive an toàn cho bản cài đặt'}
+                  ? t('Đồng bộ Google Drive an toàn thông qua trình duyệt', 'Secure Google Drive sync via browser')
+                  : t(
+                      'Cấp quyền truy cập Google Drive an toàn cho bản cài đặt',
+                      'Grant secure Google Drive access to your desktop install'
+                    )}
               </p>
             </div>
           </div>
@@ -330,7 +354,7 @@ export const AuthBridgeModal: React.FC<AuthBridgeModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            aria-label="Đóng"
+            aria-label={t('Đóng', 'Close')}
             className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 hover:bg-slate-200/70 dark:hover:bg-slate-800 transition-colors cursor-pointer shrink-0"
           >
             <X className="w-4 h-4" />
@@ -352,16 +376,24 @@ export const AuthBridgeModal: React.FC<AuthBridgeModalProps> = ({
 
                   <div className="space-y-1">
                     <h3 className="text-sm font-medium text-slate-900 dark:text-slate-100">
-                      Đang chờ đăng nhập từ trình duyệt
+                      {t('Đang chờ đăng nhập từ trình duyệt', 'Waiting for browser sign-in')}
                     </h3>
                     <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm leading-relaxed">
-                      Cửa sổ trình duyệt đã được mở. Vui lòng chọn tài khoản Google của bạn trên trình duyệt.
+                      {t(
+                        'Cửa sổ trình duyệt đã được mở. Vui lòng chọn tài khoản Google của bạn trên trình duyệt.',
+                        'A browser window has opened. Please choose your Google account in the browser.'
+                      )}
                     </p>
                   </div>
 
                   <div className="w-full py-2 px-3 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-300 flex items-center justify-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
-                    <span>Tự động nhận diện khi bạn chọn tài khoản và quay lại cửa sổ này</span>
+                    <span>
+                      {t(
+                        'Tự động nhận diện khi bạn chọn tài khoản và quay lại cửa sổ này',
+                        'Automatically detected when you select an account and return here'
+                      )}
+                    </span>
                   </div>
 
                   <div className="pt-1 flex flex-wrap items-center justify-center gap-2">
@@ -371,7 +403,7 @@ export const AuthBridgeModal: React.FC<AuthBridgeModalProps> = ({
                       className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
                     >
                       <ExternalLink className="w-3.5 h-3.5" />
-                      <span>Mở lại trình duyệt</span>
+                      <span>{t('Mở lại trình duyệt', 'Reopen browser')}</span>
                     </button>
                     <button
                       type="button"
@@ -379,7 +411,7 @@ export const AuthBridgeModal: React.FC<AuthBridgeModalProps> = ({
                       className="px-3.5 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium flex items-center gap-1 transition-colors cursor-pointer"
                     >
                       {showManualInput ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                      <span>Dán mã thủ công (dự phòng)</span>
+                      <span>{t('Dán mã thủ công (dự phòng)', 'Paste code manually (fallback)')}</span>
                     </button>
                   </div>
                 </div>
@@ -392,12 +424,18 @@ export const AuthBridgeModal: React.FC<AuthBridgeModalProps> = ({
                   </div>
                   <div className="space-y-1">
                     <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
-                      Đang kết nối tài khoản Google...
+                      {t('Đang kết nối tài khoản Google...', 'Connecting Google account...')}
                     </h3>
                     <p className="text-xs text-slate-600 dark:text-slate-300">
                       {connectedUser?.displayName
-                        ? `Đang kích hoạt tài khoản "${connectedUser.displayName}"...`
-                        : 'Đang xác thực thông tin và thiết lập không gian lưu trữ...'}
+                        ? t(
+                            `Đang kích hoạt tài khoản "${connectedUser.displayName}"...`,
+                            `Activating account "${connectedUser.displayName}"...`
+                          )
+                        : t(
+                            'Đang xác thực thông tin và thiết lập không gian lưu trữ...',
+                            'Verifying credentials and setting up storage space...'
+                          )}
                     </p>
                   </div>
                 </div>
@@ -410,12 +448,18 @@ export const AuthBridgeModal: React.FC<AuthBridgeModalProps> = ({
                   </div>
                   <div className="space-y-1">
                     <h3 className="text-base font-medium text-emerald-950 dark:text-emerald-100">
-                      Đăng nhập thành công
+                      {t('Đăng nhập thành công', 'Sign-in successful')}
                     </h3>
                     <p className="text-xs text-emerald-800 dark:text-emerald-300">
                       {connectedUser?.displayName || connectedUser?.email
-                        ? `Chào mừng ${connectedUser.displayName || connectedUser.email}. Đang tải danh sách bảng vẽ...`
-                        : 'Đã hoàn tất kết nối Google Drive. Đang nạp dữ liệu...'}
+                        ? t(
+                            `Chào mừng ${connectedUser.displayName || connectedUser.email}. Đang tải danh sách bảng vẽ...`,
+                            `Welcome ${connectedUser.displayName || connectedUser.email}. Loading your boards...`
+                          )
+                        : t(
+                            'Đã hoàn tất kết nối Google Drive. Đang nạp dữ liệu...',
+                            'Google Drive connection complete. Loading data...'
+                          )}
                     </p>
                   </div>
                 </div>
@@ -428,10 +472,14 @@ export const AuthBridgeModal: React.FC<AuthBridgeModalProps> = ({
                   </div>
                   <div className="space-y-1">
                     <h3 className="text-sm font-bold text-red-900 dark:text-red-200">
-                      Chưa hoàn tất kết nối
+                      {t('Chưa hoàn tất kết nối', 'Connection incomplete')}
                     </h3>
                     <p className="text-xs text-red-700 dark:text-red-300 max-w-sm">
-                      {errorMessage || 'Không thể xác thực mã đăng nhập từ trình duyệt.'}
+                      {errorMessage ||
+                        t(
+                          'Không thể xác thực mã đăng nhập từ trình duyệt.',
+                          'Could not verify the sign-in code from your browser.'
+                        )}
                     </p>
                   </div>
                   <div className="pt-1 flex gap-2">
@@ -440,14 +488,14 @@ export const AuthBridgeModal: React.FC<AuthBridgeModalProps> = ({
                       onClick={handleOpenBrowserForCode}
                       className="px-3.5 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-semibold cursor-pointer transition-colors"
                     >
-                      Thử lại qua trình duyệt
+                      {t('Thử lại qua trình duyệt', 'Retry via browser')}
                     </button>
                     <button
                       type="button"
                       onClick={() => setShowManualInput(true)}
                       className="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-medium cursor-pointer"
                     >
-                      Dán mã thủ công
+                      {t('Dán mã thủ công', 'Paste code manually')}
                     </button>
                   </div>
                 </div>
@@ -458,7 +506,7 @@ export const AuthBridgeModal: React.FC<AuthBridgeModalProps> = ({
                 <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 space-y-2.5">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
-                      Dán mã kết nối thủ công
+                      {t('Dán mã kết nối thủ công', 'Paste connection code manually')}
                     </span>
                     <button
                       type="button"
@@ -466,7 +514,7 @@ export const AuthBridgeModal: React.FC<AuthBridgeModalProps> = ({
                       className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 text-indigo-600 dark:text-indigo-400 text-[11px] font-semibold transition-colors cursor-pointer"
                     >
                       <Clipboard className="w-3 h-3" />
-                      <span>Dán từ bộ nhớ tạm</span>
+                      <span>{t('Dán từ bộ nhớ tạm', 'Paste from clipboard')}</span>
                     </button>
                   </div>
 
@@ -478,7 +526,7 @@ export const AuthBridgeModal: React.FC<AuthBridgeModalProps> = ({
                         setInputToken(e.target.value);
                         setErrorMessage(null);
                       }}
-                      placeholder="Dán mã bắt đầu bằng BTTM- vào đây"
+                      placeholder={t('Dán mã bắt đầu bằng BTTM- vào đây', 'Paste the code starting with BTTM- here')}
                       className="w-full p-2.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-mono text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors duration-150 resize-none"
                     />
                   </div>
@@ -490,14 +538,19 @@ export const AuthBridgeModal: React.FC<AuthBridgeModalProps> = ({
                     className="w-full h-9 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer"
                   >
                     <Check className="w-4 h-4 shrink-0" />
-                    <span>Xác nhận kết nối</span>
+                    <span>{t('Xác nhận kết nối', 'Confirm connection')}</span>
                   </button>
                 </div>
               )}
 
               <div className="flex items-center gap-2 text-[11.5px] text-slate-500 dark:text-slate-400 pt-1">
                 <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                <span>Hoàn toàn tự động và an toàn theo chuẩn bảo mật Google OAuth.</span>
+                <span>
+                  {t(
+                    'Hoàn toàn tự động và an toàn theo chuẩn bảo mật Google OAuth.',
+                    'Fully automatic and secured with standard Google OAuth.'
+                  )}
+                </span>
               </div>
             </div>
           ) : (
@@ -513,16 +566,19 @@ export const AuthBridgeModal: React.FC<AuthBridgeModalProps> = ({
                   </div>
                   <div className="max-w-sm space-y-1.5">
                     <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
-                      Đăng nhập Google để kết nối ứng dụng máy tính
+                      {t('Đăng nhập Google để kết nối ứng dụng máy tính', 'Sign in with Google to connect the desktop app')}
                     </h3>
                     <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                      Đăng nhập tài khoản Google của bạn để cấp quyền lưu trữ và đồng bộ bảng vẽ cho ứng dụng fzInK trên máy tính.
+                      {t(
+                        'Đăng nhập tài khoản Google của bạn để cấp quyền lưu trữ và đồng bộ bảng vẽ cho ứng dụng fzInK trên máy tính.',
+                        'Sign in to your Google account to grant storage and board sync permissions for the fzInK desktop app.'
+                      )}
                     </p>
                   </div>
                   <GoogleSignInButton
                     onClick={() => void drive.signIn()}
                     isLoading={drive.isLoggingIn}
-                    label="Đăng nhập Google để kết nối app"
+                    label={t('Đăng nhập Google để kết nối app', 'Sign in with Google to connect app')}
                   />
                 </div>
               ) : (
@@ -536,13 +592,13 @@ export const AuthBridgeModal: React.FC<AuthBridgeModalProps> = ({
 
                     <div className="space-y-1">
                       <h3 className="text-base font-bold text-emerald-950 dark:text-emerald-100">
-                        Đăng nhập thành công!
+                        {t('Đăng nhập thành công!', 'Sign-in successful!')}
                       </h3>
                       <div className="flex items-center justify-center gap-2 pt-0.5">
                         {drive.user.photoURL ? (
                           <img
                             src={drive.user.photoURL}
-                            alt={drive.user.displayName || 'Tài khoản'}
+                            alt={drive.user.displayName || t('Tài khoản', 'Account')}
                             referrerPolicy="no-referrer"
                             className="w-5 h-5 rounded-full border border-emerald-200 dark:border-emerald-700"
                           />
@@ -551,7 +607,7 @@ export const AuthBridgeModal: React.FC<AuthBridgeModalProps> = ({
                           {drive.user.displayName || drive.user.email}
                         </span>
                         <span className="text-[11px] px-1.5 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300 font-medium">
-                          Đã liên kết Drive
+                          {t('Đã liên kết Drive', 'Drive linked')}
                         </span>
                       </div>
                     </div>
@@ -561,10 +617,13 @@ export const AuthBridgeModal: React.FC<AuthBridgeModalProps> = ({
                   <div className="space-y-3 pt-1">
                     <div className="text-center space-y-1">
                       <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                        Bạn muốn quay về ứng dụng máy tính hay tiếp tục sử dụng trên trình duyệt web?
+                        {t(
+                          'Bạn muốn quay về ứng dụng máy tính hay tiếp tục sử dụng trên trình duyệt web?',
+                          'Would you like to return to the desktop app or continue in your web browser?'
+                        )}
                       </p>
                       <p className="text-[11.5px] text-slate-500 dark:text-slate-400">
-                        Chọn cách làm việc phù hợp với bạn bên dưới:
+                        {t('Chọn cách làm việc phù hợp với bạn bên dưới:', 'Choose your preferred option below:')}
                       </p>
                     </div>
 
@@ -576,13 +635,16 @@ export const AuthBridgeModal: React.FC<AuthBridgeModalProps> = ({
                         className="w-full h-11 px-4 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs sm:text-sm flex items-center justify-center gap-2 transition-[background-color,transform] duration-150 cursor-pointer active:scale-[0.98]"
                       >
                         <Laptop className="w-4 h-4 shrink-0" strokeWidth={1.75} />
-                        <span>Quay về ứng dụng máy tính</span>
+                        <span>{t('Quay về ứng dụng máy tính', 'Return to desktop app')}</span>
                         <ArrowRight className="w-4 h-4 shrink-0 opacity-80" strokeWidth={1.75} />
                       </button>
 
                       {appRedirectRequested && (
                         <div className="p-2.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 text-xs text-indigo-900 dark:text-indigo-200 text-center leading-relaxed">
-                          Đã kích hoạt quay về ứng dụng. Hãy mở hoặc chuyển sang cửa sổ fzInK trên thanh tác vụ của máy tính.
+                          {t(
+                            'Đã kích hoạt quay về ứng dụng. Hãy mở hoặc chuyển sang cửa sổ fzInK trên thanh tác vụ của máy tính.',
+                            'Triggered switch back to desktop app. Open or focus the fzInK window on your taskbar.'
+                          )}
                         </div>
                       )}
 
@@ -593,7 +655,7 @@ export const AuthBridgeModal: React.FC<AuthBridgeModalProps> = ({
                         className="w-full h-11 px-4 rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-semibold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
                       >
                         <Globe className="w-4 h-4 text-slate-500 shrink-0" />
-                        <span>Tiếp tục dùng trên web</span>
+                        <span>{t('Tiếp tục dùng trên web', 'Continue on web')}</span>
                       </button>
                     </div>
                   </div>
@@ -606,19 +668,19 @@ export const AuthBridgeModal: React.FC<AuthBridgeModalProps> = ({
                       className="text-[11px] text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 flex items-center gap-1 mx-auto cursor-pointer"
                     >
                       {showManualCode ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-                      <span>Xem mã kết nối thủ công (dự phòng)</span>
+                      <span>{t('Xem mã kết nối thủ công (dự phòng)', 'Show manual connection code (fallback)')}</span>
                     </button>
 
                     {showManualCode && (
                       <div className="mt-2.5 p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 space-y-2">
                         <div className="flex items-center justify-between gap-2">
                           <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">
-                            Mã phiên đăng nhập:
+                            {t('Mã phiên đăng nhập:', 'Session code:')}
                           </span>
                           {copiedCode && (
                             <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
                               <Check className="w-3.5 h-3.5" strokeWidth={1.75} />
-                              <span>Đã sao chép</span>
+                              <span>{t('Đã sao chép', 'Copied')}</span>
                             </span>
                           )}
                         </div>
@@ -627,7 +689,7 @@ export const AuthBridgeModal: React.FC<AuthBridgeModalProps> = ({
                           <input
                             type="text"
                             readOnly
-                            value={generatedToken || 'Đang tạo mã kết nối...'}
+                            value={generatedToken || t('Đang tạo mã kết nối...', 'Generating connection code...')}
                             className="w-full h-9 px-3 pr-20 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 font-mono text-[11px] text-slate-800 dark:text-slate-200 select-all"
                           />
                           <button
@@ -637,7 +699,7 @@ export const AuthBridgeModal: React.FC<AuthBridgeModalProps> = ({
                             className="absolute right-1 top-1 h-7 px-2.5 rounded-md bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-[11px] font-medium flex items-center gap-1 transition-colors cursor-pointer"
                           >
                             {copiedCode ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                            <span>Sao chép</span>
+                            <span>{t('Sao chép', 'Copy')}</span>
                           </button>
                         </div>
                       </div>

@@ -1,3 +1,4 @@
+import { AppLanguage, getAppLanguage } from '../i18n';
 import { BoardElement, BoardPattern, Camera, NotebookPageConfig, NotebookPaperSize, Point, Rect } from '../types/board';
 import { getArrowEndpoints, getElementBounds } from './geometry';
 
@@ -12,32 +13,66 @@ export interface NotebookPaperStyleOption {
 
 export const DEFAULT_NOTEBOOK_PAPER_STYLE: NotebookPaperStyle = 'lined';
 
-export const NOTEBOOK_PAPER_STYLES: NotebookPaperStyleOption[] = [
-  {
-    id: 'lined',
-    label: 'Giấy kẻ ngang',
-    shortLabel: 'Kẻ ngang',
-    description: 'Dòng kẻ ngang truyền thống',
-  },
-  {
-    id: 'grid',
-    label: 'Giấy ô ly',
-    shortLabel: 'Ô ly',
-    description: 'Ô vuông đều, dễ căn hàng & vẽ hình',
-  },
-  {
-    id: 'dots',
-    label: 'Giấy chấm bi',
-    shortLabel: 'Chấm bi',
-    description: 'Chấm lưới tinh gọn, ghi chú tự do',
-  },
-  {
-    id: 'plain',
-    label: 'Giấy trắng trơn',
-    shortLabel: 'Trắng trơn',
-    description: 'Không dòng kẻ, chỉ giữ lề trang',
-  },
-];
+export function getNotebookPaperStyles(
+  lang: AppLanguage = getAppLanguage()
+): NotebookPaperStyleOption[] {
+  if (lang === 'en') {
+    return [
+      {
+        id: 'lined',
+        label: 'Ruled paper',
+        shortLabel: 'Ruled',
+        description: 'Classic horizontal lines',
+      },
+      {
+        id: 'grid',
+        label: 'Grid paper',
+        shortLabel: 'Grid',
+        description: 'Even squares for alignment & sketches',
+      },
+      {
+        id: 'dots',
+        label: 'Dotted paper',
+        shortLabel: 'Dotted',
+        description: 'Subtle dot grid for freeform notes',
+      },
+      {
+        id: 'plain',
+        label: 'Blank paper',
+        shortLabel: 'Blank',
+        description: 'No lines, page margins only',
+      },
+    ];
+  }
+  return [
+    {
+      id: 'lined',
+      label: 'Giấy kẻ ngang',
+      shortLabel: 'Kẻ ngang',
+      description: 'Dòng kẻ ngang truyền thống',
+    },
+    {
+      id: 'grid',
+      label: 'Giấy ô ly',
+      shortLabel: 'Ô ly',
+      description: 'Ô vuông đều, dễ căn hàng & vẽ hình',
+    },
+    {
+      id: 'dots',
+      label: 'Giấy chấm bi',
+      shortLabel: 'Chấm bi',
+      description: 'Chấm lưới tinh gọn, ghi chú tự do',
+    },
+    {
+      id: 'plain',
+      label: 'Giấy trắng trơn',
+      shortLabel: 'Trắng trơn',
+      description: 'Không dòng kẻ, chỉ giữ lề trang',
+    },
+  ];
+}
+
+export const NOTEBOOK_PAPER_STYLES: NotebookPaperStyleOption[] = getNotebookPaperStyles('vi');
 
 export function normalizeNotebookPaperStyle(raw?: BoardPattern | unknown): NotebookPaperStyle {
   if (raw === 'lined' || raw === 'grid' || raw === 'dots' || raw === 'plain') {
@@ -99,11 +134,22 @@ export const NOTEBOOK_PAPER_CONFIGS: Record<NotebookPaperSize, NotebookPageConfi
 
 export const DEFAULT_NOTEBOOK_PAPER_SIZE: NotebookPaperSize = 'a4';
 
-export function getNotebookConfig(size?: NotebookPaperSize): NotebookPageConfig {
-  if (size && NOTEBOOK_PAPER_CONFIGS[size]) {
-    return NOTEBOOK_PAPER_CONFIGS[size];
-  }
-  return NOTEBOOK_PAPER_CONFIGS[DEFAULT_NOTEBOOK_PAPER_SIZE];
+export function getNotebookConfig(
+  size?: NotebookPaperSize,
+  lang: AppLanguage = getAppLanguage()
+): NotebookPageConfig {
+  const base =
+    size && NOTEBOOK_PAPER_CONFIGS[size]
+      ? NOTEBOOK_PAPER_CONFIGS[size]
+      : NOTEBOOK_PAPER_CONFIGS[DEFAULT_NOTEBOOK_PAPER_SIZE];
+  if (lang !== 'en') return base;
+  const enLabels: Record<NotebookPaperSize, { name: string; label: string }> = {
+    a4: { name: 'A4 (210 × 297 mm)', label: 'A4' },
+    a3: { name: 'A3 (297 × 420 mm)', label: 'A3' },
+    b5: { name: 'B5 (176 × 250 mm)', label: 'B5' },
+    letter: { name: 'Letter (216 × 279 mm)', label: 'Letter' },
+  };
+  return { ...base, ...enLabels[base.id] };
 }
 
 export function normalizeNotebookPaperSize(raw: unknown): NotebookPaperSize {

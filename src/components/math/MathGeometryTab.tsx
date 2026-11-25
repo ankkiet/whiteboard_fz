@@ -1,11 +1,12 @@
 import React from 'react';
 import { useBoardStore } from '../../store/useBoardStore';
 import {
-  MATH_GEOMETRY_PRESETS,
   MathGeometryPresetId,
   buildGeometryPresetElements,
+  getMathGeometryPresets,
 } from '../../engine/mathUtils';
 import { MathGradeMode } from '../../types/board';
+import { useI18n } from '../../i18n/useI18n';
 import { Solid3DPreview } from './Solid3DPreview';
 import { LayoutGrid } from 'lucide-react';
 
@@ -22,12 +23,15 @@ export const MathGeometryTab: React.FC<MathGeometryTabProps> = ({
   gradeMode,
   getWorldCenter,
 }) => {
+  const { language, t } = useI18n();
   const virtualTools = useBoardStore((s) => s.virtualTools);
   const toggleVirtualTool = useBoardStore((s) => s.toggleVirtualTool);
   const arrangeVirtualTools = useBoardStore((s) => s.arrangeVirtualTools);
   const hideAllVirtualTools = useBoardStore((s) => s.hideAllVirtualTools);
   const addElementsBatch = useBoardStore((s) => s.addElementsBatch);
   const addToast = useBoardStore((s) => s.addToast);
+
+  const presets = getMathGeometryPresets(language);
 
   const activeVirtualCount = (
     ['ruler', 'setSquare', 'protractor', 'compass'] as const
@@ -39,7 +43,10 @@ export const MathGeometryTab: React.FC<MathGeometryTabProps> = ({
     const maxZ = state.elements.reduce((m, el) => Math.max(m, el.zIndex || 0), 0);
     const items = buildGeometryPresetElements(presetId, center, state.color, maxZ, uid);
     addElementsBatch(items, true);
-    addToast(`Đã chèn "${label}" (đã nhóm sẵn)`, 'success');
+    addToast(
+      t(`Đã chèn "${label}" (đã nhóm sẵn)`, `Inserted "${label}" (grouped)`),
+      'success'
+    );
   };
 
   return (
@@ -48,7 +55,7 @@ export const MathGeometryTab: React.FC<MathGeometryTabProps> = ({
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-1">
           <div className="text-xs font-medium text-slate-800 dark:text-slate-100">
-            Dụng cụ đo vẽ ảo (Hút nét bút)
+            {t('Dụng cụ đo vẽ ảo (Hút nét bút)', 'Virtual drafting tools (Snap to edge)')}
           </div>
           {activeVirtualCount > 0 && (
             <div className="flex items-center gap-1">
@@ -56,20 +63,23 @@ export const MathGeometryTab: React.FC<MathGeometryTabProps> = ({
                 type="button"
                 data-testid="arrange-virtual-tools-button"
                 onClick={arrangeVirtualTools}
-                title="Tự động xếp gọn các dụng cụ đang bật không chồng lấp nhau"
+                title={t(
+                  'Tự động xếp gọn các dụng cụ đang bật không chồng lấp nhau',
+                  'Automatically arrange active tools without overlap'
+                )}
                 className="h-6 px-2 rounded-lg bg-indigo-50 dark:bg-indigo-950/80 hover:bg-indigo-100 text-indigo-700 dark:text-indigo-300 text-[10px] font-semibold inline-flex items-center gap-1 cursor-pointer"
               >
                 <LayoutGrid className="w-3 h-3" />
-                <span>Xếp gọn</span>
+                <span>{t('Xếp gọn', 'Arrange')}</span>
               </button>
               <button
                 type="button"
                 data-testid="hide-all-virtual-tools-button"
                 onClick={hideAllVirtualTools}
-                title="Ẩn tất cả dụng cụ đo vẽ"
+                title={t('Ẩn tất cả dụng cụ đo vẽ', 'Hide all drafting tools')}
                 className="h-6 px-2 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-rose-50 dark:hover:bg-rose-950/50 hover:text-rose-600 text-slate-600 dark:text-slate-300 text-[10px] font-semibold cursor-pointer"
               >
-                Ẩn hết
+                {t('Ẩn hết', 'Hide all')}
               </button>
             </div>
           )}
@@ -77,16 +87,16 @@ export const MathGeometryTab: React.FC<MathGeometryTabProps> = ({
         <div className="grid grid-cols-2 gap-1.5">
           {(
             [
-              { id: 'ruler' as const, label: 'Thước kẻ cm', show: true },
-              { id: 'setSquare' as const, label: 'Thước Ê-ke 90°', show: true },
+              { id: 'ruler' as const, label: t('Thước kẻ cm', 'cm Ruler'), show: true },
+              { id: 'setSquare' as const, label: t('Thước Ê-ke 90°', '90° Set square'), show: true },
               {
                 id: 'protractor' as const,
-                label: 'Thước đo độ 180°',
+                label: t('Thước đo độ 180°', '180° Protractor'),
                 show: gradeMode !== 'primary',
               },
               {
                 id: 'compass' as const,
-                label: 'Compa vẽ tròn',
+                label: t('Compa vẽ tròn', 'Compass'),
                 show: gradeMode !== 'primary',
               },
             ] as const
@@ -124,10 +134,10 @@ export const MathGeometryTab: React.FC<MathGeometryTabProps> = ({
       {/* Quick 2D Geometric Constructions */}
       <div className="space-y-2 pt-3 border-t border-slate-200/80 dark:border-slate-800">
         <div className="text-xs font-medium text-slate-800 dark:text-slate-100">
-          Dựng hình phẳng chuẩn SGK
+          {t('Dựng hình phẳng chuẩn SGK', 'Standard 2D constructions')}
         </div>
         <div className="grid grid-cols-2 gap-1.5">
-          {MATH_GEOMETRY_PRESETS.map((preset) => (
+          {presets.map((preset) => (
             <button
               key={preset.id}
               type="button"

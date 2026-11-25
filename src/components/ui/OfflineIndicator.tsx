@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useOnlineStatus } from '../../hooks/usePWAInstall';
 import { isDesktopApp } from '../../services/appUpdater';
+import { useI18n } from '../../i18n/useI18n';
 import { WifiOff, X } from 'lucide-react';
 
 const OFFLINE_BANNER_DURATION_MS = 4000;
 
 export const OfflineIndicator: React.FC = () => {
+  const { t } = useI18n();
   const isOnline = useOnlineStatus();
   const [visible, setVisible] = useState(!isOnline);
 
@@ -39,13 +41,19 @@ export const OfflineIndicator: React.FC = () => {
       <WifiOff className="w-4 h-4 shrink-0" strokeWidth={1.75} />
       <span>
         {isDesktop
-          ? 'Đang ngoại tuyến — Dữ liệu bảng vẫn tự động lưu trên máy'
-          : 'Đang ngoại tuyến — Dữ liệu bảng vẫn đang lưu trên trình duyệt'}
+          ? t(
+              'Đang ngoại tuyến — Dữ liệu bảng vẫn tự động lưu trên máy',
+              'Offline — Boards continue auto-saving on this device'
+            )
+          : t(
+              'Đang ngoại tuyến — Dữ liệu bảng vẫn đang lưu trên trình duyệt',
+              'Offline — Boards continue auto-saving in this browser'
+            )}
       </span>
       <button
         type="button"
         onClick={() => setVisible(false)}
-        aria-label="Đóng thông báo ngoại tuyến"
+        aria-label={t('Đóng thông báo ngoại tuyến', 'Dismiss offline notice')}
         className="ml-1 inline-flex items-center justify-center w-6 h-6 rounded-md hover:bg-black/15 transition-colors duration-150 cursor-pointer shrink-0"
       >
         <X className="w-3.5 h-3.5" strokeWidth={1.75} />

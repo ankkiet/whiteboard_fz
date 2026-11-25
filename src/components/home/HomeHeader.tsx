@@ -1,7 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { GoogleDriveWorkspaceState } from '../../hooks/useGoogleDriveWorkspace';
+import { StartDesktopUpdateParams } from '../../hooks/useDesktopUpdate';
 import { HomeSettingsMenu, PWAInstallTriggerButton } from './HomeSettingsMenu';
 import { AppLogo } from '../ui/AppLogo';
+import { useI18n } from '../../i18n/useI18n';
 import {
   ChevronDown,
   Laptop,
@@ -20,6 +22,7 @@ interface HomeHeaderProps {
   onCreateNewClick: () => void;
   onOpenDesktopAppClick: () => void;
   onOpenAuthBridgeClick?: () => void;
+  onStartDesktopUpdate?: (params: StartDesktopUpdateParams) => void;
 }
 
 export const HomeHeader: React.FC<HomeHeaderProps> = ({
@@ -30,7 +33,9 @@ export const HomeHeader: React.FC<HomeHeaderProps> = ({
   onCreateNewClick,
   onOpenDesktopAppClick,
   onOpenAuthBridgeClick,
+  onStartDesktopUpdate,
 }) => {
+  const { t } = useI18n();
   const [showAccountMenu, setShowAccountMenu] = useState(false);
   const accountMenuRef = useRef<HTMLDivElement>(null);
 
@@ -61,8 +66,16 @@ export const HomeHeader: React.FC<HomeHeaderProps> = ({
           <button
             type="button"
             onClick={onToggleTheme}
-            aria-label={theme === 'dark' ? 'Chuyển sang giao diện sáng' : 'Chuyển sang giao diện tối'}
-            title={theme === 'dark' ? 'Giao diện sáng' : 'Giao diện tối'}
+            aria-label={
+              theme === 'dark'
+                ? t('Chuyển sang giao diện sáng', 'Switch to light mode')
+                : t('Chuyển sang giao diện tối', 'Switch to dark mode')
+            }
+            title={
+              theme === 'dark'
+                ? t('Giao diện sáng', 'Light mode')
+                : t('Giao diện tối', 'Dark mode')
+            }
             className="w-9 h-9 rounded-lg flex items-center justify-center text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100 transition-colors duration-150 cursor-pointer shrink-0"
           >
             {theme === 'dark' ? (
@@ -78,13 +91,13 @@ export const HomeHeader: React.FC<HomeHeaderProps> = ({
                 type="button"
                 onClick={() => setShowAccountMenu((v) => !v)}
                 aria-expanded={showAccountMenu}
-                aria-label="Tài khoản Google"
+                aria-label={t('Tài khoản Google', 'Google account')}
                 className="h-9 pl-1.5 pr-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2 transition-colors duration-150 cursor-pointer shrink-0"
               >
                 {drive.user.photoURL ? (
                   <img
                     src={drive.user.photoURL}
-                    alt={drive.user.displayName || 'Tài khoản Google'}
+                    alt={drive.user.displayName || t('Tài khoản Google', 'Google account')}
                     referrerPolicy="no-referrer"
                     className="w-6 h-6 rounded-full border border-slate-200 dark:border-slate-700 shrink-0"
                   />
@@ -106,7 +119,7 @@ export const HomeHeader: React.FC<HomeHeaderProps> = ({
                 >
                   <div className="px-2.5 py-2 border-b border-slate-100 dark:border-slate-800 mb-1">
                     <div className="text-xs font-medium text-slate-900 dark:text-slate-100 truncate">
-                      {drive.user.displayName || 'Tài khoản Google'}
+                      {drive.user.displayName || t('Tài khoản Google', 'Google account')}
                     </div>
                     <div className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">
                       {drive.user.email}
@@ -123,7 +136,7 @@ export const HomeHeader: React.FC<HomeHeaderProps> = ({
                     className="w-full h-9 flex items-center gap-2 px-2.5 rounded-lg text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors duration-150 cursor-pointer"
                   >
                     <UserRoundCog className="w-4 h-4 text-slate-400 shrink-0" strokeWidth={1.75} />
-                    <span>Đổi tài khoản Google</span>
+                    <span>{t('Đổi tài khoản Google', 'Switch Google account')}</span>
                   </button>
                   {!isFileProtocol && onOpenAuthBridgeClick && (
                     <button
@@ -136,7 +149,7 @@ export const HomeHeader: React.FC<HomeHeaderProps> = ({
                       className="w-full h-9 flex items-center gap-2 px-2.5 rounded-lg text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors duration-150 cursor-pointer"
                     >
                       <Laptop className="w-4 h-4 text-slate-400 shrink-0" strokeWidth={1.75} />
-                      <span>Mã kết nối app máy tính</span>
+                      <span>{t('Mã kết nối app máy tính', 'Desktop app connection code')}</span>
                     </button>
                   )}
                   <button
@@ -150,7 +163,7 @@ export const HomeHeader: React.FC<HomeHeaderProps> = ({
                     className="w-full h-9 flex items-center gap-2 px-2.5 rounded-lg text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/50 transition-colors duration-150 cursor-pointer"
                   >
                     <LogOut className="w-4 h-4 shrink-0" strokeWidth={1.75} />
-                    <span>Đăng xuất</span>
+                    <span>{t('Đăng xuất', 'Sign out')}</span>
                   </button>
                 </div>
               )}
@@ -159,6 +172,7 @@ export const HomeHeader: React.FC<HomeHeaderProps> = ({
 
           <HomeSettingsMenu
             onOpenDesktopModal={onOpenDesktopAppClick}
+            onStartDesktopUpdate={onStartDesktopUpdate}
             theme={theme}
             onToggleTheme={onToggleTheme}
           />
@@ -172,7 +186,7 @@ export const HomeHeader: React.FC<HomeHeaderProps> = ({
             className="h-9 inline-flex items-center gap-1.5 px-3 sm:px-4 rounded-lg bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] text-white text-xs sm:text-sm font-medium transition-[background-color,transform] duration-150 whitespace-nowrap shrink-0 cursor-pointer"
           >
             <Plus className="w-4 h-4" strokeWidth={1.75} />
-            <span>Tạo bảng mới</span>
+            <span>{t('Tạo bảng mới', 'New board')}</span>
           </button>
         </div>
       </div>

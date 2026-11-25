@@ -431,12 +431,12 @@ export function formatPrimeFactorizationLatex(n: number, factors: number[]): str
 }
 
 /**
- * Converts exact trigonometry value labels ("√2/2", "-√3/2", "π/4", "KXĐ") into crisp LaTeX.
+ * Converts exact trigonometry value labels ("√2/2", "-√3/2", "π/4", "KXĐ", "Undef") into crisp LaTeX.
  */
 export function formatTrigValueToLatex(label: string): string {
   const s = label.trim();
   if (!s) return '';
-  if (s === 'KXĐ') return '\\text{KXĐ}';
+  if (s === 'KXĐ' || s === 'Undef') return `\\text{${s}}`;
   const neg = s.startsWith('-');
   const body = neg ? s.slice(1) : s;
   const sign = neg ? '-' : '';
