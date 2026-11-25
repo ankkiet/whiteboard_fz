@@ -1,4 +1,11 @@
-import { clearGoogleAccessToken, getGoogleAccessToken } from './googleAuth';
+import {
+  canRefreshGoogleAccessToken,
+  clearGoogleAccessToken,
+  ensureGoogleAccessToken,
+  refreshGoogleAccessToken,
+  TokenRefreshRevokedError,
+  TokenRefreshTransientError,
+} from './googleAuth';
 import { tr } from '../i18n';
 import {
   APP_DRIVE_FOLDER_NAME,
@@ -38,8 +45,19 @@ export class DriveAuthError extends Error {
   }
 }
 
-function requireToken(): string {
-  const token = getGoogleAccessToken();
+async function requireToken(): Promise<string> {
+  let token: string | null = null;
+  try {
+    token = await ensureGoogleAccessToken();
+  } catch (err) {
+    if (err instanceof TokenRefreshRevokedError) {
+      clearGoogleAccessToken();
+      clearCachedDriveFolder();
+      throw new DriveAuthError(err.message);
+    }
+    throw err;
+  }
+
   if (!token) {
     throw new DriveAuthError(
       tr('Vui lòng đăng nhập bằng Google để sử dụng Google Drive.', 'Please sign in with Google to use Google Drive.')
@@ -49,11 +67,33 @@ function requireToken(): string {
 }
 
 async function driveFetch(url: string, init: RequestInit = {}): Promise<Response> {
-  const token = requireToken();
-  const headers = new Headers(init.headers);
-  headers.set('Authorization', `Bearer ${token}`);
+  const token = await requireToken();
+  const sendWithToken = (accessToken: string) => {
+    const headers = new Headers(init.headers);
+    headers.set('Authorization', `Bearer ${accessToken}`);
+    return fetch(url, { ...init, headers });
+  };
 
-  const res = await fetch(url, { ...init, headers });
+  let res = await sendWithToken(token);
+  if (res.status === 401 && canRefreshGoogleAccessToken()) {
+    try {
+      const refreshedToken = await refreshGoogleAccessToken(true);
+      if (refreshedToken) {
+        res = await sendWithToken(refreshedToken);
+      }
+    } catch (err) {
+      if (err instanceof TokenRefreshTransientError) {
+        throw err;
+      }
+      if (err instanceof TokenRefreshRevokedError) {
+        clearGoogleAccessToken();
+        clearCachedDriveFolder();
+        throw new DriveAuthError(err.message);
+      }
+      throw err;
+    }
+  }
+
   if (res.status === 401) {
     clearGoogleAccessToken();
     clearCachedDriveFolder();

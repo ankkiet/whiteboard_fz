@@ -6,7 +6,7 @@ import {
   parseAuthBridgeToken,
   BridgeUser,
 } from '../../services/authBridge';
-import { getGoogleAccessToken } from '../../services/googleAuth';
+import { fetchDesktopBridgeSessionToken, getGoogleAccessToken } from '../../services/googleAuth';
 import { GoogleSignInButton } from '../home/GoogleSignInButton';
 import { useI18n } from '../../i18n/useI18n';
 import {
@@ -73,22 +73,32 @@ export const AuthBridgeModal: React.FC<AuthBridgeModalProps> = ({
     }
   }, [isOpen, effectiveMode]);
 
-  // Phía Web: Khi người dùng đã đăng nhập Google, tạo token cầu nối
+  // Phía Web: Khi người dùng đã đăng nhập Google, tạo token cầu nối (kèm sessionToken gia hạn dài hạn nếu có)
   useEffect(() => {
     if (!isOpen || effectiveMode !== 'export') return;
 
     if (!drive.needsAuth && drive.user) {
       const accessToken = getGoogleAccessToken();
-      if (accessToken) {
+      if (!accessToken) {
+        setGeneratedToken(null);
+        return;
+      }
+
+      const activeUser = drive.user;
+      let cancelled = false;
+
+      const buildAndPublishCode = (sessionToken: string | null) => {
+        if (cancelled) return;
         try {
           const code = createAuthBridgeToken(
             {
-              uid: drive.user.uid,
-              displayName: drive.user.displayName,
-              email: drive.user.email,
-              photoURL: drive.user.photoURL,
+              uid: activeUser.uid,
+              displayName: activeUser.displayName,
+              email: activeUser.email,
+              photoURL: activeUser.photoURL,
             },
-            accessToken
+            accessToken,
+            sessionToken
           );
           setGeneratedToken(code);
 
@@ -99,9 +109,13 @@ export const AuthBridgeModal: React.FC<AuthBridgeModalProps> = ({
         } catch {
           setGeneratedToken(null);
         }
-      } else {
-        setGeneratedToken(null);
-      }
+      };
+
+      void fetchDesktopBridgeSessionToken().then(buildAndPublishCode);
+
+      return () => {
+        cancelled = true;
+      };
     } else {
       setGeneratedToken(null);
     }

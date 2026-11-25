@@ -168,6 +168,28 @@ export const HomePage: React.FC<HomePageProps> = ({
           onCreateNewClick={() => handleOpenCreateModal()}
           onOpenAuthBridgeClick={onOpenAuthBridgeClick}
         />
+
+        <footer className="pt-4 pb-2 border-t border-slate-200/70 dark:border-slate-800/70 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400">
+          <span>fzInK</span>
+          <div className="flex items-center gap-4">
+            <a
+              href="./privacy.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-slate-900 dark:hover:text-slate-200 transition-colors"
+            >
+              {t('Chính sách quyền riêng tư', 'Privacy policy')}
+            </a>
+            <a
+              href="./terms.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-slate-900 dark:hover:text-slate-200 transition-colors"
+            >
+              {t('Điều khoản sử dụng', 'Terms of service')}
+            </a>
+          </div>
+        </footer>
       </div>
 
       {/* Create New Board Template Modal */}

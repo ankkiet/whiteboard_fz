@@ -18,6 +18,9 @@ export interface BridgeSession {
   user: BridgeUser;
   createdAt: number;
   expiresIn?: number;
+  accessTokenExpiresAt?: number;
+  /** Encrypted server-side session token holding refresh_token (used for silent auto-refresh) */
+  sessionToken?: string;
 }
 
 interface DesktopAuthBridgeApi {
@@ -32,10 +35,12 @@ declare global {
   }
 }
 
-interface WebTokenCacheRecord {
+export interface WebTokenCacheRecord {
   accessToken: string;
   expiresAt: number;
   email?: string | null;
+  user?: BridgeUser | null;
+  oauthMode?: boolean;
 }
 
 const BRIDGE_PREFIX = 'BTTM-';
@@ -57,7 +62,19 @@ export function getWebPortalOrigin(): string {
   return PRODUCTION_UPDATE_ORIGIN;
 }
 
-export function createAuthBridgeToken(user: BridgeUser, accessToken: string): string {
+export function getAuthApiOrigin(): string {
+  if (typeof window !== 'undefined' && window.location.protocol.startsWith('http')) {
+    return '';
+  }
+  return getWebPortalOrigin();
+}
+
+export function createAuthBridgeToken(
+  user: BridgeUser,
+  accessToken: string,
+  sessionToken?: string | null
+): string {
+  const now = Date.now();
   const payload: BridgeSession = {
     accessToken,
     user: {
@@ -66,8 +83,10 @@ export function createAuthBridgeToken(user: BridgeUser, accessToken: string): st
       email: user.email || null,
       photoURL: user.photoURL || null,
     },
-    createdAt: Date.now(),
+    createdAt: now,
     expiresIn: 3600,
+    accessTokenExpiresAt: now + 3600 * 1000,
+    ...(sessionToken ? { sessionToken } : {}),
   };
   const json = JSON.stringify(payload);
   const base64 = btoa(
@@ -114,6 +133,13 @@ export function parseAuthBridgeToken(raw: string): BridgeSession {
       );
     }
 
+    const createdAt = parsed.createdAt || Date.now();
+    const expiresIn = parsed.expiresIn || 3600;
+    const sessionToken =
+      typeof parsed.sessionToken === 'string' && parsed.sessionToken.trim()
+        ? parsed.sessionToken.trim()
+        : undefined;
+
     return {
       accessToken: parsed.accessToken,
       user: {
@@ -122,8 +148,13 @@ export function parseAuthBridgeToken(raw: string): BridgeSession {
         email: parsed.user.email,
         photoURL: parsed.user.photoURL || null,
       },
-      createdAt: parsed.createdAt || Date.now(),
-      expiresIn: parsed.expiresIn || 3600,
+      createdAt,
+      expiresIn,
+      accessTokenExpiresAt:
+        typeof parsed.accessTokenExpiresAt === 'number'
+          ? parsed.accessTokenExpiresAt
+          : createdAt + expiresIn * 1000,
+      ...(sessionToken ? { sessionToken } : {}),
     };
   } catch (err) {
     if (err instanceof BridgeTokenValidationError) {
@@ -139,6 +170,10 @@ export function parseAuthBridgeToken(raw: string): BridgeSession {
 }
 
 export function isBridgeSessionExpired(session: BridgeSession, now = Date.now()): boolean {
+  // Long-lived sessions backed by a server refresh sessionToken do not expire after 60 minutes.
+  if (typeof session.sessionToken === 'string' && session.sessionToken.trim().length > 0) {
+    return false;
+  }
   if (!session.createdAt || typeof session.createdAt !== 'number') return false;
   const ttlSeconds = typeof session.expiresIn === 'number' && session.expiresIn > 0 ? session.expiresIn : 3600;
   // Leave a 90s buffer so we don't hand out a token right as it expires
@@ -242,16 +277,21 @@ export function saveWebAccessTokenCache(
   token: string,
   email?: string | null,
   ttlMs = DEFAULT_TOKEN_TTL_MS,
-  now = Date.now()
+  now = Date.now(),
+  user?: BridgeUser | null,
+  oauthMode = false
 ): void {
   if (typeof window === 'undefined') return;
   const record: WebTokenCacheRecord = {
     accessToken: token,
     expiresAt: now + ttlMs,
-    email: email || null,
+    email: email || user?.email || null,
+    ...(user ? { user } : {}),
+    ...(oauthMode ? { oauthMode: true } : {}),
   };
-  if (email) {
-    saveLastGoogleEmail(email);
+  const resolvedEmail = email || user?.email;
+  if (resolvedEmail) {
+    saveLastGoogleEmail(resolvedEmail);
   }
   try {
     window.localStorage.setItem(WEB_TOKEN_LOCAL_KEY, JSON.stringify(record));
@@ -266,7 +306,7 @@ export function saveWebAccessTokenCache(
   }
 }
 
-export function loadWebAccessTokenCache(now = Date.now()): string | null {
+export function loadWebAuthCacheRecord(now = Date.now()): WebTokenCacheRecord | null {
   if (typeof window === 'undefined') return null;
   try {
     const raw = window.localStorage.getItem(WEB_TOKEN_LOCAL_KEY);
@@ -278,13 +318,28 @@ export function loadWebAccessTokenCache(now = Date.now()): string | null {
         typeof parsed.expiresAt === 'number' &&
         now < parsed.expiresAt
       ) {
-        return parsed.accessToken;
+        return {
+          accessToken: parsed.accessToken,
+          expiresAt: parsed.expiresAt,
+          email: parsed.email || null,
+          user: parsed.user || null,
+          oauthMode: Boolean(parsed.oauthMode),
+        };
       }
       // Expired or malformed record -> clean up
       window.localStorage.removeItem(WEB_TOKEN_LOCAL_KEY);
     }
   } catch {
     // ignore
+  }
+  return null;
+}
+
+export function loadWebAccessTokenCache(now = Date.now()): string | null {
+  if (typeof window === 'undefined') return null;
+  const record = loadWebAuthCacheRecord(now);
+  if (record) {
+    return record.accessToken;
   }
 
   // Legacy fallback during migration

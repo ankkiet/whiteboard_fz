@@ -46,8 +46,9 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Bỏ qua các tệp cài đặt lớn và manifest kiểm tra phiên bản
+  // Bỏ qua các API xác thực, tệp cài đặt lớn và manifest kiểm tra phiên bản
   if (
+    url.pathname.startsWith('/api/') ||
     url.pathname === '/app-version.json' ||
     url.pathname === '/app-version.js' ||
     /\.(exe|dmg|zip|msi)$/i.test(url.pathname)

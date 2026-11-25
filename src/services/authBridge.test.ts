@@ -5,11 +5,13 @@ import {
   clearLastGoogleEmail,
   clearWebAccessTokenCache,
   createAuthBridgeToken,
+  getAuthApiOrigin,
   getWebPortalOrigin,
   isBridgeSessionExpired,
   loadBridgeSession,
   loadLastGoogleEmail,
   loadWebAccessTokenCache,
+  loadWebAuthCacheRecord,
   parseAuthBridgeToken,
   saveBridgeSession,
   saveLastGoogleEmail,
@@ -160,6 +162,68 @@ test('desktop bridge session persists via Electron native IPC even when localSto
 
     clearBridgeSession();
     assert.equal(persistedInMain, null);
+  } finally {
+    (globalThis as any).window = prevWindow;
+  }
+});
+
+test('bridge session with server sessionToken stays valid past 60 minutes and roundtrips via BTTM-', () => {
+  const prevWindow = (globalThis as any).window;
+  const localStorage = createMemoryStorage();
+  (globalThis as any).window = {
+    localStorage,
+    location: { protocol: 'file:' },
+  };
+
+  try {
+    const dummyUser = {
+      uid: 'google-oauth-sub-1',
+      displayName: 'Thầy Minh',
+      email: 'minh@school.edu.vn',
+      photoURL: null,
+    };
+    const bridgeCode = createAuthBridgeToken(dummyUser, 'ya29.short_access', 'enc_session_tok_v1');
+    const parsed = parseAuthBridgeToken(bridgeCode);
+    assert.equal(parsed.sessionToken, 'enc_session_tok_v1');
+
+    saveBridgeSession(parsed);
+    const tenHoursLater = parsed.createdAt + 10 * 60 * 60 * 1000;
+    assert.equal(isBridgeSessionExpired(parsed, tenHoursLater), false);
+
+    const restored = loadBridgeSession(tenHoursLater);
+    assert.equal(restored?.sessionToken, 'enc_session_tok_v1');
+    assert.equal(restored?.user.email, 'minh@school.edu.vn');
+    assert.equal(getAuthApiOrigin(), 'https://whiteboardfz.pages.dev');
+  } finally {
+    (globalThis as any).window = prevWindow;
+  }
+});
+
+test('web OAuth cache record preserves user metadata and uses relative auth origin', () => {
+  const prevWindow = (globalThis as any).window;
+  const localStorage = createMemoryStorage();
+  const sessionStorage = createMemoryStorage();
+  (globalThis as any).window = {
+    localStorage,
+    sessionStorage,
+    location: { protocol: 'https:', origin: 'https://whiteboardfz.pages.dev' },
+  };
+
+  try {
+    const t0 = 1_700_000_000_000;
+    const user = {
+      uid: 'sub-42',
+      displayName: 'Cô Hoa',
+      email: 'hoa@gmail.com',
+      photoURL: 'https://example.com/a.png',
+    };
+    saveWebAccessTokenCache('ya29.oauth_tok', user.email, 3_000_000, t0, user, true);
+
+    const record = loadWebAuthCacheRecord(t0 + 1000);
+    assert.equal(record?.accessToken, 'ya29.oauth_tok');
+    assert.equal(record?.oauthMode, true);
+    assert.equal(record?.user?.email, 'hoa@gmail.com');
+    assert.equal(getAuthApiOrigin(), '');
   } finally {
     (globalThis as any).window = prevWindow;
   }
