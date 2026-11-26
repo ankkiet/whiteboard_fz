@@ -17,16 +17,32 @@ function signPath(targetPath) {
   });
 }
 
-function listFilesRecursive(dir) {
+function listNonBundleFiles(dir) {
   const results = [];
   if (!fs.existsSync(dir)) return results;
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     if (entry.isSymbolicLink()) continue;
     const fullPath = path.join(dir, entry.name);
     if (entry.isDirectory()) {
-      results.push(...listFilesRecursive(fullPath));
+      if (entry.name.endsWith('.app') || entry.name.endsWith('.xpc')) continue;
+      results.push(...listNonBundleFiles(fullPath));
     } else if (entry.isFile()) {
       results.push(fullPath);
+    }
+  }
+  return results;
+}
+
+function listNestedBundles(dir) {
+  const results = [];
+  if (!fs.existsSync(dir)) return results;
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    if (entry.isSymbolicLink() || !entry.isDirectory()) continue;
+    const fullPath = path.join(dir, entry.name);
+    if (entry.name.endsWith('.app') || entry.name.endsWith('.xpc')) {
+      results.push(fullPath);
+    } else {
+      results.push(...listNestedBundles(fullPath));
     }
   }
   return results;
@@ -47,24 +63,16 @@ function signFrameworkInsideOut(frameworkPath) {
   }
 
   for (const root of roots) {
-    // 1. Sign nested .app / .xpc bundles (e.g. Helpers or Resources)
-    for (const subDirName of ['Helpers', 'Resources', 'XPCServices']) {
-      const subDir = path.join(root, subDirName);
-      if (!fs.existsSync(subDir)) continue;
-      for (const entry of fs.readdirSync(subDir, { withFileTypes: true })) {
-        if (entry.isDirectory() && (entry.name.endsWith('.app') || entry.name.endsWith('.xpc'))) {
-          const nestedBundle = path.join(subDir, entry.name);
-          if (!isCodeSigned(nestedBundle)) {
-            console.log(`[afterPack] Ad-hoc signing nested bundle: ${nestedBundle}`);
-            signPath(nestedBundle);
-          }
-        }
+    // 1. Sign nested .app / .xpc bundles inside this framework version
+    for (const nestedBundle of listNestedBundles(root)) {
+      if (!isCodeSigned(nestedBundle)) {
+        console.log(`[afterPack] Ad-hoc signing nested bundle: ${nestedBundle}`);
+        signPath(nestedBundle);
       }
     }
 
-    // 2. Sign unsigned .dylib and executable helper binaries (e.g. Squirrel's ShipIt)
-    for (const filePath of listFilesRecursive(root)) {
-      if (filePath.includes('.app/') || filePath.includes('.xpc/')) continue;
+    // 2. Sign unsigned .dylib and executable helper binaries (e.g. chrome_crashpad_handler, ShipIt)
+    for (const filePath of listNonBundleFiles(root)) {
       const stat = fs.statSync(filePath);
       const isDylib = filePath.endsWith('.dylib') || filePath.endsWith('.so');
       const isExec = (stat.mode & 0o111) !== 0;
@@ -104,7 +112,7 @@ exports.default = async function afterPack(context) {
   if (fs.existsSync(frameworksDir)) {
     const entries = fs.readdirSync(frameworksDir, { withFileTypes: true });
 
-    // 1. Ensure all nested .framework bundles (such as Squirrel.framework on x64) are signed.
+    // 1. Ensure all nested .framework bundles (such as Electron Framework / Squirrel on x64) are signed.
     for (const entry of entries) {
       if (entry.isDirectory() && entry.name.endsWith('.framework')) {
         const frameworkPath = path.join(frameworksDir, entry.name);
