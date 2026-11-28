@@ -1,66 +1,886 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="vi">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Điều khoản sử dụng - fzInK</title>
+    <title>Điều khoản sử dụng — fzInK</title>
+    <meta name="description" content="Điều khoản sử dụng ứng dụng bảng trắng tương tác và không gian toán học fzInK." />
     <link rel="icon" type="image/svg+xml" href="./icon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
     <style>
-      :root { color-scheme: light dark; }
-      body {
-        font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-        line-height: 1.65;
-        margin: 0;
-        padding: 32px 16px;
-        background: #f8fafc;
-        color: #0f172a;
+      @font-face {
+        font-family: "fzInKBrand";
+        src: url("data:font/woff2;base64,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") format("woff2");
+        font-weight: 400;
+        font-style: normal;
+        font-display: block;
       }
+
+      :root {
+        color-scheme: light dark;
+        --bg: #fafafa;
+        --surface: #ffffff;
+        --surface-muted: #f4f4f5;
+        --border: rgba(24, 24, 27, 0.09);
+        --border-strong: rgba(24, 24, 27, 0.16);
+        --text: #171717;
+        --text-secondary: #52525b;
+        --text-muted: #71717a;
+        --accent: #1d5fbf;
+        --accent-hover: #174ea1;
+        --accent-soft: rgba(29, 95, 191, 0.08);
+        --ease-ui: cubic-bezier(0.22, 1, 0.36, 1);
+      }
+
       @media (prefers-color-scheme: dark) {
-        body { background: #020617; color: #e2e8f0; }
-        .card { background: #0f172a; border-color: #1e293b; }
-        .muted { color: #94a3b8; }
-        a { color: #818cf8; }
+        :root {
+          --bg: #111113;
+          --surface: #19191b;
+          --surface-muted: #232325;
+          --border: rgba(237, 237, 237, 0.08);
+          --border-strong: rgba(237, 237, 237, 0.16);
+          --text: #ededed;
+          --text-secondary: #a1a1aa;
+          --text-muted: #85858b;
+          --accent: #669df6;
+          --accent-hover: #8ab4f8;
+          --accent-soft: rgba(102, 157, 246, 0.12);
+        }
       }
-      .card {
-        max-width: 780px;
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+
+      @media (prefers-reduced-motion: no-preference) {
+        html {
+          scroll-behavior: smooth;
+        }
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-size: 15px;
+        line-height: 1.7;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+
+      a {
+        color: var(--accent);
+        text-decoration: none;
+        transition: color 160ms var(--ease-ui);
+      }
+
+      a:hover {
+        color: var(--accent-hover);
+        text-decoration: underline;
+        text-underline-offset: 3px;
+      }
+
+      a:focus-visible,
+      button:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+
+      /* Top editorial header */
+      .topbar {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        height: 56px;
+        background: var(--bg);
+        border-bottom: 1px solid var(--border);
+      }
+
+      .topbar-inner {
+        max-width: 1080px;
+        height: 100%;
         margin: 0 auto;
-        background: #ffffff;
-        border: 1px solid #e2e8f0;
-        border-radius: 16px;
-        padding: 32px;
+        padding: 0 24px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
       }
-      h1 { margin-top: 0; font-size: 1.6rem; }
-      h2 { margin-top: 1.75rem; font-size: 1.15rem; }
-      .muted { color: #64748b; font-size: 0.9rem; }
-      a { color: #4f46e5; text-decoration: none; }
-      a:hover { text-decoration: underline; }
+
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--text);
+        text-decoration: none;
+        flex-shrink: 0;
+      }
+
+      .brand:hover {
+        color: var(--text);
+        text-decoration: none;
+      }
+
+      .brand-wordmark {
+        font-family: "fzInKBrand", "Plus Jakarta Sans", sans-serif;
+        font-size: 22px;
+        line-height: 1;
+        letter-spacing: 0.01em;
+        padding-right: 4px;
+      }
+
+      .topbar-nav {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .doc-switch {
+        display: none;
+        align-items: center;
+        gap: 4px;
+        padding: 4px;
+        border-radius: 10px;
+        background: var(--surface-muted);
+        border: 1px solid var(--border);
+      }
+
+      .doc-switch a {
+        height: 28px;
+        padding: 0 12px;
+        border-radius: 6px;
+        display: inline-flex;
+        align-items: center;
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--text-secondary);
+        text-decoration: none;
+        white-space: nowrap;
+        transition: color 160ms var(--ease-ui), background-color 160ms var(--ease-ui);
+      }
+
+      .doc-switch a:hover {
+        color: var(--text);
+        text-decoration: none;
+      }
+
+      .doc-switch a[aria-current="page"] {
+        background: var(--surface);
+        color: var(--text);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+      }
+
+      .back-btn {
+        height: 36px;
+        padding: 0 12px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: var(--surface);
+        color: var(--text);
+        font-size: 13px;
+        font-weight: 500;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        text-decoration: none;
+        white-space: nowrap;
+        transition: background-color 160ms var(--ease-ui), border-color 160ms var(--ease-ui);
+      }
+
+      .back-btn:hover {
+        background: var(--surface-muted);
+        border-color: var(--border-strong);
+        color: var(--text);
+        text-decoration: none;
+      }
+
+      .back-btn svg {
+        width: 16px;
+        height: 16px;
+        color: var(--text-muted);
+        flex-shrink: 0;
+      }
+
+      /* Main page shell */
+      .page {
+        max-width: 1080px;
+        margin: 0 auto;
+        padding: 24px 20px 64px;
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 24px;
+        align-items: start;
+      }
+
+      @media (min-width: 640px) {
+        .doc-switch {
+          display: inline-flex;
+        }
+
+        .page {
+          padding: 32px 24px 64px;
+          gap: 32px;
+        }
+      }
+
+      @media (min-width: 920px) {
+        .topbar-inner,
+        .page {
+          padding-left: 32px;
+          padding-right: 32px;
+        }
+
+        .page {
+          padding-top: 40px;
+          padding-bottom: 80px;
+          grid-template-columns: 240px minmax(0, 1fr);
+          gap: 48px;
+        }
+      }
+
+      /* Left sticky rail */
+      .rail {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      @media (min-width: 920px) {
+        .rail {
+          position: sticky;
+          top: 84px;
+          gap: 24px;
+        }
+      }
+
+      .mobile-doc-switch {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 4px;
+        padding: 4px;
+        background: var(--surface-muted);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+      }
+
+      .mobile-doc-switch a {
+        height: 36px;
+        padding: 0 8px;
+        border-radius: 6px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--text-secondary);
+        text-decoration: none;
+        white-space: nowrap;
+      }
+
+      .mobile-doc-switch a[aria-current="page"] {
+        background: var(--surface);
+        color: var(--text);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+      }
+
+      @media (min-width: 640px) {
+        .mobile-doc-switch {
+          display: none;
+        }
+      }
+
+      .meta-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .meta-row {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      .meta-label {
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--text-muted);
+      }
+
+      .meta-value {
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--text);
+        font-variant-numeric: tabular-nums;
+      }
+
+      .meta-mono {
+        font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+        font-size: 12px;
+        color: var(--text-secondary);
+        word-break: break-all;
+      }
+
+      .lang-jump {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 4px;
+        padding: 4px;
+        background: var(--surface-muted);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+      }
+
+      .lang-jump a {
+        height: 32px;
+        border-radius: 6px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--text-secondary);
+        text-decoration: none;
+        white-space: nowrap;
+        transition: color 160ms var(--ease-ui), background-color 160ms var(--ease-ui);
+      }
+
+      .lang-jump a:hover {
+        color: var(--text);
+        background: var(--surface);
+        text-decoration: none;
+      }
+
+      .toc {
+        display: none;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      @media (min-width: 920px) {
+        .toc {
+          display: flex;
+        }
+      }
+
+      .toc-heading {
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--text-muted);
+        padding: 0 8px 4px;
+      }
+
+      .toc a {
+        min-height: 32px;
+        padding: 6px 8px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        line-height: 1.35;
+        color: var(--text-secondary);
+        text-decoration: none;
+        transition: color 160ms var(--ease-ui), background-color 160ms var(--ease-ui);
+      }
+
+      .toc a:hover {
+        color: var(--text);
+        background: var(--surface-muted);
+        text-decoration: none;
+      }
+
+      .toc a.is-active {
+        color: var(--accent);
+        background: var(--accent-soft);
+        font-weight: 500;
+      }
+
+      .toc-num {
+        font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+        font-size: 11px;
+        color: var(--text-muted);
+        font-variant-numeric: tabular-nums;
+        flex-shrink: 0;
+        width: 20px;
+      }
+
+      .toc a.is-active .toc-num {
+        color: var(--accent);
+      }
+
+      /* Editorial document surface */
+      .document {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 24px;
+      }
+
+      @media (min-width: 640px) {
+        .document {
+          padding: 40px 44px;
+        }
+      }
+
+      .doc-header {
+        padding-bottom: 24px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .doc-kicker {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+        font-size: 12px;
+        color: var(--text-muted);
+        margin-bottom: 12px;
+      }
+
+      .doc-kicker-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 9999px;
+        background: var(--accent);
+      }
+
+      h1 {
+        margin: 0 0 12px;
+        font-size: 28px;
+        line-height: 1.18;
+        font-weight: 500;
+        letter-spacing: -0.02em;
+        color: var(--text);
+      }
+
+      @media (min-width: 640px) {
+        h1 {
+          font-size: 34px;
+        }
+      }
+
+      .doc-lead {
+        margin: 0;
+        font-size: 15px;
+        line-height: 1.65;
+        color: var(--text-secondary);
+        max-width: 64ch;
+      }
+
+      /* Key facts editorial strip (hairline-divided) */
+      .facts-grid {
+        margin-top: 24px;
+        padding-top: 20px;
+        border-top: 1px solid var(--border);
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 16px;
+      }
+
+      @media (min-width: 640px) {
+        .facts-grid {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 0;
+        }
+
+        .fact-item {
+          padding-right: 20px;
+        }
+
+        .fact-item + .fact-item {
+          padding-left: 20px;
+          border-left: 1px solid var(--border);
+        }
+      }
+
+      .fact-title {
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--text);
+        margin-bottom: 4px;
+      }
+
+      .fact-desc {
+        font-size: 12px;
+        line-height: 1.55;
+        color: var(--text-muted);
+        margin: 0;
+      }
+
+      /* Numbered sections */
+      .section-block {
+        padding: 28px 0;
+        border-bottom: 1px solid var(--border);
+        scroll-margin-top: 84px;
+      }
+
+      .section-block:last-of-type {
+        border-bottom: none;
+        padding-bottom: 0;
+      }
+
+      .section-head {
+        display: flex;
+        align-items: baseline;
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+
+      .section-num {
+        font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--accent);
+        font-variant-numeric: tabular-nums;
+        flex-shrink: 0;
+      }
+
+      h2 {
+        margin: 0;
+        font-size: 18px;
+        line-height: 1.35;
+        font-weight: 500;
+        color: var(--text);
+      }
+
+      p {
+        margin: 0 0 12px;
+        color: var(--text-secondary);
+        max-width: 66ch;
+      }
+
+      p:last-child {
+        margin-bottom: 0;
+      }
+
+      strong {
+        font-weight: 500;
+        color: var(--text);
+      }
+
+      /* Language divider between VI and EN */
+      .lang-divider {
+        margin: 40px 0 8px;
+        padding: 20px 24px;
+        border-radius: 12px;
+        background: var(--surface-muted);
+        border: 1px solid var(--border);
+        scroll-margin-top: 84px;
+      }
+
+      .lang-divider-label {
+        font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+        font-size: 12px;
+        color: var(--text-muted);
+        margin-bottom: 4px;
+      }
+
+      .lang-divider-title {
+        margin: 0;
+        font-size: 22px;
+        line-height: 1.3;
+        font-weight: 500;
+        color: var(--text);
+      }
+
+      .lang-divider-meta {
+        margin: 4px 0 0;
+        font-size: 13px;
+        color: var(--text-secondary);
+        font-variant-numeric: tabular-nums;
+      }
+
+      /* Document footer */
+      .doc-footer {
+        margin-top: 32px;
+        padding-top: 24px;
+        border-top: 1px solid var(--border);
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        font-size: 13px;
+        color: var(--text-muted);
+      }
+
+      .doc-footer-links {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 16px;
+      }
+
+      @media print {
+        .topbar,
+        .rail,
+        .doc-footer-links {
+          display: none;
+        }
+
+        body {
+          background: #ffffff;
+          color: #111111;
+        }
+
+        .page {
+          padding: 0;
+          display: block;
+        }
+
+        .document {
+          border: none;
+          padding: 0;
+        }
+      }
     </style>
   </head>
   <body>
-    <main class="card">
-      <p class="muted"><a href="./">← Quay lại fzInK</a></p>
-      <h1>Điều khoản sử dụng (Terms of Service)</h1>
-      <p class="muted">Cập nhật lần cuối: 25/11/2026 · Ứng dụng: <strong>fzInK</strong></p>
+    <header class="topbar">
+      <div class="topbar-inner">
+        <a href="./" class="brand" aria-label="Trang chủ fzInK">
+          <svg width="28" height="28" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <rect width="512" height="512" rx="112" fill="#4338CA" />
+            <g fill="#FFFFFF" fill-opacity="0.24">
+              <circle cx="136" cy="136" r="10" />
+              <circle cx="256" cy="136" r="10" />
+              <circle cx="376" cy="136" r="10" />
+              <circle cx="136" cy="256" r="10" />
+              <circle cx="376" cy="256" r="10" />
+              <circle cx="136" cy="376" r="10" />
+              <circle cx="256" cy="376" r="10" />
+              <circle cx="376" cy="376" r="10" />
+            </g>
+            <path d="M124 344 C 178 206, 232 344, 304 226 C 334 176, 362 168, 392 152" stroke="#FFFFFF" stroke-width="42" stroke-linecap="round" stroke-linejoin="round" />
+            <circle cx="392" cy="152" r="20" fill="#FFFFFF" />
+          </svg>
+          <span class="brand-wordmark">fzInK</span>
+        </a>
 
-      <h2>1. Phạm vi dịch vụ</h2>
-      <p>
-        <strong>fzInK</strong> là ứng dụng bảng trắng tương tác phục vụ học tập, giảng dạy và ghi chú. Bạn có thể sử dụng miễn phí trên trình duyệt web hoặc ứng dụng máy tính.
-      </p>
+        <div class="topbar-nav">
+          <nav class="doc-switch" aria-label="Tài liệu pháp lý">
+            <a href="./privacy.html">Chính sách riêng tư</a>
+            <a href="./terms.html" aria-current="page">Điều khoản sử dụng</a>
+          </nav>
 
-      <h2>2. Dữ liệu và quyền sở hữu</h2>
-      <p>
-        Bạn giữ toàn quyền sở hữu đối với mọi nội dung bảng trắng, hình ảnh và tài liệu bạn tạo hoặc lưu trên thiết bị hay Google Drive cá nhân của mình.
-      </p>
+          <a href="./" class="back-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M19 12H5" />
+              <path d="m12 19-7-7 7-7" />
+            </svg>
+            <span>Quay lại fzInK</span>
+          </a>
+        </div>
+      </div>
+    </header>
 
-      <h2>3. Sử dụng hợp pháp</h2>
-      <p>
-        Bạn chịu trách nhiệm về nội dung do mình tạo và không sử dụng ứng dụng cho các hành vi vi phạm pháp luật hoặc gây gián đoạn hệ thống xác thực.
-      </p>
+    <div class="page">
+      <aside class="rail" aria-label="Mục lục tài liệu">
+        <nav class="mobile-doc-switch" aria-label="Tài liệu pháp lý">
+          <a href="./privacy.html">Quyền riêng tư</a>
+          <a href="./terms.html" aria-current="page">Điều khoản</a>
+        </nav>
 
-      <h2>4. Liên hệ</h2>
-      <p>
-        Mọi yêu cầu hỗ trợ xin liên hệ: <a href="mailto:kiet0905478167@gmail.com">kiet0905478167@gmail.com</a>.
-      </p>
-    </main>
+        <div class="meta-card">
+          <div class="meta-row">
+            <span class="meta-label">Cập nhật lần cuối</span>
+            <span class="meta-value">25/11/2026</span>
+          </div>
+          <div class="meta-row">
+            <span class="meta-label">Ứng dụng</span>
+            <a href="https://whiteboardfz.pages.dev" class="meta-mono">whiteboardfz.pages.dev</a>
+          </div>
+          <div class="meta-row">
+            <span class="meta-label">Phạm vi áp dụng</span>
+            <span class="meta-value">Web &amp; ứng dụng máy tính</span>
+          </div>
+        </div>
+
+        <div class="lang-jump" role="navigation" aria-label="Chuyển ngôn ngữ">
+          <a href="#vi-terms">Tiếng Việt</a>
+          <a href="#en-terms">English</a>
+        </div>
+
+        <nav class="toc" aria-label="Mục lục">
+          <span class="toc-heading">Mục lục</span>
+          <a href="#vi-1" class="is-active"><span class="toc-num">01</span><span>Phạm vi dịch vụ</span></a>
+          <a href="#vi-2"><span class="toc-num">02</span><span>Dữ liệu và quyền sở hữu</span></a>
+          <a href="#vi-3"><span class="toc-num">03</span><span>Sử dụng hợp pháp</span></a>
+          <a href="#vi-4"><span class="toc-num">04</span><span>Liên hệ hỗ trợ</span></a>
+          <a href="#en-terms"><span class="toc-num">EN</span><span>English summary</span></a>
+        </nav>
+      </aside>
+
+      <main class="document">
+        <header id="vi-terms" class="doc-header">
+          <div class="doc-kicker">
+            <span class="doc-kicker-dot" aria-hidden="true"></span>
+            <span>Pháp lý · Điều khoản sử dụng</span>
+          </div>
+          <h1>Điều khoản sử dụng</h1>
+          <p class="doc-lead">
+            <strong>fzInK</strong> là ứng dụng bảng trắng tương tác phục vụ học tập, giảng dạy và ghi chú trên trình duyệt web và ứng dụng máy tính.
+            Khi sử dụng fzInK, bạn giữ toàn quyền kiểm soát nội dung và dữ liệu của mình theo các nguyên tắc minh bạch dưới đây.
+          </p>
+
+          <div class="facts-grid">
+            <div class="fact-item">
+              <div class="fact-title">Miễn phí sử dụng</div>
+              <p class="fact-desc">Dùng trực tiếp trên trình duyệt web hoặc ứng dụng máy tính để dạy học và ghi chú.</p>
+            </div>
+            <div class="fact-item">
+              <div class="fact-title">Nội dung thuộc về bạn</div>
+              <p class="fact-desc">Mọi bảng trắng, hình ảnh và tài liệu đều do bạn toàn quyền sở hữu và quản lý.</p>
+            </div>
+            <div class="fact-item">
+              <div class="fact-title">Hỗ trợ trực tiếp</div>
+              <p class="fact-desc">Mọi thắc mắc về vận hành và tài khoản được tiếp nhận qua email của nhà phát triển.</p>
+            </div>
+          </div>
+        </header>
+
+        <section id="vi-1" class="section-block">
+          <div class="section-head">
+            <span class="section-num">01</span>
+            <h2>Phạm vi dịch vụ</h2>
+          </div>
+          <p>
+            <strong>fzInK</strong> là ứng dụng bảng trắng tương tác phục vụ học tập, giảng dạy và ghi chú. Bạn có thể sử dụng miễn phí trên trình duyệt web hoặc ứng dụng máy tính.
+          </p>
+        </section>
+
+        <section id="vi-2" class="section-block">
+          <div class="section-head">
+            <span class="section-num">02</span>
+            <h2>Dữ liệu và quyền sở hữu</h2>
+          </div>
+          <p>
+            Bạn giữ toàn quyền sở hữu đối với mọi nội dung bảng trắng, hình ảnh và tài liệu bạn tạo hoặc lưu trên thiết bị hay Google Drive cá nhân của mình.
+          </p>
+        </section>
+
+        <section id="vi-3" class="section-block">
+          <div class="section-head">
+            <span class="section-num">03</span>
+            <h2>Sử dụng hợp pháp</h2>
+          </div>
+          <p>
+            Bạn chịu trách nhiệm về nội dung do mình tạo và không sử dụng ứng dụng cho các hành vi vi phạm pháp luật hoặc gây gián đoạn hệ thống xác thực.
+          </p>
+        </section>
+
+        <section id="vi-4" class="section-block">
+          <div class="section-head">
+            <span class="section-num">04</span>
+            <h2>Liên hệ</h2>
+          </div>
+          <p>
+            Mọi yêu cầu hỗ trợ xin liên hệ: <a href="mailto:kiet0905478167@gmail.com">kiet0905478167@gmail.com</a>.
+          </p>
+        </section>
+
+        <div id="en-terms" class="lang-divider" lang="en">
+          <div class="lang-divider-label">EN · English</div>
+          <h2 class="lang-divider-title">Terms of service — fzInK</h2>
+          <p class="lang-divider-meta">Last updated: November 25, 2026 · Application: whiteboardfz.pages.dev</p>
+        </div>
+
+        <section id="en-1" class="section-block" lang="en">
+          <div class="section-head">
+            <span class="section-num">01</span>
+            <h2>Scope of service</h2>
+          </div>
+          <p>
+            <strong>fzInK</strong> is an interactive whiteboard application for learning, teaching, and note-taking. You may use it free of charge in a web browser or via the desktop application.
+          </p>
+        </section>
+
+        <section id="en-2" class="section-block" lang="en">
+          <div class="section-head">
+            <span class="section-num">02</span>
+            <h2>Data and ownership</h2>
+          </div>
+          <p>
+            You retain full ownership of all whiteboard content, images, and documents you create or store on your device or in your personal Google Drive.
+          </p>
+        </section>
+
+        <section id="en-3" class="section-block" lang="en">
+          <div class="section-head">
+            <span class="section-num">03</span>
+            <h2>Lawful use</h2>
+          </div>
+          <p>
+            You are responsible for the content you create and agree not to use the application for unlawful activities or actions that disrupt the authentication system.
+          </p>
+        </section>
+
+        <section id="en-4" class="section-block" lang="en">
+          <div class="section-head">
+            <span class="section-num">04</span>
+            <h2>Contact</h2>
+          </div>
+          <p>
+            For support inquiries, please contact: <a href="mailto:kiet0905478167@gmail.com">kiet0905478167@gmail.com</a>.
+          </p>
+        </section>
+
+        <footer class="doc-footer">
+          <span>fzInK · Bảng trắng tương tác &amp; không gian toán học</span>
+          <div class="doc-footer-links">
+            <a href="./privacy.html">Chính sách quyền riêng tư (Privacy policy)</a>
+            <a href="./">Quay lại fzInK</a>
+          </div>
+        </footer>
+      </main>
+    </div>
+
+    <script>
+      (function () {
+        var links = Array.prototype.slice.call(document.querySelectorAll('.toc a[href^="#"]'));
+        if (!links.length || !('IntersectionObserver' in window)) return;
+        var map = new Map();
+        links.forEach(function (link) {
+          var id = link.getAttribute('href').slice(1);
+          var el = document.getElementById(id);
+          if (el) map.set(el, link);
+        });
+        var setActive = function (target) {
+          links.forEach(function (l) {
+            l.classList.toggle('is-active', l === target);
+          });
+        };
+        var observer = new IntersectionObserver(
+          function (entries) {
+            for (var i = 0; i < entries.length; i++) {
+              if (entries[i].isIntersecting) {
+                var activeLink = map.get(entries[i].target);
+                if (activeLink) {
+                  setActive(activeLink);
+                  break;
+                }
+              }
+            }
+          },
+          { rootMargin: '-18% 0px -70% 0px', threshold: 0 }
+        );
+        map.forEach(function (_link, el) {
+          observer.observe(el);
+        });
+      })();
+    </script>
   </body>
 </html>

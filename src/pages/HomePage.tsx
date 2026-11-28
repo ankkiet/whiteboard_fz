@@ -9,6 +9,7 @@ import {
   useScrollReveal,
 } from '../hooks/useHomeScrollState';
 import { isWhiteboardProjectFile } from '../services/googleDriveUtils';
+import { getWebPortalUrl } from '../services/authBridge';
 import { getBoardTemplates } from '../engine/boardTemplates';
 import { useI18n } from '../i18n/useI18n';
 import { BoardPattern, BoardType, NotebookPaperSize, ToolType } from '../types/board';
@@ -326,18 +327,18 @@ export const HomePage: React.FC<HomePageProps> = ({
 
           <div className="flex flex-wrap items-center gap-4 text-[13px] text-slate-600 dark:text-slate-400">
             <a
-              href="./privacy.html"
+              href={getWebPortalUrl('/privacy.html')}
               target="_blank"
               rel="noopener noreferrer"
-              className="hover:text-slate-900 dark:hover:text-slate-100 transition-colors"
+              className="hover:text-slate-900 dark:hover:text-slate-100 hover:underline transition-colors cursor-pointer"
             >
               {t('Chính sách quyền riêng tư', 'Privacy policy')}
             </a>
             <a
-              href="./terms.html"
+              href={getWebPortalUrl('/terms.html')}
               target="_blank"
               rel="noopener noreferrer"
-              className="hover:text-slate-900 dark:hover:text-slate-100 transition-colors"
+              className="hover:text-slate-900 dark:hover:text-slate-100 hover:underline transition-colors cursor-pointer"
             >
               {t('Điều khoản sử dụng', 'Terms of service')}
             </a>

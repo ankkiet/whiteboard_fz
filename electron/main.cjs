@@ -527,12 +527,24 @@ function createMainWindow() {
     }
   });
 
-  // Mở các liên kết ngoài (như Google Drive) bằng trình duyệt mặc định của hệ điều hành
+  // Mở các liên kết ngoài (như Google Drive, Chính sách, Điều khoản) bằng trình duyệt mặc định của hệ điều hành
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     if (url.startsWith('http://') || url.startsWith('https://')) {
-      shell.openExternal(url);
+      shell.openExternal(url).catch(() => {});
     }
     return { action: 'deny' };
+  });
+
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    const currentUrl = mainWindow.webContents.getURL();
+    if (url === currentUrl) return;
+    if (isDev && process.env.ELECTRON_START_URL && url.startsWith(process.env.ELECTRON_START_URL)) {
+      return;
+    }
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      event.preventDefault();
+      shell.openExternal(url).catch(() => {});
+    }
   });
 
   mainWindow.on('closed', () => {

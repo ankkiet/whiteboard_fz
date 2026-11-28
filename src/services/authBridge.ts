@@ -3,7 +3,7 @@
  * và bộ nhớ đệm phiên đăng nhập cho web/desktop.
  */
 
-import { PRODUCTION_UPDATE_ORIGIN } from '../engine/versionCheck';
+import { PRODUCTION_UPDATE_ORIGIN, normalizeOriginUrl } from '../engine/versionCheck';
 import { tr } from '../i18n';
 
 export interface BridgeUser {
@@ -60,6 +60,16 @@ export function getWebPortalOrigin(): string {
     return window.__BTTM_EMBEDDED_BUILD__.updateOrigin;
   }
   return PRODUCTION_UPDATE_ORIGIN;
+}
+
+/**
+ * Resolves a path (e.g. '/privacy.html') against the public web portal origin
+ * so links in file:// desktop builds open the live web page in the browser.
+ */
+export function getWebPortalUrl(path: string): string {
+  const origin = normalizeOriginUrl(getWebPortalOrigin()) || PRODUCTION_UPDATE_ORIGIN;
+  const cleanPath = path.startsWith('/') ? path : `/${path}`;
+  return `${origin}${cleanPath}`;
 }
 
 export function getAuthApiOrigin(): string {

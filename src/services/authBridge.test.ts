@@ -7,6 +7,7 @@ import {
   createAuthBridgeToken,
   getAuthApiOrigin,
   getWebPortalOrigin,
+  getWebPortalUrl,
   isBridgeSessionExpired,
   loadBridgeSession,
   loadLastGoogleEmail,
@@ -83,6 +84,26 @@ test('parseAuthBridgeToken validates token prefix and structure', () => {
 test('getWebPortalOrigin returns fallback host if no window', () => {
   const origin = getWebPortalOrigin();
   assert.ok(origin.startsWith('https://'));
+});
+
+test('getWebPortalUrl resolves public web URLs for desktop file:// and web origins', () => {
+  const prevWindow = (globalThis as any).window;
+
+  try {
+    (globalThis as any).window = {
+      location: { protocol: 'file:' },
+      __BTTM_EMBEDDED_BUILD__: { updateOrigin: 'https://whiteboardfz.pages.dev/' },
+    };
+    assert.equal(getWebPortalUrl('/privacy.html'), 'https://whiteboardfz.pages.dev/privacy.html');
+    assert.equal(getWebPortalUrl('terms.html'), 'https://whiteboardfz.pages.dev/terms.html');
+
+    (globalThis as any).window = {
+      location: { protocol: 'https:', origin: 'https://example.com' },
+    };
+    assert.equal(getWebPortalUrl('/privacy.html'), 'https://example.com/privacy.html');
+  } finally {
+    (globalThis as any).window = prevWindow;
+  }
 });
 
 test('web access token persists in localStorage with expiry and saves last Google email', () => {
