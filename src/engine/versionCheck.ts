@@ -244,10 +244,7 @@ export function resolveEffectiveVersionConfig(params: {
       ? cfgMinNative
       : nativeVersion;
 
-  const version =
-    cfgVersion && compareVersionStrings(cfgVersion, nativeVersion) >= 0
-      ? cfgVersion
-      : nativeVersion;
+  const version = cfgVersion || nativeVersion;
 
   return {
     version,

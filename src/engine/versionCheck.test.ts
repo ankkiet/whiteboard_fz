@@ -160,7 +160,7 @@ describe('versionCheck — update origin resolution and honest failure classific
 
   it('classifies 2-tier desktop updates between fast OTA and full native installer', () => {
     const otaLatest = {
-      version: '1.2.12.2',
+      version: 'v_fz.1.1.1.2.13',
       buildId: 'web-hash-2',
       nativeVersion: '1.2.12',
       minNativeVersion: '1.2.12',
@@ -170,7 +170,7 @@ describe('versionCheck — update origin resolution and honest failure classific
 
     assert.equal(
       classifyDesktopUpdateKind({
-        installedVersion: '1.2.12.2',
+        installedVersion: 'v_fz.1.1.1.2.13',
         installedNativeVersion: '1.2.12',
         hasOtaBridge: true,
         latest: otaLatest,
@@ -180,7 +180,7 @@ describe('versionCheck — update origin resolution and honest failure classific
 
     assert.equal(
       classifyDesktopUpdateKind({
-        installedVersion: '1.2.12.1',
+        installedVersion: 'v_fz.1.1.1.2.12',
         installedNativeVersion: '1.2.12',
         hasOtaBridge: true,
         latest: otaLatest,
@@ -190,7 +190,7 @@ describe('versionCheck — update origin resolution and honest failure classific
 
     assert.equal(
       classifyDesktopUpdateKind({
-        installedVersion: '1.2.12.1',
+        installedVersion: 'v_fz.1.1.1.2.12',
         installedNativeVersion: '1.2.12',
         hasOtaBridge: false,
         latest: otaLatest,
@@ -200,12 +200,12 @@ describe('versionCheck — update origin resolution and honest failure classific
 
     assert.equal(
       classifyDesktopUpdateKind({
-        installedVersion: '1.2.12.2',
+        installedVersion: 'v_fz.1.1.1.2.13',
         installedNativeVersion: '1.2.12',
         hasOtaBridge: true,
         latest: {
           ...otaLatest,
-          version: '1.3.0',
+          version: 'v_fz.1.1.1.3.0',
           nativeVersion: '1.3.0',
           minNativeVersion: '1.3.0',
         },
@@ -229,31 +229,31 @@ describe('versionCheck — update origin resolution and honest failure classific
       resolveEffectiveVersionConfig({
         packageVersion: '1.2.12',
         versionConfig: {
-          version: '1.2.12.3',
+          version: 'v_fz.1.1.1.2.12',
           minNativeVersion: '1.2.12',
           notes: 'Hotfix',
         },
       }),
       {
-        version: '1.2.12.3',
+        version: 'v_fz.1.1.1.2.12',
         nativeVersion: '1.2.12',
         minNativeVersion: '1.2.12',
         notes: 'Hotfix',
       }
     );
 
-    // Bumping package.json above version.json automatically lifts minNativeVersion & version
+    // Bumping package.json above version.json minNativeVersion automatically lifts minNativeVersion while keeping v_fz.* version
     assert.deepEqual(
       resolveEffectiveVersionConfig({
         packageVersion: '1.3.0',
         versionConfig: {
-          version: '1.2.12.3',
+          version: 'v_fz.1.1.1.3.0',
           minNativeVersion: '1.2.12',
           notes: 'Major upgrade',
         },
       }),
       {
-        version: '1.3.0',
+        version: 'v_fz.1.1.1.3.0',
         nativeVersion: '1.3.0',
         minNativeVersion: '1.3.0',
         notes: 'Major upgrade',

@@ -37,10 +37,7 @@ function readEffectiveReleaseConfig() {
     cfgMinNative && otaUpdater.compareVersions(cfgMinNative, nativeVersion) >= 0
       ? cfgMinNative
       : nativeVersion;
-  const version =
-    cfgVersion && otaUpdater.compareVersions(cfgVersion, nativeVersion) >= 0
-      ? cfgVersion
-      : nativeVersion;
+  const version = cfgVersion || nativeVersion;
   const notes = typeof cfg.notes === 'string' ? cfg.notes.trim() : '';
 
   return {version, nativeVersion, minNativeVersion, notes};

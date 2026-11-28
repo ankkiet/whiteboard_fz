@@ -94,9 +94,9 @@ describe('otaUpdater — ZIP packaging, integrity verification, and 2-tier resol
       );
     };
 
-    writeEmbeddedHtml(bundledDistDir, '1.2.12');
-    writeEmbeddedHtml(otaBuild1Dir, '1.2.12.1');
-    writeEmbeddedHtml(otaBuild2Dir, '1.2.12.2');
+    writeEmbeddedHtml(bundledDistDir, 'v_fz.1.1.1.2.12');
+    writeEmbeddedHtml(otaBuild1Dir, 'v_fz.1.1.1.2.13');
+    writeEmbeddedHtml(otaBuild2Dir, 'v_fz.1.1.1.2.14');
 
     // Before any OTA -> resolves to bundled dist
     const initialEntry = otaUpdater.resolveWebEntry({
@@ -107,15 +107,15 @@ describe('otaUpdater — ZIP packaging, integrity verification, and 2-tier resol
     assert.equal(initialEntry.isOta, false);
     assert.equal(initialEntry.entryHtmlPath, path.join(bundledDistDir, 'index.html'));
 
-    // Install OTA 1.2.12.1
+    // Install OTA v_fz.1.1.1.2.13
     const zip1Path = path.join(zipDir, 'ota1.zip');
     const zip1Info = otaUpdater.createZipFromDirectory(otaBuild1Dir, zip1Path);
     const install1 = otaUpdater.installOtaFromZip({
       userDataDir,
       zipPath: zip1Path,
       expectedSha256: zip1Info.sha256,
-      targetVersion: '1.2.12.1',
-      targetBuildId: 'b-1.2.12.1',
+      targetVersion: 'v_fz.1.1.1.2.13',
+      targetBuildId: 'b-v_fz.1.1.1.2.13',
       nativeVersion: '1.2.12',
     });
 
@@ -125,18 +125,18 @@ describe('otaUpdater — ZIP packaging, integrity verification, and 2-tier resol
       nativeVersion: '1.2.12',
     });
     assert.equal(afterOta1.isOta, true);
-    assert.equal(afterOta1.activeVersion, '1.2.12.1');
+    assert.equal(afterOta1.activeVersion, 'v_fz.1.1.1.2.13');
     assert.equal(afterOta1.entryHtmlPath, install1.entryHtmlPath);
 
-    // Install OTA 1.2.12.2 and verify old OTA 1 folder gets pruned on next startup resolution
+    // Install OTA v_fz.1.1.1.2.14 and verify old OTA 1 folder gets pruned on next startup resolution
     const zip2Path = path.join(zipDir, 'ota2.zip');
     const zip2Info = otaUpdater.createZipFromDirectory(otaBuild2Dir, zip2Path);
     const install2 = otaUpdater.installOtaFromZip({
       userDataDir,
       zipPath: zip2Path,
       expectedSha256: zip2Info.sha256,
-      targetVersion: '1.2.12.2',
-      targetBuildId: 'b-1.2.12.2',
+      targetVersion: 'v_fz.1.1.1.2.14',
+      targetBuildId: 'b-v_fz.1.1.1.2.14',
       nativeVersion: '1.2.12',
     });
 
@@ -146,15 +146,15 @@ describe('otaUpdater — ZIP packaging, integrity verification, and 2-tier resol
       nativeVersion: '1.2.12',
     });
     assert.equal(afterOta2.isOta, true);
-    assert.equal(afterOta2.activeVersion, '1.2.12.2');
+    assert.equal(afterOta2.activeVersion, 'v_fz.1.1.1.2.14');
     assert.equal(afterOta2.entryHtmlPath, install2.entryHtmlPath);
     assert.equal(
       fs.existsSync(path.join(userDataDir, 'web-updates', 'releases', install1.dirName)),
       false
     );
 
-    // Simulate native installer upgrade to 1.3.0 -> stale 1.2.12.2 OTA must be cleared
-    writeEmbeddedHtml(bundledDistDir, '1.3.0');
+    // Simulate native installer upgrade to v_fz.1.1.1.3.0 / 1.3.0 -> stale OTA must be cleared
+    writeEmbeddedHtml(bundledDistDir, 'v_fz.1.1.1.3.0');
     const afterNativeUpgrade = otaUpdater.resolveWebEntry({
       userDataDir,
       bundledDistDir,
