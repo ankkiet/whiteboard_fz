@@ -1,5 +1,5 @@
 {
-  "version": "v_fz.1.1.1.3.0",
-  "minNativeVersion": "1.2.13",
-  "notes": "Mở liên kết Chính sách quyền riêng tư và Điều khoản sử dụng ra trình duyệt web từ ứng dụng máy tính và làm mới giao diện hai trang này."
+  "version": "v_fz.1.2.14.0",
+  "minNativeVersion": "1.2.14",
+  "notes": "Khắc phục nhận diện cập nhật từ bản 1.2.12, mở Chính sách & Điều khoản ra trình duyệt và làm mới giao diện hai trang này."
 }

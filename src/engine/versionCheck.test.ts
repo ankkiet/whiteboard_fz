@@ -125,6 +125,9 @@ describe('versionCheck — update origin resolution and honest failure classific
     assert.ok(compareVersionStrings('v_fz.1.1.1.1.9', 'v_fz.1.1.1.1.8') > 0);
     assert.ok(compareVersionStrings('v_fz.1.1.1.1.10', 'v_fz.1.1.1.1.9') > 0);
     assert.ok(compareVersionStrings('v_fz.1.1.1.1.7', 'v_fz.1.1.1.1.8') < 0);
+    assert.ok(compareVersionStrings('v_fz.1.2.14.0', '1.2.12') > 0);
+    assert.ok(compareVersionStrings('v_fz.1.2.14.0', 'v_fz.1.1.1.2.12') > 0);
+    assert.ok(compareVersionStrings('v_fz.1.2.14.0', 'v_fz.1.1.1.3.0') > 0);
   });
 
   it('never reports false update when installed version equals latest even if buildId differs across CI OSes', () => {
