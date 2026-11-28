@@ -214,7 +214,7 @@ export const LocalBoardsSection: React.FC<LocalBoardsSectionProps> = ({
       id="local-boards-section"
       data-testid="local-boards-section"
       aria-labelledby="local-boards-heading"
-      className="space-y-4"
+      className="max-w-[1200px] mx-auto px-5 sm:px-8 space-y-5"
     >
       <input
         ref={jsonInputRef}
@@ -227,14 +227,14 @@ export const LocalBoardsSection: React.FC<LocalBoardsSectionProps> = ({
 
       {/* Section Header */}
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap items-baseline gap-2">
+        <div className="flex flex-wrap items-baseline gap-2.5">
           <h2
             id="local-boards-heading"
-            className="text-base font-medium text-slate-900 dark:text-slate-100"
+            className="text-xl sm:text-2xl font-semibold tracking-[-0.02em] text-slate-900 dark:text-slate-100"
           >
             {copy.heading}
           </h2>
-          <span className="text-xs font-mono text-slate-500 dark:text-slate-400 tabular-nums">
+          <span className="text-xs text-slate-600 dark:text-slate-400 tabular-nums">
             {t(`${localBoards.length} bảng`, `${localBoards.length} boards`)} · {copy.badgeSuffix}
           </span>
         </div>
@@ -243,7 +243,7 @@ export const LocalBoardsSection: React.FC<LocalBoardsSectionProps> = ({
           <button
             type="button"
             onClick={() => jsonInputRef.current?.click()}
-            className="h-8 inline-flex items-center gap-2 px-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-medium transition-colors duration-150 whitespace-nowrap shrink-0 cursor-pointer"
+            className="h-9 inline-flex items-center gap-2 px-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#19191d] hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-medium transition-colors duration-150 whitespace-nowrap shrink-0 cursor-pointer"
           >
             <FileUp className="w-4 h-4 text-slate-500 dark:text-slate-400" strokeWidth={1.75} />
             <span>{t('Mở tệp .json', 'Open .json file')}</span>
@@ -251,9 +251,9 @@ export const LocalBoardsSection: React.FC<LocalBoardsSectionProps> = ({
         </div>
       </div>
 
-      {/* Filter, Search, Sort & Layout Controls */}
+      {/* Sticky Filter, Search, Sort & Layout Controls */}
       {localBoards.length > 0 && (
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5">
+        <div className="sticky top-14 z-10 -mx-5 sm:-mx-8 px-5 sm:px-8 py-3 bg-[#fafafa] dark:bg-[#111113] border-b border-slate-200/60 dark:border-slate-800/60 flex flex-col md:flex-row md:items-center justify-between gap-2.5">
           {/* Board Type Filter Pills */}
           <div
             role="tablist"
@@ -267,7 +267,7 @@ export const LocalBoardsSection: React.FC<LocalBoardsSectionProps> = ({
               onClick={() => setFilter('all')}
               className={`h-7 px-2.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap shrink-0 tabular-nums cursor-pointer ${
                 filter === 'all'
-                  ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
+                  ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
@@ -286,7 +286,7 @@ export const LocalBoardsSection: React.FC<LocalBoardsSectionProps> = ({
                     onClick={() => setFilter(tpl.id)}
                     className={`h-7 px-2.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap shrink-0 tabular-nums cursor-pointer ${
                       active
-                        ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
+                        ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white'
                         : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                     }`}
                   >
@@ -309,7 +309,7 @@ export const LocalBoardsSection: React.FC<LocalBoardsSectionProps> = ({
                 onChange={(e) => setQuery(e.target.value)}
                 aria-label={copy.searchPlaceholder}
                 placeholder={copy.searchPlaceholder}
-                className="h-9 w-full pl-8 pr-3 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:border-indigo-500 transition-colors"
+                className="h-9 w-full pl-8 pr-3 rounded-lg bg-white dark:bg-[#19191d] border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:border-[#1d5fbf] dark:focus:border-[#669df6] transition-colors"
               />
             </div>
 
@@ -317,14 +317,14 @@ export const LocalBoardsSection: React.FC<LocalBoardsSectionProps> = ({
               aria-label={copy.sortAria}
               value={sort}
               onChange={(e) => setSort(e.target.value as LocalBoardSort)}
-              className="h-9 px-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-medium text-slate-700 dark:text-slate-200 cursor-pointer shrink-0"
+              className="h-9 px-2.5 rounded-lg bg-white dark:bg-[#19191d] border border-slate-200 dark:border-slate-800 text-xs font-medium text-slate-700 dark:text-slate-200 cursor-pointer shrink-0"
             >
               <option value="updatedDesc">{t('Mới cập nhật', 'Recently updated')}</option>
               <option value="nameAsc">{t('Tên A → Z', 'Name A → Z')}</option>
               <option value="elementsDesc">{t('Nhiều nội dung nhất', 'Most items')}</option>
             </select>
 
-            <div className="h-9 inline-flex items-center p-0.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shrink-0">
+            <div className="h-9 inline-flex items-center p-0.5 rounded-lg bg-white dark:bg-[#19191d] border border-slate-200 dark:border-slate-800 shrink-0">
               <button
                 type="button"
                 onClick={() => setViewMode('grid')}
@@ -373,16 +373,16 @@ export const LocalBoardsSection: React.FC<LocalBoardsSectionProps> = ({
           ))}
         </div>
       ) : localBoards.length === 0 ? (
-        <div className="bg-white dark:bg-slate-900 border border-dashed border-slate-300 dark:border-slate-800 rounded-xl px-6 py-8 text-center space-y-2">
-          <h3 className="text-sm font-medium text-slate-900 dark:text-slate-100">
+        <div className="bg-white dark:bg-[#19191d] border border-dashed border-slate-300 dark:border-slate-800 rounded-xl px-6 py-8 text-center space-y-2">
+          <h3 className="text-[15px] font-medium text-slate-900 dark:text-slate-100">
             {copy.emptyTitle}
           </h3>
-          <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
+          <p className="text-[13px] text-slate-600 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
             {copy.emptyDesc}
           </p>
         </div>
       ) : visibleBoards.length === 0 ? (
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-6 py-8 text-center space-y-3">
+        <div className="bg-white dark:bg-[#19191d] border border-slate-200 dark:border-slate-800 rounded-xl px-6 py-8 text-center space-y-3">
           <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">
             {copy.emptyFilter}
           </p>
@@ -406,10 +406,10 @@ export const LocalBoardsSection: React.FC<LocalBoardsSectionProps> = ({
               <article
                 key={board.id}
                 data-testid={`local-board-card-${board.id}`}
-                className={`bg-white dark:bg-slate-900 border rounded-xl overflow-hidden flex flex-col transition-colors ${
+                className={`bg-white dark:bg-[#19191d] border rounded-xl overflow-hidden flex flex-col transition-colors ${
                   isCurrent
-                    ? 'border-indigo-500 dark:border-indigo-500 ring-1 ring-indigo-500/20'
-                    : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+                    ? 'border-[#1d5fbf] dark:border-[#669df6] ring-1 ring-[#1d5fbf]/20 dark:ring-[#669df6]/20'
+                    : 'border-slate-200/80 dark:border-slate-800/80 hover:border-slate-300 dark:hover:border-slate-700'
                 }`}
               >
                 <button
@@ -448,7 +448,7 @@ export const LocalBoardsSection: React.FC<LocalBoardsSectionProps> = ({
                       type="button"
                       disabled={isBusy}
                       onClick={() => void handleOpen(board)}
-                      className="h-8 inline-flex items-center gap-1.5 px-2.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 text-xs font-semibold transition-colors whitespace-nowrap shrink-0 cursor-pointer disabled:opacity-60"
+                      className="h-8 inline-flex items-center gap-1.5 px-2.5 rounded-lg bg-[#1d5fbf]/10 dark:bg-[#669df6]/15 hover:bg-[#1d5fbf]/15 dark:hover:bg-[#669df6]/25 text-[#1d5fbf] dark:text-[#669df6] text-xs font-semibold transition-colors whitespace-nowrap shrink-0 cursor-pointer disabled:opacity-60"
                     >
                       <FolderOpen className="w-3.5 h-3.5" />
                       <span>{isCurrent ? t('Tiếp tục', 'Resume') : t('Mở', 'Open')}</span>
@@ -493,7 +493,7 @@ export const LocalBoardsSection: React.FC<LocalBoardsSectionProps> = ({
           })}
         </div>
       ) : (
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden divide-y divide-slate-200/80 dark:divide-slate-800">
+        <div className="bg-white dark:bg-[#19191d] border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden divide-y divide-slate-200/80 dark:divide-slate-800">
           {visibleBoards.map((board) => {
             const isCurrent = activeLocalBoardId === board.id;
             const isBusy = busyId !== null;
@@ -517,12 +517,12 @@ export const LocalBoardsSection: React.FC<LocalBoardsSectionProps> = ({
                         {board.title}
                       </span>
                       {isCurrent && (
-                        <span className="px-1.5 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 text-[10px] font-semibold shrink-0">
+                        <span className="px-1.5 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 text-xs font-semibold shrink-0">
                           {t('Đang mở', 'Open')}
                         </span>
                       )}
                     </div>
-                    <div className="text-[11px] text-slate-500 dark:text-slate-400 tabular-nums truncate">
+                    <div className="text-xs text-slate-500 dark:text-slate-400 tabular-nums truncate">
                       {getBoardTypeLabel(board.boardType, language)} ·{' '}
                       {formatElementCount(board.elementCount)} ·{' '}
                       {formatLocalBoardTime(board.updatedAt, Date.now(), language)}
@@ -535,7 +535,7 @@ export const LocalBoardsSection: React.FC<LocalBoardsSectionProps> = ({
                     type="button"
                     disabled={isBusy}
                     onClick={() => void handleOpen(board)}
-                    className="h-8 inline-flex items-center gap-1.5 px-2.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 text-xs font-semibold transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+                    className="h-8 inline-flex items-center gap-1.5 px-2.5 rounded-lg bg-[#1d5fbf]/10 dark:bg-[#669df6]/15 hover:bg-[#1d5fbf]/15 dark:hover:bg-[#669df6]/25 text-[#1d5fbf] dark:text-[#669df6] text-xs font-semibold transition-colors whitespace-nowrap shrink-0 cursor-pointer"
                   >
                     <FolderOpen className="w-3.5 h-3.5" />
                     <span>{isCurrent ? t('Tiếp tục', 'Resume') : t('Mở', 'Open')}</span>

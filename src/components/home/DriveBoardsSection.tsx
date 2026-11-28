@@ -65,75 +65,77 @@ const BoardThumbnail: React.FC<{ file: DriveWhiteboardFile; isBoard: boolean }> 
   }
 
   return (
-    <div
-      className="w-full h-full relative overflow-hidden flex items-center justify-center bg-slate-50 dark:bg-slate-950/70"
-      style={{
-        backgroundImage:
-          'radial-gradient(circle, rgba(148, 163, 184, 0.32) 1px, transparent 1px)',
-        backgroundSize: '16px 16px',
-      }}
-    >
-      {isBoard ? (
-        <svg
-          viewBox="0 0 240 120"
-          className="w-40 h-20 text-slate-300 dark:text-slate-700"
-          fill="none"
-          aria-hidden="true"
-        >
-          <rect
-            x="24"
-            y="24"
-            width="64"
-            height="40"
-            rx="6"
-            className="fill-white dark:fill-slate-900 stroke-indigo-300 dark:stroke-indigo-700"
-            strokeWidth="1.5"
-          />
-          <rect
-            x="148"
-            y="52"
-            width="68"
-            height="42"
-            rx="6"
-            className="fill-amber-50 dark:fill-amber-950/40 stroke-amber-300 dark:stroke-amber-700"
-            strokeWidth="1.5"
-          />
-          <path
-            d="M88 44 C 118 44, 118 73, 148 73"
-            className="stroke-indigo-400 dark:stroke-indigo-500"
-            strokeWidth="1.75"
-            strokeLinecap="round"
-          />
-          <path
-            d="M142 68 L 148 73 L 142 78"
-            className="stroke-indigo-400 dark:stroke-indigo-500"
-            strokeWidth="1.75"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          <line
-            x1="36"
-            y1="40"
-            x2="74"
-            y2="40"
-            className="stroke-slate-300 dark:stroke-slate-700"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-          />
-          <line
-            x1="36"
-            y1="50"
-            x2="62"
-            y2="50"
-            className="stroke-slate-200 dark:stroke-slate-800"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-          />
-        </svg>
-      ) : (
-        <div className="flex flex-col items-center gap-1 text-slate-400 dark:text-slate-500">
+    <div className="w-full h-full relative overflow-hidden flex items-center justify-center bg-slate-50 dark:bg-slate-950/70">
+      <svg
+        viewBox="0 0 240 120"
+        className="w-full h-full text-slate-300 dark:text-slate-700"
+        fill="none"
+        aria-hidden="true"
+      >
+        <defs>
+          <pattern id="drive-thumb-dots" width="16" height="16" patternUnits="userSpaceOnUse">
+            <circle cx="8" cy="8" r="0.9" className="fill-slate-300/80 dark:fill-slate-700/80" />
+          </pattern>
+        </defs>
+        <rect width="240" height="120" fill="url(#drive-thumb-dots)" />
+        {isBoard ? (
+          <g>
+            <rect
+              x="24"
+              y="24"
+              width="64"
+              height="40"
+              rx="6"
+              className="fill-white dark:fill-slate-900 stroke-[#1d5fbf]/55 dark:stroke-[#669df6]/55"
+              strokeWidth="1.5"
+            />
+            <rect
+              x="148"
+              y="52"
+              width="68"
+              height="42"
+              rx="6"
+              className="fill-amber-50 dark:fill-amber-950/40 stroke-amber-300 dark:stroke-amber-700"
+              strokeWidth="1.5"
+            />
+            <path
+              d="M88 44 C 118 44, 118 73, 148 73"
+              className="stroke-[#1d5fbf] dark:stroke-[#669df6]"
+              strokeWidth="1.75"
+              strokeLinecap="round"
+            />
+            <path
+              d="M142 68 L 148 73 L 142 78"
+              className="stroke-[#1d5fbf] dark:stroke-[#669df6]"
+              strokeWidth="1.75"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <line
+              x1="36"
+              y1="40"
+              x2="74"
+              y2="40"
+              className="stroke-slate-300 dark:stroke-slate-700"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+            />
+            <line
+              x1="36"
+              y1="50"
+              x2="62"
+              y2="50"
+              className="stroke-slate-200 dark:stroke-slate-800"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+            />
+          </g>
+        ) : null}
+      </svg>
+      {!isBoard && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-slate-500 dark:text-slate-400">
           <ImageIcon className="w-6 h-6" />
-          <span className="text-[11px] font-medium">{t('Ảnh PNG 4×', '4× PNG Image')}</span>
+          <span className="text-xs font-medium">{t('Ảnh PNG 4×', '4× PNG Image')}</span>
         </div>
       )}
     </div>
@@ -187,11 +189,15 @@ export const DriveBoardsSection: React.FC<DriveBoardsSectionProps> = ({
   };
 
   return (
-    <section id="drive-boards-section" aria-labelledby="drive-boards-heading" className="space-y-4">
+    <section
+      id="drive-boards-section"
+      aria-labelledby="drive-boards-heading"
+      className="max-w-[1200px] mx-auto px-5 sm:px-8 space-y-5"
+    >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2
           id="drive-boards-heading"
-          className="text-base font-medium text-slate-900 dark:text-slate-100"
+          className="text-xl sm:text-2xl font-semibold tracking-[-0.02em] text-slate-900 dark:text-slate-100"
         >
           {t('Bảng đã lưu trên Google Drive', 'Saved boards on Google Drive')}
         </h2>
@@ -203,7 +209,7 @@ export const DriveBoardsSection: React.FC<DriveBoardsSectionProps> = ({
                 type="button"
                 disabled={Boolean(drive.busyAction)}
                 onClick={() => void drive.organizeFilesIntoFolder()}
-                className="h-8 inline-flex items-center gap-1.5 px-2.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 text-xs font-semibold transition-colors whitespace-nowrap shrink-0 cursor-pointer disabled:opacity-60"
+                className="h-8 inline-flex items-center gap-1.5 px-2.5 rounded-lg bg-[#1d5fbf]/10 dark:bg-[#669df6]/15 hover:bg-[#1d5fbf]/15 dark:hover:bg-[#669df6]/25 text-[#1d5fbf] dark:text-[#669df6] text-xs font-semibold transition-colors whitespace-nowrap shrink-0 cursor-pointer disabled:opacity-60"
               >
                 {drive.busyAction === 'organize' ? (
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -219,7 +225,7 @@ export const DriveBoardsSection: React.FC<DriveBoardsSectionProps> = ({
               </button>
             )}
 
-            <div className="h-8 inline-flex items-center gap-2 px-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+            <div className="h-8 inline-flex items-center gap-2 px-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#19191d]">
               <span className="text-xs font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">
                 {t('Tự động lưu', 'Auto-save')}
               </span>
@@ -234,12 +240,12 @@ export const DriveBoardsSection: React.FC<DriveBoardsSectionProps> = ({
                 onClick={() => drive.setAutoSaveEnabled(!drive.autoSaveEnabled)}
                 className={`relative inline-flex h-4.5 w-8 items-center rounded-full transition-colors cursor-pointer shrink-0 ${
                   drive.autoSaveEnabled
-                    ? 'bg-indigo-600'
+                    ? 'bg-[#1d5fbf] dark:bg-[#669df6]'
                     : 'bg-slate-300 dark:bg-slate-700'
                 }`}
               >
                 <span
-                  className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-xs transition-transform ${
+                  className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
                     drive.autoSaveEnabled ? 'translate-x-4' : 'translate-x-0.5'
                   }`}
                 />
@@ -252,7 +258,7 @@ export const DriveBoardsSection: React.FC<DriveBoardsSectionProps> = ({
               disabled={drive.isLoadingFiles || Boolean(drive.busyAction)}
               aria-label={t('Làm mới danh sách Google Drive', 'Refresh Google Drive list')}
               title={t('Làm mới danh sách', 'Refresh list')}
-              className="h-8 w-8 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300 transition-colors shrink-0 cursor-pointer disabled:opacity-60"
+              className="h-8 w-8 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#19191d] hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300 transition-colors shrink-0 cursor-pointer disabled:opacity-60"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${drive.isLoadingFiles ? 'animate-spin' : ''}`} />
             </button>
@@ -297,25 +303,47 @@ export const DriveBoardsSection: React.FC<DriveBoardsSectionProps> = ({
 
       {drive.needsAuth ? (
         isFileProtocol ? (
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-6 py-8 flex flex-col items-center text-center">
-            <div className="w-10 h-10 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center mb-4">
-              <Check className="w-5 h-5" strokeWidth={1.75} />
+          <div className="bg-white dark:bg-[#19191d] border border-slate-200/80 dark:border-slate-800/80 rounded-xl overflow-hidden grid grid-cols-1 lg:grid-cols-12">
+            <div className="lg:col-span-7 p-6 sm:p-8 space-y-3">
+              <div className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">
+                <Check className="w-4 h-4 shrink-0" strokeWidth={1.75} />
+                <span>{t('Sẵn sàng ngoại tuyến', 'Offline ready')}</span>
+              </div>
+              <h3 className="text-base sm:text-lg font-semibold text-slate-900 dark:text-slate-100 text-balance">
+                {t('Ứng dụng đang chạy ở chế độ ngoại tuyến', 'Running in offline mode')}
+              </h3>
+              <p className="text-[13px] sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed max-w-xl">
+                {t(
+                  'Bản cài đặt lưu trữ toàn bộ bảng trắng trực tiếp trên máy tính của bạn (IndexedDB). Bạn không cần đăng nhập vẫn dùng đầy đủ mọi công cụ vẽ, toán học, máy tính Casio và xuất tệp.',
+                  'The desktop app stores all whiteboards locally on your computer (IndexedDB). No sign-in is required to use all drawing, math, Casio calculator, and export features.'
+                )}
+              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed pt-1">
+                {language === 'en' ? (
+                  <>
+                    To sync with Google Drive, click{' '}
+                    <strong className="font-medium text-slate-800 dark:text-slate-200">
+                      Sign in via browser
+                    </strong>{' '}
+                    and choose your Google account.
+                  </>
+                ) : (
+                  <>
+                    Để đồng bộ Google Drive, bấm{' '}
+                    <strong className="font-medium text-slate-800 dark:text-slate-200">
+                      Đăng nhập qua trình duyệt
+                    </strong>{' '}
+                    và chọn tài khoản Google của bạn.
+                  </>
+                )}
+              </p>
             </div>
-            <h3 className="text-base font-medium text-slate-900 dark:text-slate-100 text-balance max-w-md">
-              {t('Ứng dụng đang chạy ở chế độ ngoại tuyến', 'Running in offline mode')}
-            </h3>
-            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-2 max-w-lg leading-relaxed">
-              {t(
-                'Bản cài đặt lưu trữ toàn bộ bảng trắng trực tiếp trên máy tính của bạn (IndexedDB). Bạn không cần đăng nhập vẫn dùng đầy đủ mọi công cụ vẽ, toán học, máy tính Casio và xuất tệp.',
-                'The desktop app stores all whiteboards locally on your computer (IndexedDB). No sign-in is required to use all drawing, math, Casio calculator, and export features.'
-              )}
-            </p>
 
-            <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+            <div className="lg:col-span-5 p-6 sm:p-8 bg-[#f7f7f9] dark:bg-[#131317] border-t lg:border-t-0 lg:border-l border-slate-200/80 dark:border-slate-800/80 flex flex-col justify-center items-start lg:items-center gap-3">
               <button
                 type="button"
                 onClick={onCreateNewClick}
-                className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs transition-colors duration-150 cursor-pointer"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 h-10 px-4 rounded-lg bg-[#1d5fbf] hover:bg-[#174ea1] dark:bg-[#2a6fd1] dark:hover:bg-[#3b80e0] text-white font-medium text-xs transition-colors duration-150 cursor-pointer"
               >
                 <Plus className="w-4 h-4" strokeWidth={1.75} />
                 <span>{t('Tạo bảng mới', 'New board')}</span>
@@ -332,73 +360,52 @@ export const DriveBoardsSection: React.FC<DriveBoardsSectionProps> = ({
                     'width=540,height=700,menubar=no,toolbar=no,location=no,status=no'
                   );
                 }}
-                className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-medium text-xs transition-colors duration-150 cursor-pointer"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 h-10 px-4 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-medium text-xs transition-colors duration-150 cursor-pointer"
               >
                 <KeyRound className="w-4 h-4 text-slate-500 dark:text-slate-400" strokeWidth={1.75} />
                 <span>{t('Đăng nhập qua trình duyệt', 'Sign in via browser')}</span>
               </button>
             </div>
-
-            <p className="mt-4 text-xs text-slate-500 dark:text-slate-400 max-w-md leading-relaxed">
-              {language === 'en' ? (
-                <>
-                  To sync with Google Drive, click{' '}
-                  <strong className="font-medium text-slate-700 dark:text-slate-300">
-                    Sign in via browser
-                  </strong>{' '}
-                  and choose your Google account.
-                </>
-              ) : (
-                <>
-                  Để đồng bộ Google Drive, bấm{' '}
-                  <strong className="font-medium text-slate-700 dark:text-slate-300">
-                    Đăng nhập qua trình duyệt
-                  </strong>{' '}
-                  và chọn tài khoản Google của bạn.
-                </>
-              )}
-            </p>
           </div>
         ) : (
-          /* Signed-Out Connect Card */
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-6 py-8 flex flex-col items-center text-center">
-            <div className="w-10 h-10 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center mb-4">
-              <CloudUpload className="w-5 h-5" strokeWidth={1.75} />
-            </div>
-            <h3 className="text-base font-medium text-slate-900 dark:text-slate-100 text-balance max-w-md">
-              {t(
-                'Đăng nhập Google để đồng bộ bảng đã lưu',
-                'Sign in with Google to sync saved boards'
-              )}
-            </h3>
-            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-2 max-w-md leading-relaxed">
-              {t(
-                `Tự động lưu dự án bảng trắng và ảnh PNG 4× trong thư mục riêng "${APP_DRIVE_FOLDER_NAME}"`,
-                `Automatically save whiteboard projects and 4× PNG exports in a dedicated "${APP_DRIVE_FOLDER_NAME}" folder`
-              )}
-            </p>
+          /* Signed-Out Connect Split Panel */
+          <div className="bg-white dark:bg-[#19191d] border border-slate-200/80 dark:border-slate-800/80 rounded-xl overflow-hidden grid grid-cols-1 lg:grid-cols-12">
+            <div className="lg:col-span-7 p-6 sm:p-8 space-y-3">
+              <h3 className="text-base sm:text-lg font-semibold text-slate-900 dark:text-slate-100 text-balance">
+                {t(
+                  'Đăng nhập Google để đồng bộ bảng đã lưu',
+                  'Sign in with Google to sync saved boards'
+                )}
+              </h3>
+              <p className="text-[13px] sm:text-sm text-slate-600 dark:text-slate-400 max-w-xl leading-relaxed">
+                {t(
+                  `Tự động lưu dự án bảng trắng và ảnh PNG 4× trong thư mục riêng "${APP_DRIVE_FOLDER_NAME}"`,
+                  `Automatically save whiteboard projects and 4× PNG exports in a dedicated "${APP_DRIVE_FOLDER_NAME}" folder`
+                )}
+              </p>
 
-            <div className="mt-5">
+              <div className="pt-1 flex flex-col sm:flex-row sm:items-center gap-x-2.5 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
+                <span>{t('Chỉ truy cập tệp do ứng dụng tạo', 'Only accesses files created by this app')}</span>
+                <span aria-hidden="true" className="hidden sm:inline">
+                  ·
+                </span>
+                <span>{t('Dùng chung dung lượng Drive cá nhân', 'Uses your personal Google Drive storage')}</span>
+              </div>
+            </div>
+
+            <div className="lg:col-span-5 p-6 sm:p-8 bg-[#f7f7f9] dark:bg-[#131317] border-t lg:border-t-0 lg:border-l border-slate-200/80 dark:border-slate-800/80 flex flex-col justify-center items-start lg:items-center gap-2.5">
               <GoogleSignInButton
                 testId="home-google-signin-button"
                 onClick={() => void drive.signIn()}
                 isLoading={drive.isLoggingIn}
               />
             </div>
-
-            <div className="mt-5 flex flex-col sm:flex-row items-center justify-center gap-x-2 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
-              <span>{t('Chỉ truy cập tệp do ứng dụng tạo', 'Only accesses files created by this app')}</span>
-              <span aria-hidden="true" className="hidden sm:inline">
-                ·
-              </span>
-              <span>{t('Dùng chung dung lượng Drive cá nhân', 'Uses your personal Google Drive storage')}</span>
-            </div>
           </div>
         )
       ) : (
         <>
-          {/* Balanced Filter, Search, Sort & Layout Bar */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5">
+          {/* Sticky Balanced Filter, Search, Sort & Layout Bar */}
+          <div className="sticky top-14 z-10 -mx-5 sm:-mx-8 px-5 sm:px-8 py-3 bg-[#f2f2f4] dark:bg-[#16161a] border-b border-slate-200/70 dark:border-slate-800/70 flex flex-col md:flex-row md:items-center justify-between gap-2.5">
             {/* Segmented Filter Tabs */}
             <div
               role="tablist"
@@ -422,7 +429,7 @@ export const DriveBoardsSection: React.FC<DriveBoardsSectionProps> = ({
                     onClick={() => setFilter(tab.id)}
                     className={`h-7 px-2.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap shrink-0 tabular-nums cursor-pointer ${
                       active
-                        ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
+                        ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white'
                         : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                     }`}
                   >
@@ -445,7 +452,7 @@ export const DriveBoardsSection: React.FC<DriveBoardsSectionProps> = ({
                   onChange={(e) => setQuery(e.target.value)}
                   aria-label={t('Tìm bảng theo tên', 'Search boards by name')}
                   placeholder={t('Tìm theo tên', 'Search by name')}
-                  className="h-9 w-full pl-8 pr-3 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:border-indigo-500 transition-colors"
+                  className="h-9 w-full pl-8 pr-3 rounded-lg bg-white dark:bg-[#19191d] border border-slate-200 dark:border-slate-800 text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:border-[#1d5fbf] dark:focus:border-[#669df6] transition-colors"
                 />
               </div>
 
@@ -453,14 +460,14 @@ export const DriveBoardsSection: React.FC<DriveBoardsSectionProps> = ({
                 aria-label={t('Sắp xếp bảng', 'Sort boards')}
                 value={sort}
                 onChange={(e) => setSort(e.target.value as DriveFileSort)}
-                className="h-9 px-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-medium text-slate-700 dark:text-slate-200 cursor-pointer shrink-0"
+                className="h-9 px-2.5 rounded-lg bg-white dark:bg-[#19191d] border border-slate-200 dark:border-slate-800 text-xs font-medium text-slate-700 dark:text-slate-200 cursor-pointer shrink-0"
               >
                 <option value="modifiedDesc">{t('Mới cập nhật', 'Recently modified')}</option>
                 <option value="nameAsc">{t('Tên A → Z', 'Name A → Z')}</option>
                 <option value="sizeDesc">{t('Dung lượng lớn nhất', 'Largest size')}</option>
               </select>
 
-              <div className="h-9 inline-flex items-center p-0.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shrink-0">
+              <div className="h-9 inline-flex items-center p-0.5 rounded-lg bg-white dark:bg-[#19191d] border border-slate-200 dark:border-slate-800 shrink-0">
                 <button
                   type="button"
                   onClick={() => setViewMode('grid')}
@@ -497,7 +504,7 @@ export const DriveBoardsSection: React.FC<DriveBoardsSectionProps> = ({
               {Array.from({ length: 8 }).map((_, idx) => (
                 <div
                   key={idx}
-                  className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden"
+                  className="bg-white dark:bg-[#19191d] border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden"
                 >
                   <div className="h-32 bg-slate-100 dark:bg-slate-800/70" />
                   <div className="p-4 space-y-2">
@@ -509,14 +516,14 @@ export const DriveBoardsSection: React.FC<DriveBoardsSectionProps> = ({
             </div>
           ) : drive.files.length === 0 ? (
             /* Calm Empty Account State */
-            <div className="bg-white dark:bg-slate-900 border border-dashed border-slate-300 dark:border-slate-800 rounded-xl px-6 py-10 text-center space-y-1.5">
+            <div className="bg-white dark:bg-[#19191d] border border-dashed border-slate-300 dark:border-slate-800 rounded-xl px-6 py-10 text-center space-y-1.5">
               <h3 className="text-sm font-medium text-slate-900 dark:text-slate-100">
                 {t(
                   `Chưa có tệp nào trong thư mục "${APP_DRIVE_FOLDER_NAME}"`,
                   `No files in "${APP_DRIVE_FOLDER_NAME}" folder yet`
                 )}
               </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
+              <p className="text-xs sm:text-[13px] text-slate-600 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
                 {language === 'en' ? (
                   <>
                     Click <strong className="font-medium text-slate-700 dark:text-slate-300">New board</strong> above or save your current draft to see your boards here.
@@ -530,7 +537,7 @@ export const DriveBoardsSection: React.FC<DriveBoardsSectionProps> = ({
             </div>
           ) : visibleFiles.length === 0 ? (
             /* Empty Search / Filter State */
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-6 py-9 text-center space-y-3">
+            <div className="bg-white dark:bg-[#19191d] border border-slate-200 dark:border-slate-800 rounded-xl px-6 py-9 text-center space-y-3">
               <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">
                 {t(
                   'Không tìm thấy tệp nào khớp với từ khóa hoặc bộ lọc hiện tại.',
@@ -562,10 +569,10 @@ export const DriveBoardsSection: React.FC<DriveBoardsSectionProps> = ({
                 return (
                   <article
                     key={file.id}
-                    className={`bg-white dark:bg-slate-900 border rounded-xl overflow-hidden flex flex-col transition-colors ${
+                    className={`bg-white dark:bg-[#19191d] border rounded-xl overflow-hidden flex flex-col transition-colors ${
                       isCurrent
-                        ? 'border-indigo-500 dark:border-indigo-500'
-                        : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+                        ? 'border-[#1d5fbf] dark:border-[#669df6]'
+                        : 'border-slate-200/80 dark:border-slate-800/80 hover:border-slate-300 dark:hover:border-slate-700'
                     }`}
                   >
                     {isBoard ? (
@@ -622,7 +629,7 @@ export const DriveBoardsSection: React.FC<DriveBoardsSectionProps> = ({
                             type="button"
                             disabled={Boolean(drive.busyAction)}
                             onClick={() => void handleOpenDriveBoard(file)}
-                            className="h-8 inline-flex items-center gap-1.5 px-2.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 text-xs font-semibold transition-colors whitespace-nowrap shrink-0 cursor-pointer disabled:opacity-60"
+                            className="h-8 inline-flex items-center gap-1.5 px-2.5 rounded-lg bg-[#1d5fbf]/10 dark:bg-[#669df6]/15 hover:bg-[#1d5fbf]/15 dark:hover:bg-[#669df6]/25 text-[#1d5fbf] dark:text-[#669df6] text-xs font-semibold transition-colors whitespace-nowrap shrink-0 cursor-pointer disabled:opacity-60"
                           >
                             {isOpening ? (
                               <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -679,7 +686,7 @@ export const DriveBoardsSection: React.FC<DriveBoardsSectionProps> = ({
             </div>
           ) : (
             /* Compact High-Density List View */
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden divide-y divide-slate-200/80 dark:divide-slate-800">
+            <div className="bg-white dark:bg-[#19191d] border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden divide-y divide-slate-200/80 dark:divide-slate-800">
               {visibleFiles.map((file) => {
                 const isBoard = isWhiteboardProjectFile(file);
                 const isCurrent = drive.activeDriveFile?.id === file.id;
@@ -696,7 +703,7 @@ export const DriveBoardsSection: React.FC<DriveBoardsSectionProps> = ({
                       <div
                         className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
                           isBoard
-                            ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400'
+                            ? 'bg-[#1d5fbf]/10 dark:bg-[#669df6]/15 text-[#1d5fbf] dark:text-[#669df6]'
                             : 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400'
                         }`}
                       >
@@ -710,7 +717,7 @@ export const DriveBoardsSection: React.FC<DriveBoardsSectionProps> = ({
                         <div className="text-[13px] font-semibold text-slate-900 dark:text-slate-100 truncate">
                           {displayTitle}
                         </div>
-                        <div className="text-[11px] text-slate-500 dark:text-slate-400 tabular-nums truncate">
+                        <div className="text-xs text-slate-500 dark:text-slate-400 tabular-nums truncate">
                           {isBoard ? t('Bảng trắng', 'Whiteboard') : t('Ảnh PNG', 'PNG Image')}
                           {file.modifiedTime
                             ? ` · ${formatDriveModifiedTime(file.modifiedTime)}`
@@ -727,7 +734,7 @@ export const DriveBoardsSection: React.FC<DriveBoardsSectionProps> = ({
                           type="button"
                           disabled={Boolean(drive.busyAction)}
                           onClick={() => void handleOpenDriveBoard(file)}
-                          className="h-8 inline-flex items-center gap-1.5 px-2.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 text-xs font-semibold transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+                          className="h-8 inline-flex items-center gap-1.5 px-2.5 rounded-lg bg-[#1d5fbf]/10 dark:bg-[#669df6]/15 hover:bg-[#1d5fbf]/15 dark:hover:bg-[#669df6]/25 text-[#1d5fbf] dark:text-[#669df6] text-xs font-semibold transition-colors whitespace-nowrap shrink-0 cursor-pointer"
                         >
                           {isOpening ? (
                             <Loader2 className="w-3.5 h-3.5 animate-spin" />

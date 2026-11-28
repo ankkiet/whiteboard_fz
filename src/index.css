@@ -20,6 +20,12 @@
   --color-slate-950: #111113;
 
   --ease-ui: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --t-press: 140ms;
+  --t-hover: 180ms;
+  --t-ui: 240ms;
+  --t-reveal: 650ms;
 }
 
 @font-face {
@@ -58,9 +64,88 @@
   button:focus-visible,
   input:focus-visible,
   textarea:focus-visible,
-  select:focus-visible {
-    outline: 2px solid #4f46e5;
+  select:focus-visible,
+  a:focus-visible {
+    outline: 2px solid #1d5fbf;
     outline-offset: 2px;
+  }
+}
+
+/* Native document scrolling on Home view while keeping Editor canvas locked */
+html.view-home,
+html.view-home body,
+html.view-home #root {
+  height: auto;
+  min-height: 100%;
+  overflow-x: clip;
+  overflow-y: visible;
+}
+
+html.view-home {
+  overflow-y: auto;
+  scroll-padding-top: 76px;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(82, 82, 91, 0.32) transparent;
+}
+
+html.view-home.dark {
+  scrollbar-color: rgba(161, 161, 170, 0.32) transparent;
+}
+
+html.view-home body {
+  user-select: text;
+  touch-action: pan-y;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html.view-home {
+    scroll-behavior: smooth;
+  }
+}
+
+html.view-home::-webkit-scrollbar {
+  width: 8px;
+}
+
+html.view-home::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+html.view-home::-webkit-scrollbar-thumb {
+  background-color: rgba(82, 82, 91, 0.28);
+  border-radius: 9999px;
+}
+
+html.view-home::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(82, 82, 91, 0.45);
+}
+
+html.view-home.dark::-webkit-scrollbar-thumb {
+  background-color: rgba(161, 161, 170, 0.28);
+}
+
+html.view-home.dark::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(161, 161, 170, 0.45);
+}
+
+/* Below-the-fold scroll entrance (transform + opacity only, never blocks reading) */
+.home-reveal-item {
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity var(--t-reveal) var(--ease-expo), transform var(--t-reveal) var(--ease-expo);
+}
+
+.home-reveal-item[data-revealed='true'] {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-reveal-item {
+    opacity: 1;
+    transform: none;
+    transition: none;
   }
 }
 

@@ -21,6 +21,7 @@ export interface DesktopUpdaterProgress {
 
 export interface DesktopUpdaterResult {
   ok: boolean;
+  mode?: 'ota' | 'native';
   cancelled?: boolean;
   fileName?: string;
   destPath?: string;
@@ -29,8 +30,17 @@ export interface DesktopUpdaterResult {
   error?: string;
 }
 
+export interface DesktopOtaUpdatePayload {
+  bundleUrl: string;
+  expectedSha256?: string;
+  targetVersion: string;
+  targetBuildId?: string;
+}
+
 export interface DesktopUpdaterBridgeApi {
+  getNativeVersion?: () => string | null;
   downloadAndInstall: () => Promise<DesktopUpdaterResult>;
+  applyOtaUpdate?: (payload: DesktopOtaUpdatePayload) => Promise<DesktopUpdaterResult>;
   cancelDownload?: () => Promise<{ ok: boolean }>;
   onProgress: (cb: (payload: DesktopUpdaterProgress) => void) => () => void;
 }
@@ -66,7 +76,7 @@ declare global {
   }
 }
 
-export const LATEST_DESKTOP_VERSION_FALLBACK = 'v_fz.1.1.1.1.13';
+export const LATEST_DESKTOP_VERSION_FALLBACK = '1.2.12';
 export const DESKTOP_APP_DOWNLOADED_EVENT = 'bttm:desktop-app-downloaded';
 
 const DESKTOP_APP_DOWNLOADED_KEY = 'bttm_desktop_app_downloaded_v1';
@@ -134,6 +144,29 @@ export function getDownloadedVersion(): string | null {
     return 'v_fz.1.1.1.1.0';
   }
   return null;
+}
+
+export function getInstalledNativeVersion(): string | null {
+  if (typeof window === 'undefined') return null;
+  if (isDesktopApp()) {
+    try {
+      const bridgeVersion = window.fzinkDesktopUpdater?.getNativeVersion?.();
+      if (bridgeVersion && typeof bridgeVersion === 'string') {
+        return bridgeVersion;
+      }
+    } catch {
+      // ignore IPC errors
+    }
+  }
+  if (window.__BTTM_EMBEDDED_BUILD__?.nativeVersion) {
+    return window.__BTTM_EMBEDDED_BUILD__.nativeVersion;
+  }
+  return null;
+}
+
+export function hasDesktopOtaSupport(): boolean {
+  if (typeof window === 'undefined') return false;
+  return typeof window.fzinkDesktopUpdater?.applyOtaUpdate === 'function';
 }
 
 export function markDesktopAppAsDownloaded(manifest?: AppVersionManifest | null): void {

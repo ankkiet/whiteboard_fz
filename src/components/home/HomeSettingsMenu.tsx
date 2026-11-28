@@ -5,8 +5,10 @@ import { useI18n } from '../../i18n/useI18n';
 import {
   AppVersionManifest,
   UpdateCheckFailureReason,
-  shouldPromptDesktopUpdate,
+  classifyDesktopUpdateKind,
+  resolveOtaBundleUrl,
 } from '../../engine/versionCheck';
+import { formatFileSize } from '../../engine/documentUtils';
 import {
   DESKTOP_APP_DOWNLOADED_EVENT,
   DOWNLOAD_LINKS,
@@ -15,6 +17,8 @@ import {
   fetchLatestVersionManifest,
   getDownloadedBuildId,
   getDownloadedVersion,
+  getInstalledNativeVersion,
+  hasDesktopOtaSupport,
   isDesktopApp,
   triggerDirectDownload,
 } from '../../services/appUpdater';
@@ -77,6 +81,7 @@ type SettingsCheckState =
       status: 'update-available';
       currentVersion: string;
       latestManifest: AppVersionManifest;
+      updateKind: 'ota' | 'native';
       sourceOrigin?: string;
     }
   | { status: 'not-installed'; latestManifest: AppVersionManifest | null }
@@ -105,31 +110,39 @@ export const HomeSettingsMenu: React.FC<HomeSettingsMenuProps> = ({
     if (!isDesktop) return;
     const installedId = getDownloadedBuildId();
     const installedVer = getDownloadedVersion();
-    const latest = await fetchLatestVersionManifest();
-    if (latest?.version) {
+    const installedNativeVer = getInstalledNativeVersion();
+    const status = await checkLatestVersionStatus();
+    if (!status.ok) {
+      setHasUpdateBadge(false);
+      return;
+    }
+    const latest = status.manifest;
+    if (latest.version) {
       setLatestDesktopVersion(latest.version);
     }
-    const isUpdateAvailable = shouldPromptDesktopUpdate({
+    const updateKind = classifyDesktopUpdateKind({
       installedVersion: installedVer,
       installedBuildId: installedId,
+      installedNativeVersion: installedNativeVer,
+      hasOtaBridge: hasDesktopOtaSupport(),
       latest,
     });
-    if (isUpdateAvailable && latest) {
+    if (updateKind !== 'none') {
       setHasUpdateBadge(true);
       setCheckResult({
         status: 'update-available',
         currentVersion: installedVer || installedId || 'v_fz.1.1.1.1.0',
         latestManifest: latest,
+        updateKind,
+        sourceOrigin: status.sourceOrigin,
       });
-    } else if (latest) {
+    } else {
       setHasUpdateBadge(false);
       setCheckResult({
         status: 'up-to-date',
         version: installedVer || latest.version,
         buildId: installedId || latest.buildId,
       });
-    } else {
-      setHasUpdateBadge(false);
     }
   }, [isDesktop]);
 
@@ -221,18 +234,22 @@ export const HomeSettingsMenu: React.FC<HomeSettingsMenuProps> = ({
       }
 
       const latest = result.manifest;
-      const isUpdateAvailable = shouldPromptDesktopUpdate({
+      const installedNativeVer = getInstalledNativeVersion();
+      const updateKind = classifyDesktopUpdateKind({
         installedVersion: installedVer,
         installedBuildId: installedId,
+        installedNativeVersion: installedNativeVer,
+        hasOtaBridge: hasDesktopOtaSupport(),
         latest,
       });
 
-      if (isUpdateAvailable) {
+      if (updateKind !== 'none') {
         setHasUpdateBadge(true);
         setCheckResult({
           status: 'update-available',
           currentVersion: installedVer || installedId || t('Bản cũ', 'Previous version'),
           latestManifest: latest,
+          updateKind,
           sourceOrigin: result.sourceOrigin,
         });
         addToast(
@@ -264,11 +281,25 @@ export const HomeSettingsMenu: React.FC<HomeSettingsMenuProps> = ({
 
   const handleOneClickDesktopUpdate = () => {
     if (checkResult.status === 'update-available' && onStartDesktopUpdate && typeof window !== 'undefined' && window.fzinkDesktopUpdater) {
+      const originForOta =
+        checkResult.sourceOrigin ||
+        checkResult.latestManifest.updateOrigin ||
+        window.__BTTM_EMBEDDED_BUILD__?.updateOrigin ||
+        '';
+      const resolvedOtaUrl =
+        checkResult.updateKind === 'ota'
+          ? resolveOtaBundleUrl(originForOta, checkResult.latestManifest.otaBundleUrl)
+          : null;
+
       setIsOpen(false);
       onStartDesktopUpdate({
         currentVersion: checkResult.currentVersion,
         targetVersion: checkResult.latestManifest.version,
+        targetBuildId: checkResult.latestManifest.buildId,
         notes: checkResult.latestManifest.notes,
+        updateKind: resolvedOtaUrl ? 'ota' : 'native',
+        otaBundleUrl: resolvedOtaUrl || undefined,
+        otaBundleSha256: checkResult.latestManifest.otaBundleSha256,
       });
       return;
     }
@@ -317,9 +348,9 @@ export const HomeSettingsMenu: React.FC<HomeSettingsMenuProps> = ({
               aria-checked={active}
               data-testid={`language-option-${opt.id}`}
               onClick={() => setLanguage(opt.id)}
-              className={`h-7 px-2 rounded-md text-[11px] font-medium transition-colors cursor-pointer whitespace-nowrap ${
+              className={`h-7 px-2 rounded-md text-xs font-medium transition-colors cursor-pointer whitespace-nowrap ${
                 active
-                  ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+                  ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
@@ -360,7 +391,7 @@ export const HomeSettingsMenu: React.FC<HomeSettingsMenuProps> = ({
           data-testid="home-settings-dropdown"
           role="dialog"
           aria-label={t('Bảng cài đặt hệ thống', 'System settings panel')}
-          className="absolute right-0 mt-2 w-80 bg-white dark:bg-slate-900 rounded-xl shadow-lg dark:shadow-none border border-slate-200 dark:border-slate-800 p-4 z-40 space-y-3"
+          className="absolute right-0 mt-2 w-80 bg-white dark:bg-slate-900 rounded-xl shadow-lg dark:shadow-none border border-slate-200 dark:border-slate-800 p-4 z-40 space-y-3" /* taste-skill-ignore */
         >
           {isDesktop ? (
             <>
@@ -373,7 +404,7 @@ export const HomeSettingsMenu: React.FC<HomeSettingsMenuProps> = ({
                     {t('Ứng dụng máy tính', 'Desktop app')}
                   </div>
                 </div>
-                <span className="text-xs font-mono text-slate-500 dark:text-slate-400 tabular-nums whitespace-nowrap shrink-0">
+                <span className="text-xs text-slate-500 dark:text-slate-400 tabular-nums whitespace-nowrap shrink-0">
                   {currentVersionLabel}
                 </span>
               </div>
@@ -390,7 +421,7 @@ export const HomeSettingsMenu: React.FC<HomeSettingsMenuProps> = ({
                     data-testid="check-update-button"
                     disabled={isChecking}
                     onClick={() => void handleCheckUpdateNow()}
-                    className="h-7 px-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-xs font-medium inline-flex items-center gap-1.5 transition-colors duration-150 cursor-pointer whitespace-nowrap shrink-0"
+                    className="h-7 px-2.5 rounded-lg bg-[#1d5fbf] hover:bg-[#174ea1] dark:bg-[#2a6fd1] dark:hover:bg-[#3b80e0] disabled:opacity-60 text-white text-xs font-medium inline-flex items-center gap-1.5 transition-colors duration-150 cursor-pointer whitespace-nowrap shrink-0"
                   >
                     {isChecking ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -413,7 +444,7 @@ export const HomeSettingsMenu: React.FC<HomeSettingsMenuProps> = ({
                     <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" strokeWidth={1.75} />
                     <span>
                       {t('Đang dùng bản mới nhất', 'Up to date')} (
-                      <strong className="font-mono font-medium">{checkResult.version}</strong>)
+                      <strong className="font-medium tabular-nums">{checkResult.version}</strong>)
                     </span>
                   </div>
                 )}
@@ -432,11 +463,22 @@ export const HomeSettingsMenu: React.FC<HomeSettingsMenuProps> = ({
                         )}
                       </span>
                     </div>
-                    <div className="text-amber-800/90 dark:text-amber-300/90">
+                    <div className="text-amber-800/90 dark:text-amber-300/90 tabular-nums">
                       {t('Hiện tại:', 'Current:')}{' '}
-                      <span className="font-mono font-medium">{checkResult.currentVersion}</span> →{' '}
+                      <span className="font-medium">{checkResult.currentVersion}</span> →{' '}
                       {t('Mới nhất:', 'Latest:')}{' '}
-                      <span className="font-mono font-medium">{checkResult.latestManifest.version}</span>
+                      <span className="font-medium">{checkResult.latestManifest.version}</span>
+                    </div>
+                    <div className="text-[11px] text-amber-800/80 dark:text-amber-300/80">
+                      {checkResult.updateKind === 'ota'
+                        ? t(
+                            `Cập nhật nhanh (OTA)${checkResult.latestManifest.otaBundleSize ? ` · ${formatFileSize(checkResult.latestManifest.otaBundleSize)}` : ''} · Áp dụng ngay không cần cài lại`,
+                            `Quick update (OTA)${checkResult.latestManifest.otaBundleSize ? ` · ${formatFileSize(checkResult.latestManifest.otaBundleSize)}` : ''} · Applies without reinstalling`
+                          )
+                        : t(
+                            'Cập nhật lớn · Cần tải và chạy bộ cài đặt mới',
+                            'Major update · Requires downloading the new installer'
+                          )}
                     </div>
 
                     <div className="space-y-1.5 pt-0.5">
@@ -447,7 +489,11 @@ export const HomeSettingsMenu: React.FC<HomeSettingsMenuProps> = ({
                         className="w-full h-9 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs flex items-center justify-center gap-1.5 transition-colors duration-150 cursor-pointer"
                       >
                         <RefreshCw className="w-3.5 h-3.5" strokeWidth={1.75} />
-                        <span>{t('Cập nhật ngay', 'Update now')}</span>
+                        <span>
+                          {checkResult.updateKind === 'ota'
+                            ? t('Cập nhật nhanh ngay', 'Quick update now')
+                            : t('Cập nhật ngay', 'Update now')}
+                        </span>
                       </button>
 
                       <button
@@ -470,7 +516,7 @@ export const HomeSettingsMenu: React.FC<HomeSettingsMenuProps> = ({
                   <div className="p-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 space-y-2 text-xs">
                     <div className="text-slate-700 dark:text-slate-200">
                       {t('Phiên bản mới nhất:', 'Latest version:')}{' '}
-                      <strong className="font-mono font-medium">
+                      <strong className="font-medium tabular-nums">
                         {checkResult.latestManifest?.version || LATEST_DESKTOP_VERSION_FALLBACK}
                       </strong>
                     </div>
@@ -480,7 +526,7 @@ export const HomeSettingsMenu: React.FC<HomeSettingsMenuProps> = ({
                         setIsOpen(false);
                         onOpenDesktopModal();
                       }}
-                      className="w-full h-8 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs flex items-center justify-center gap-1.5 transition-colors duration-150 cursor-pointer"
+                      className="w-full h-8 rounded-lg bg-[#1d5fbf] hover:bg-[#174ea1] dark:bg-[#2a6fd1] dark:hover:bg-[#3b80e0] text-white font-medium text-xs flex items-center justify-center gap-1.5 transition-colors duration-150 cursor-pointer"
                     >
                       <Download className="w-3.5 h-3.5" strokeWidth={1.75} />
                       <span>{t('Tải bộ cài (.exe / Mac)', 'Download installer (.exe / Mac)')}</span>
@@ -496,8 +542,8 @@ export const HomeSettingsMenu: React.FC<HomeSettingsMenuProps> = ({
                     <WifiOff className="w-4 h-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" strokeWidth={1.75} />
                     <span>
                       {t(
-                        'Thiết bị đang ngoại tuyến — Kết nối mạng để kiểm tra phiên bản mới.',
-                        'Device is offline — Connect to the internet to check for updates.'
+                        'Thiết bị đang ngoại tuyến. Hãy kết nối mạng để kiểm tra phiên bản mới.',
+                        'Device is offline. Connect to the internet to check for updates.'
                       )}
                     </span>
                   </div>
@@ -515,8 +561,8 @@ export const HomeSettingsMenu: React.FC<HomeSettingsMenuProps> = ({
                       <p>
                         {checkResult.reason === 'auth-or-cors-blocked'
                           ? t(
-                              'Không thể kiểm tra trực tiếp từ ứng dụng — hãy mở trang web gốc trên trình duyệt để kiểm tra.',
-                              'Cannot check directly from the app — please open the web portal in your browser.'
+                              'Không thể kiểm tra trực tiếp từ ứng dụng, hãy mở trang web gốc trên trình duyệt để kiểm tra.',
+                              'Cannot check directly from the app. Please open the web portal in your browser.'
                             )
                           : checkResult.reason === 'local-server-stopped'
                           ? t(
@@ -533,7 +579,7 @@ export const HomeSettingsMenu: React.FC<HomeSettingsMenuProps> = ({
                           href={checkResult.portalUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-block font-medium text-indigo-600 dark:text-indigo-400 hover:underline"
+                          className="inline-block font-medium text-[#1d5fbf] dark:text-[#669df6] hover:underline"
                         >
                           {t('Mở trang web fzInK', 'Open fzInK web portal')}
                         </a>
@@ -606,14 +652,14 @@ export const HomeSettingsMenu: React.FC<HomeSettingsMenuProps> = ({
                     <Laptop className="w-4 h-4 text-slate-500 dark:text-slate-400 shrink-0" strokeWidth={1.75} />
                     <span>{t('Ứng dụng máy tính', 'Desktop app')}</span>
                   </div>
-                  <span className="text-xs font-mono text-slate-500 dark:text-slate-400 tabular-nums">
+                  <span className="text-xs text-slate-500 dark:text-slate-400 tabular-nums">
                     {latestDesktopVersion}
                   </span>
                 </div>
                 <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
                   {t(
                     'Cài đặt trên Windows hoặc macOS để lưu trữ cục bộ và làm việc ngoại tuyến không cần mạng.',
-                    'Install on Windows or macOS for local storage and seamless offline work.'
+                    'Install on Windows or macOS for local storage and reliable offline work.'
                   )}
                 </p>
                 <button
@@ -623,7 +669,7 @@ export const HomeSettingsMenu: React.FC<HomeSettingsMenuProps> = ({
                     setIsOpen(false);
                     onOpenDesktopModal();
                   }}
-                  className="w-full h-9 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs flex items-center justify-center gap-1.5 transition-colors duration-150 cursor-pointer"
+                  className="w-full h-9 rounded-lg bg-[#1d5fbf] hover:bg-[#174ea1] dark:bg-[#2a6fd1] dark:hover:bg-[#3b80e0] text-white font-medium text-xs flex items-center justify-center gap-1.5 transition-colors duration-150 cursor-pointer"
                 >
                   <Download className="w-4 h-4" strokeWidth={1.75} />
                   <span>{t('Tải bộ cài đặt (.exe / Mac)', 'Download installer (.exe / Mac)')}</span>

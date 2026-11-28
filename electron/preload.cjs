@@ -31,11 +31,25 @@ contextBridge.exposeInMainWorld('fzinkDesktopAuth', {
 });
 
 contextBridge.exposeInMainWorld('fzinkDesktopUpdater', {
+  getNativeVersion: () => {
+    try {
+      return ipcRenderer.sendSync('fzink:updater:native-version') || null;
+    } catch {
+      return null;
+    }
+  },
   downloadAndInstall: () => {
     try {
       return ipcRenderer.invoke('fzink:updater:download-and-install');
     } catch (err) {
       return Promise.resolve({ ok: false, error: err && err.message ? err.message : 'Update failed' });
+    }
+  },
+  applyOtaUpdate: (payload) => {
+    try {
+      return ipcRenderer.invoke('fzink:updater:apply-ota', payload);
+    } catch (err) {
+      return Promise.resolve({ ok: false, error: err && err.message ? err.message : 'OTA update failed' });
     }
   },
   cancelDownload: () => {

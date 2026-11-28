@@ -1,6 +1,5 @@
 import React from 'react';
 import { BoardType } from '../../types/board';
-import { useI18n } from '../../i18n/useI18n';
 
 interface BoardTemplatePreviewProps {
   type: BoardType;
@@ -11,7 +10,6 @@ export const BoardTemplatePreview: React.FC<BoardTemplatePreviewProps> = ({
   type,
   className = 'w-full h-24',
 }) => {
-  const { t } = useI18n();
   if (type === 'math') {
     return (
       <div
@@ -31,13 +29,13 @@ export const BoardTemplatePreview: React.FC<BoardTemplatePreviewProps> = ({
           {/* Geometric right triangle */}
           <path
             d="M 28 30 L 28 84 L 92 84 Z"
-            className="fill-indigo-500/8 stroke-indigo-600 dark:stroke-indigo-400"
+            className="fill-[#1d5fbf]/10 dark:fill-[#669df6]/15 stroke-[#1d5fbf] dark:stroke-[#669df6]"
             strokeWidth="1.8"
             strokeLinejoin="round"
           />
           <path
             d="M 28 75 L 37 75 L 37 84"
-            className="stroke-indigo-500 dark:stroke-indigo-400"
+            className="stroke-[#1d5fbf] dark:stroke-[#669df6]"
             strokeWidth="1.2"
           />
 
@@ -48,7 +46,7 @@ export const BoardTemplatePreview: React.FC<BoardTemplatePreviewProps> = ({
             className="fill-slate-700 dark:fill-slate-200"
             fontSize="12"
             fontWeight="600"
-            fontFamily="ui-monospace, SFMono-Regular, monospace"
+            fontFamily="KaTeX_Main, Georgia, serif"
           >
             a² + b² = c²
           </text>
@@ -77,7 +75,7 @@ export const BoardTemplatePreview: React.FC<BoardTemplatePreviewProps> = ({
         className={`${className} relative overflow-hidden bg-slate-200/70 dark:bg-slate-950 flex items-center justify-center`}
       >
         <svg viewBox="0 0 220 110" className="w-full h-full" fill="none" aria-hidden="true">
-          {/* Paper sheet shadow & background */}
+          {/* Paper sheet backdrop & surface */}
           <rect
             x="28"
             y="7"
@@ -130,26 +128,23 @@ export const BoardTemplatePreview: React.FC<BoardTemplatePreviewProps> = ({
             strokeDasharray="3 3"
           />
 
-          {/* Header text watermark */}
-          <text
-            x="42"
-            y="17"
-            className="fill-slate-400 dark:fill-slate-600 font-sans"
-            fontSize="5.5"
-            fontWeight="500"
-          >
-            {t('Vở ghi chú • A4', 'Notebook • A4')}
-          </text>
-          <text
-            x="174"
-            y="17"
-            textAnchor="end"
-            className="fill-slate-400 dark:fill-slate-600 font-sans"
-            fontSize="5.5"
-            fontWeight="500"
-          >
-            {t('Trang 1', 'Page 1')}
-          </text>
+          {/* Header bar placeholders (avoids sub-11px SVG text nodes) */}
+          <rect
+            x="44"
+            y="13"
+            width="46"
+            height="4"
+            rx="2"
+            className="fill-slate-300 dark:fill-slate-700"
+          />
+          <rect
+            x="152"
+            y="13"
+            width="20"
+            height="4"
+            rx="2"
+            className="fill-slate-300 dark:fill-slate-700"
+          />
 
           {/* Handwriting sample */}
           <line
@@ -199,16 +194,14 @@ export const BoardTemplatePreview: React.FC<BoardTemplatePreviewProps> = ({
             className="fill-slate-100 dark:fill-slate-800 stroke-slate-300 dark:stroke-slate-700"
             strokeWidth="0.6"
           />
-          <text
-            x="108"
-            y="92"
-            textAnchor="middle"
-            className="fill-slate-500 dark:fill-slate-400 font-sans"
-            fontSize="4.8"
-            fontWeight="600"
-          >
-            {t('Hết trang 1', 'End of page 1')}
-          </text>
+          <rect
+            x="94"
+            y="88.5"
+            width="28"
+            height="3"
+            rx="1.5"
+            className="fill-slate-400 dark:fill-slate-500"
+          />
         </svg>
       </div>
     );
@@ -218,13 +211,14 @@ export const BoardTemplatePreview: React.FC<BoardTemplatePreviewProps> = ({
     return (
       <div
         className={`${className} relative overflow-hidden bg-slate-50 dark:bg-slate-950/80 flex items-center justify-center`}
-        style={{
-          backgroundImage:
-            'radial-gradient(circle, rgba(148, 163, 184, 0.35) 1px, transparent 1px)',
-          backgroundSize: '14px 14px',
-        }}
       >
         <svg viewBox="0 0 220 110" className="w-full h-full" fill="none" aria-hidden="true">
+          <defs>
+            <pattern id="dot-grid-mindmap" width="14" height="14" patternUnits="userSpaceOnUse">
+              <circle cx="7" cy="7" r="0.9" className="fill-slate-300 dark:fill-slate-700" />
+            </pattern>
+          </defs>
+          <rect width="220" height="110" fill="url(#dot-grid-mindmap)" />
           {/* Connectors */}
           <path
             d="M 134 50 C 148 44, 150 30, 160 30"
@@ -251,7 +245,7 @@ export const BoardTemplatePreview: React.FC<BoardTemplatePreviewProps> = ({
             width="52"
             height="30"
             rx="7"
-            className="fill-indigo-50 dark:fill-indigo-950/70 stroke-indigo-500 dark:stroke-indigo-400"
+            className="fill-[#1d5fbf]/10 dark:fill-[#669df6]/15 stroke-[#1d5fbf] dark:stroke-[#669df6]"
             strokeWidth="1.6"
           />
           <line
@@ -259,7 +253,7 @@ export const BoardTemplatePreview: React.FC<BoardTemplatePreviewProps> = ({
             y1="55"
             x2="125"
             y2="55"
-            className="stroke-indigo-600 dark:stroke-indigo-300"
+            className="stroke-[#1d5fbf] dark:stroke-[#669df6]"
             strokeWidth="2.2"
             strokeLinecap="round"
           />
@@ -330,7 +324,7 @@ export const BoardTemplatePreview: React.FC<BoardTemplatePreviewProps> = ({
         />
         <path
           d="M 94 45 C 114 45, 114 66, 132 66"
-          className="stroke-indigo-500 dark:stroke-indigo-400"
+          className="stroke-[#1d5fbf] dark:stroke-[#669df6]"
           strokeWidth="1.75"
           strokeLinecap="round"
         />

@@ -102,9 +102,13 @@ export const DesktopUpdateModal: React.FC<DesktopUpdateModalProps> = ({
             <div className="min-w-0">
               <h2 id="desktop-update-title" className="text-base font-semibold truncate">
                 {session.status === 'completed'
-                  ? t('Tải cập nhật hoàn tất', 'Update ready')
+                  ? session.updateKind === 'ota'
+                    ? t('Đã áp dụng bản cập nhật', 'Update applied')
+                    : t('Tải cập nhật hoàn tất', 'Update ready')
                   : session.status === 'error'
                   ? t('Cập nhật chưa thành công', 'Update failed')
+                  : session.updateKind === 'ota'
+                  ? t('Đang cập nhật nhanh (OTA)', 'Applying quick update (OTA)')
                   : t('Đang cập nhật ứng dụng', 'Updating application')}
               </h2>
               <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-mono">
@@ -181,7 +185,9 @@ export const DesktopUpdateModal: React.FC<DesktopUpdateModalProps> = ({
                         : 'text-slate-600 dark:text-slate-400'
                     }`}
                   >
-                    {session.fileName
+                    {session.updateKind === 'ota'
+                      ? t('Tải gói cập nhật nhẹ (web-update.zip)', 'Download lightweight update (web-update.zip)')
+                      : session.fileName
                       ? t(`Tải gói cài đặt (${session.fileName})`, `Download installer (${session.fileName})`)
                       : t('Tải gói cài đặt mới', 'Download new installer')}
                   </span>
@@ -247,7 +253,12 @@ export const DesktopUpdateModal: React.FC<DesktopUpdateModalProps> = ({
                 }
               >
                 {session.status === 'completed'
-                  ? session.platform === 'darwin'
+                  ? session.updateKind === 'ota'
+                    ? t(
+                        'Đã giải nén bản mới — ứng dụng đang tự tải lại...',
+                        'New version extracted — reloading app...'
+                      )
+                    : session.platform === 'darwin'
                     ? t(
                         'Đã mở tệp .dmg — kéo fzInK vào Applications để hoàn tất',
                         'Opened .dmg — drag fzInK into Applications to finish'
@@ -261,6 +272,8 @@ export const DesktopUpdateModal: React.FC<DesktopUpdateModalProps> = ({
                         `Đã tải xong ${session.fileName || ''} vào thư mục Downloads`,
                         `Downloaded ${session.fileName || ''} to your Downloads folder`
                       )
+                  : session.updateKind === 'ota'
+                  ? t('Giải nén và nạp phiên bản mới', 'Extract and reload new version')
                   : t('Mở trình cài đặt và áp dụng bản mới', 'Launch installer & apply update')}
               </span>
             </div>
@@ -331,7 +344,9 @@ export const DesktopUpdateModal: React.FC<DesktopUpdateModalProps> = ({
                 </>
               )}
 
-              {session.status === 'completed' && (!session.launched || session.platform === 'darwin') && (
+              {session.status === 'completed' &&
+                session.updateKind !== 'ota' &&
+                (!session.launched || session.platform === 'darwin') && (
                 <button
                   type="button"
                   onClick={onClose}

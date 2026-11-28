@@ -2,11 +2,14 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   buildUpdateOriginCandidates,
+  classifyDesktopUpdateKind,
   classifyUpdateCheckFailure,
   compareVersionStrings,
   formatVersionJsonpScript,
   isAiStudioPreviewOrigin,
   isLocalhostOrigin,
+  resolveEffectiveVersionConfig,
+  resolveOtaBundleUrl,
   shouldPromptDesktopUpdate,
 } from './versionCheck';
 
@@ -152,6 +155,109 @@ describe('versionCheck — update origin resolution and honest failure classific
         latest: { version: 'v_fz.1.1.1.1.9', buildId: 'new-hash' },
       }),
       true
+    );
+  });
+
+  it('classifies 2-tier desktop updates between fast OTA and full native installer', () => {
+    const otaLatest = {
+      version: '1.2.12.2',
+      buildId: 'web-hash-2',
+      nativeVersion: '1.2.12',
+      minNativeVersion: '1.2.12',
+      otaBundleUrl: 'web-update.zip',
+      otaBundleSha256: 'abc123',
+    };
+
+    assert.equal(
+      classifyDesktopUpdateKind({
+        installedVersion: '1.2.12.2',
+        installedNativeVersion: '1.2.12',
+        hasOtaBridge: true,
+        latest: otaLatest,
+      }),
+      'none'
+    );
+
+    assert.equal(
+      classifyDesktopUpdateKind({
+        installedVersion: '1.2.12.1',
+        installedNativeVersion: '1.2.12',
+        hasOtaBridge: true,
+        latest: otaLatest,
+      }),
+      'ota'
+    );
+
+    assert.equal(
+      classifyDesktopUpdateKind({
+        installedVersion: '1.2.12.1',
+        installedNativeVersion: '1.2.12',
+        hasOtaBridge: false,
+        latest: otaLatest,
+      }),
+      'native'
+    );
+
+    assert.equal(
+      classifyDesktopUpdateKind({
+        installedVersion: '1.2.12.2',
+        installedNativeVersion: '1.2.12',
+        hasOtaBridge: true,
+        latest: {
+          ...otaLatest,
+          version: '1.3.0',
+          nativeVersion: '1.3.0',
+          minNativeVersion: '1.3.0',
+        },
+      }),
+      'native'
+    );
+  });
+
+  it('resolves OTA bundle URLs and effective version configs cleanly', () => {
+    assert.equal(
+      resolveOtaBundleUrl('https://whiteboardfz.pages.dev/', 'web-update.zip'),
+      'https://whiteboardfz.pages.dev/web-update.zip'
+    );
+    assert.equal(
+      resolveOtaBundleUrl('https://whiteboardfz.pages.dev', 'https://cdn.example.com/ota.zip'),
+      'https://cdn.example.com/ota.zip'
+    );
+    assert.equal(resolveOtaBundleUrl('', 'web-update.zip'), null);
+
+    assert.deepEqual(
+      resolveEffectiveVersionConfig({
+        packageVersion: '1.2.12',
+        versionConfig: {
+          version: '1.2.12.3',
+          minNativeVersion: '1.2.12',
+          notes: 'Hotfix',
+        },
+      }),
+      {
+        version: '1.2.12.3',
+        nativeVersion: '1.2.12',
+        minNativeVersion: '1.2.12',
+        notes: 'Hotfix',
+      }
+    );
+
+    // Bumping package.json above version.json automatically lifts minNativeVersion & version
+    assert.deepEqual(
+      resolveEffectiveVersionConfig({
+        packageVersion: '1.3.0',
+        versionConfig: {
+          version: '1.2.12.3',
+          minNativeVersion: '1.2.12',
+          notes: 'Major upgrade',
+        },
+      }),
+      {
+        version: '1.3.0',
+        nativeVersion: '1.3.0',
+        minNativeVersion: '1.3.0',
+        notes: 'Major upgrade',
+      }
     );
   });
 });

@@ -6,10 +6,12 @@
 const { app, BrowserWindow, shell, Menu, ipcMain, safeStorage, net } = require('electron');
 const fs = require('fs');
 const path = require('path');
+const otaUpdater = require('./otaUpdater.cjs');
 
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 const GITHUB_LATEST_DOWNLOAD = 'https://github.com/ankkiet/whiteboard_fz/releases/latest/download';
 let mainWindow = null;
+let isUsingOtaEntry = false;
 let isDownloadingUpdate = false;
 let activeUpdateAbortController = null;
 let activeUpdateCancelReason = null;
@@ -110,35 +112,23 @@ function moveDownloadedInstaller(tempPath, destPath) {
 const UPDATE_IDLE_TIMEOUT_MS = 20000;
 const UPDATE_PROGRESS_THROTTLE_MS = 120;
 
-ipcMain.handle('fzink:updater:cancel', () => {
-  if (isDownloadingUpdate && activeUpdateAbortController) {
-    activeUpdateCancelReason = 'user';
-    activeUpdateAbortController.abort();
-    return { ok: true };
-  }
-  return { ok: false };
-});
-
-ipcMain.handle('fzink:updater:download-and-install', async () => {
-  if (isDownloadingUpdate) {
-    return { ok: false, error: 'Đang tải bản cập nhật, vui lòng chờ hoàn tất.' };
-  }
-  isDownloadingUpdate = true;
-  activeUpdateAbortController = new AbortController();
-  activeUpdateCancelReason = null;
-
-  const fileName = getPlatformInstallerFileName();
-  const downloadUrl = `${GITHUB_LATEST_DOWNLOAD}/${fileName}`;
-  const targetDir = (() => {
-    try {
-      return app.getPath('downloads');
-    } catch {
-      return app.getPath('temp');
+function isAllowedUpdateBundleUrl(rawUrl) {
+  try {
+    const parsed = new URL(String(rawUrl || ''));
+    if (parsed.protocol === 'https:') return true;
+    if (
+      parsed.protocol === 'http:' &&
+      (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1')
+    ) {
+      return true;
     }
-  })();
-  const destPath = path.join(targetDir, fileName);
-  const tempPath = `${destPath}.downloading`;
+    return false;
+  } catch {
+    return false;
+  }
+}
 
+async function streamDownloadToFile(downloadUrl, tempPath, fileName) {
   let idleTimer = null;
   const clearIdleTimer = () => {
     if (idleTimer) {
@@ -157,6 +147,7 @@ ipcMain.handle('fzink:updater:download-and-install', async () => {
   };
 
   try {
+    fs.mkdirSync(path.dirname(tempPath), { recursive: true });
     if (fs.existsSync(tempPath)) {
       fs.unlinkSync(tempPath);
     }
@@ -239,13 +230,146 @@ ipcMain.handle('fzink:updater:download-and-install', async () => {
       });
     }
 
+    return {
+      receivedBytes,
+      totalBytes: totalBytes || receivedBytes,
+      speedBps: lastSpeedBps,
+    };
+  } finally {
+    clearIdleTimer();
+  }
+}
+
+ipcMain.on('fzink:updater:native-version', (event) => {
+  event.returnValue = app.getVersion();
+});
+
+ipcMain.handle('fzink:updater:cancel', () => {
+  if (isDownloadingUpdate && activeUpdateAbortController) {
+    activeUpdateCancelReason = 'user';
+    activeUpdateAbortController.abort();
+    return { ok: true };
+  }
+  return { ok: false };
+});
+
+ipcMain.handle('fzink:updater:apply-ota', async (_event, payload) => {
+  if (isDownloadingUpdate) {
+    return { ok: false, error: 'Đang tải bản cập nhật, vui lòng chờ hoàn tất.' };
+  }
+  const bundleUrl = payload && typeof payload.bundleUrl === 'string' ? payload.bundleUrl.trim() : '';
+  if (!isAllowedUpdateBundleUrl(bundleUrl)) {
+    return { ok: false, error: 'Địa chỉ gói cập nhật OTA không hợp lệ.' };
+  }
+
+  isDownloadingUpdate = true;
+  activeUpdateAbortController = new AbortController();
+  activeUpdateCancelReason = null;
+
+  const fileName = 'web-update.zip';
+  const userDataDir = app.getPath('userData');
+  const tempZipPath = path.join(userDataDir, 'web-updates', 'staging.zip.downloading');
+
+  try {
+    const dlStats = await streamDownloadToFile(bundleUrl, tempZipPath, fileName);
+
+    sendUpdaterProgress({
+      phase: 'launching',
+      percent: 100,
+      receivedBytes: dlStats.receivedBytes,
+      totalBytes: dlStats.totalBytes,
+      speedBps: dlStats.speedBps,
+      fileName,
+    });
+
+    const installRes = otaUpdater.installOtaFromZip({
+      userDataDir,
+      zipPath: tempZipPath,
+      expectedSha256: payload && payload.expectedSha256 ? String(payload.expectedSha256) : undefined,
+      targetVersion: payload && payload.targetVersion ? String(payload.targetVersion) : '',
+      targetBuildId: payload && payload.targetBuildId ? String(payload.targetBuildId) : '',
+      nativeVersion: app.getVersion(),
+    });
+
+    try {
+      if (fs.existsSync(tempZipPath)) fs.unlinkSync(tempZipPath);
+    } catch {}
+
+    setTimeout(() => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        isUsingOtaEntry = true;
+        mainWindow.loadFile(installRes.entryHtmlPath);
+      }
+    }, 450);
+
+    return {
+      ok: true,
+      mode: 'ota',
+      fileName,
+      destPath: installRes.entryHtmlPath,
+      launched: true,
+      platform: process.platform,
+    };
+  } catch (err) {
+    try {
+      if (fs.existsSync(tempZipPath)) fs.unlinkSync(tempZipPath);
+    } catch {}
+
+    if (activeUpdateCancelReason === 'user') {
+      sendUpdaterProgress({ phase: 'cancelled', percent: 0, fileName });
+      return { ok: false, cancelled: true, fileName };
+    }
+
+    const errorMessage =
+      activeUpdateCancelReason === 'timeout'
+        ? 'Kết nối tải bản cập nhật bị gián đoạn quá lâu (hết thời gian chờ).'
+        : err && err.message
+        ? err.message
+        : 'Không thể áp dụng bản cập nhật nhanh.';
+
+    sendUpdaterProgress({ phase: 'error', percent: 0, fileName });
+    return {
+      ok: false,
+      fileName,
+      error: errorMessage,
+    };
+  } finally {
+    activeUpdateAbortController = null;
+    activeUpdateCancelReason = null;
+    isDownloadingUpdate = false;
+  }
+});
+
+ipcMain.handle('fzink:updater:download-and-install', async () => {
+  if (isDownloadingUpdate) {
+    return { ok: false, error: 'Đang tải bản cập nhật, vui lòng chờ hoàn tất.' };
+  }
+  isDownloadingUpdate = true;
+  activeUpdateAbortController = new AbortController();
+  activeUpdateCancelReason = null;
+
+  const fileName = getPlatformInstallerFileName();
+  const downloadUrl = `${GITHUB_LATEST_DOWNLOAD}/${fileName}`;
+  const targetDir = (() => {
+    try {
+      return app.getPath('downloads');
+    } catch {
+      return app.getPath('temp');
+    }
+  })();
+  const destPath = path.join(targetDir, fileName);
+  const tempPath = `${destPath}.downloading`;
+
+  try {
+    const dlStats = await streamDownloadToFile(downloadUrl, tempPath, fileName);
+
     const finalPath = moveDownloadedInstaller(tempPath, destPath);
     sendUpdaterProgress({
       phase: 'launching',
       percent: 100,
-      receivedBytes,
-      totalBytes: totalBytes || receivedBytes,
-      speedBps: lastSpeedBps,
+      receivedBytes: dlStats.receivedBytes,
+      totalBytes: dlStats.totalBytes,
+      speedBps: dlStats.speedBps,
       fileName,
     });
 
@@ -258,6 +382,7 @@ ipcMain.handle('fzink:updater:download-and-install', async () => {
       shell.showItemInFolder(finalPath);
       return {
         ok: true,
+        mode: 'native',
         fileName,
         destPath: finalPath,
         launched: false,
@@ -274,13 +399,13 @@ ipcMain.handle('fzink:updater:download-and-install', async () => {
 
     return {
       ok: true,
+      mode: 'native',
       fileName,
       destPath: finalPath,
       launched: true,
       platform: process.platform,
     };
   } catch (err) {
-    clearIdleTimer();
     try {
       if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
     } catch {}
@@ -304,7 +429,6 @@ ipcMain.handle('fzink:updater:download-and-install', async () => {
       error: errorMessage,
     };
   } finally {
-    clearIdleTimer();
     activeUpdateAbortController = null;
     activeUpdateCancelReason = null;
     isDownloadingUpdate = false;
@@ -377,11 +501,31 @@ function createMainWindow() {
     },
   });
 
+  const bundledDistDir = path.join(__dirname, '../dist');
+  const bundledIndexPath = path.join(bundledDistDir, 'index.html');
+
   if (isDev && process.env.ELECTRON_START_URL) {
+    isUsingOtaEntry = false;
     mainWindow.loadURL(process.env.ELECTRON_START_URL);
   } else {
-    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
+    const resolvedEntry = otaUpdater.resolveWebEntry({
+      userDataDir: app.getPath('userData'),
+      bundledDistDir,
+      nativeVersion: app.getVersion(),
+    });
+    isUsingOtaEntry = Boolean(resolvedEntry.isOta);
+    mainWindow.loadFile(resolvedEntry.entryHtmlPath);
   }
+
+  mainWindow.webContents.on('did-fail-load', (_event, _errorCode, _errorDescription, _validatedURL, isMainFrame) => {
+    if (isMainFrame && isUsingOtaEntry) {
+      isUsingOtaEntry = false;
+      otaUpdater.clearOtaUpdates(app.getPath('userData'));
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.loadFile(bundledIndexPath);
+      }
+    }
+  });
 
   // Mở các liên kết ngoài (như Google Drive) bằng trình duyệt mặc định của hệ điều hành
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {

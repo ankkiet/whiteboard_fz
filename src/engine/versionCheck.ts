@@ -1,9 +1,22 @@
 export interface AppVersionManifest {
   version: string;
   buildId: string;
+  nativeVersion?: string;
+  minNativeVersion?: string;
+  otaBundleUrl?: string;
+  otaBundleSha256?: string;
+  otaBundleSize?: number;
   notes?: string;
   updateOrigin?: string;
 }
+
+export interface VersionConfigInput {
+  version?: string;
+  minNativeVersion?: string;
+  notes?: string;
+}
+
+export type DesktopUpdateKind = 'none' | 'ota' | 'native';
 
 export type UpdateCheckFailureReason =
   | 'offline'
@@ -205,4 +218,98 @@ export function shouldPromptDesktopUpdate(params: {
   }
 
   return false;
+}
+
+/**
+ * Combines package.json version (the Electron native shell version) with optional
+ * version.json overrides so small web-only releases can bump the 4th segment (e.g. 1.2.12.1)
+ * while native bumps in package.json automatically raise minNativeVersion and version.
+ */
+export function resolveEffectiveVersionConfig(params: {
+  packageVersion: string;
+  versionConfig?: VersionConfigInput | null;
+}): {
+  version: string;
+  nativeVersion: string;
+  minNativeVersion: string;
+  notes: string;
+} {
+  const nativeVersion = (params.packageVersion || '').trim() || '1.0.0';
+  const cfg = params.versionConfig ?? {};
+  const cfgMinNative = (cfg.minNativeVersion || '').trim();
+  const cfgVersion = (cfg.version || '').trim();
+
+  const minNativeVersion =
+    cfgMinNative && compareVersionStrings(cfgMinNative, nativeVersion) >= 0
+      ? cfgMinNative
+      : nativeVersion;
+
+  const version =
+    cfgVersion && compareVersionStrings(cfgVersion, nativeVersion) >= 0
+      ? cfgVersion
+      : nativeVersion;
+
+  return {
+    version,
+    nativeVersion,
+    minNativeVersion,
+    notes: (cfg.notes || '').trim(),
+  };
+}
+
+/**
+ * Resolves an OTA bundle path/URL (e.g. "web-update.zip") against the update origin.
+ */
+export function resolveOtaBundleUrl(
+  sourceOrigin: string,
+  otaBundleUrl?: string | null
+): string | null {
+  const raw = (otaBundleUrl || '').trim();
+  if (!raw) return null;
+  if (/^https?:\/\//i.test(raw)) {
+    return raw;
+  }
+  const cleanOrigin = normalizeOriginUrl(sourceOrigin);
+  if (!cleanOrigin) return null;
+  const cleanPath = raw.replace(/^\/+/, '');
+  return `${cleanOrigin}/${cleanPath}`;
+}
+
+/**
+ * Classifies whether an available desktop update should be applied via fast OTA web bundle
+ * or via the full native installer (.exe / .dmg).
+ */
+export function classifyDesktopUpdateKind(params: {
+  installedVersion?: string | null;
+  installedBuildId?: string | null;
+  installedNativeVersion?: string | null;
+  hasOtaBridge?: boolean;
+  latest?: AppVersionManifest | null;
+}): DesktopUpdateKind {
+  const {
+    installedVersion,
+    installedBuildId,
+    installedNativeVersion,
+    hasOtaBridge = false,
+    latest,
+  } = params;
+
+  if (!shouldPromptDesktopUpdate({ installedVersion, installedBuildId, latest })) {
+    return 'none';
+  }
+
+  if (!latest?.otaBundleUrl || !hasOtaBridge) {
+    return 'native';
+  }
+
+  const requiredNative = latest.minNativeVersion || latest.nativeVersion;
+  if (!installedNativeVersion || !requiredNative) {
+    return 'native';
+  }
+
+  if (compareVersionStrings(requiredNative, installedNativeVersion) > 0) {
+    return 'native';
+  }
+
+  return 'ota';
 }

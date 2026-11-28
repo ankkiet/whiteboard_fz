@@ -7,13 +7,18 @@ import { DesktopUpdaterProgress } from '../services/appUpdater';
 export interface StartDesktopUpdateParams {
   currentVersion: string;
   targetVersion: string;
+  targetBuildId?: string;
   notes?: string;
+  updateKind?: 'ota' | 'native';
+  otaBundleUrl?: string;
+  otaBundleSha256?: string;
 }
 
 export interface DesktopUpdateSession {
   currentVersion: string;
   targetVersion: string;
   notes?: string;
+  updateKind: 'ota' | 'native';
   status: 'saving' | 'preparing' | 'downloading' | 'launching' | 'completed' | 'error';
   progress: DesktopUpdaterProgress | null;
   errorMessage?: string;
@@ -21,6 +26,7 @@ export interface DesktopUpdateSession {
   destPath?: string;
   launched?: boolean;
   platform?: string;
+  mode?: 'ota' | 'native';
 }
 
 interface UseDesktopUpdateOptions {
@@ -65,10 +71,17 @@ export function useDesktopUpdate({
       const runId = ++activeRunIdRef.current;
       lastParamsRef.current = params;
 
+      const canRunOta =
+        params.updateKind === 'ota' &&
+        Boolean(params.otaBundleUrl) &&
+        typeof window.fzinkDesktopUpdater.applyOtaUpdate === 'function';
+      const resolvedUpdateKind: 'ota' | 'native' = canRunOta ? 'ota' : 'native';
+
       setSession({
         currentVersion: params.currentVersion,
         targetVersion: params.targetVersion,
         notes: params.notes,
+        updateKind: resolvedUpdateKind,
         status: 'saving',
         progress: null,
       });
@@ -119,7 +132,15 @@ export function useDesktopUpdate({
       });
 
       try {
-        const res = await window.fzinkDesktopUpdater.downloadAndInstall();
+        const res =
+          canRunOta && params.otaBundleUrl && window.fzinkDesktopUpdater.applyOtaUpdate
+            ? await window.fzinkDesktopUpdater.applyOtaUpdate({
+                bundleUrl: params.otaBundleUrl,
+                expectedSha256: params.otaBundleSha256,
+                targetVersion: params.targetVersion,
+                targetBuildId: params.targetBuildId,
+              })
+            : await window.fzinkDesktopUpdater.downloadAndInstall();
         if (activeRunIdRef.current !== runId) return;
 
         if (res.cancelled) {
@@ -134,6 +155,7 @@ export function useDesktopUpdate({
               ? {
                   ...prev,
                   status: 'completed',
+                  mode: res.mode || resolvedUpdateKind,
                   fileName: res.fileName || prev.fileName,
                   destPath: res.destPath,
                   launched: res.launched,

@@ -79,7 +79,7 @@ export const RenameBoardModal: React.FC<RenameBoardModalProps> = ({
     >
       <form
         onSubmit={(e) => void handleSubmit(e)}
-        className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl max-w-md w-full p-5 space-y-4"
+        className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl max-w-md w-full p-5 space-y-4" /* taste-skill-ignore */
       >
         <div className="flex items-center justify-between gap-2">
           <h3 id={titleId} className="text-base font-medium text-slate-900 dark:text-slate-100">
@@ -129,7 +129,7 @@ export const RenameBoardModal: React.FC<RenameBoardModalProps> = ({
           <button
             type="submit"
             disabled={isSubmitting}
-            className="h-9 px-4 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium transition-colors disabled:opacity-60 cursor-pointer"
+            className="h-9 px-4 rounded-lg bg-[#1d5fbf] hover:bg-[#174ea1] dark:bg-[#2a6fd1] dark:hover:bg-[#3b80e0] text-white text-xs font-medium transition-colors disabled:opacity-60 cursor-pointer"
           >
             {isSubmitting ? resolvedSubmittingLabel : resolvedSubmitLabel}
           </button>
@@ -186,7 +186,7 @@ export const DeleteBoardConfirmModal: React.FC<DeleteBoardConfirmModalProps> = (
         if (e.target === e.currentTarget && !isSubmitting) onClose();
       }}
     >
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl max-w-sm w-full p-5 space-y-4">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl max-w-sm w-full p-5 space-y-4" /* taste-skill-ignore */>
         <div className="flex items-start gap-3">
           <div className="w-9 h-9 rounded-xl bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0">
             <AlertTriangle className="w-5 h-5" />

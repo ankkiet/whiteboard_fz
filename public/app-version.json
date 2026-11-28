@@ -1,6 +1,11 @@
 {
-  "version": "v_fz.1.1.1.1.13",
-  "buildId": "2aac4ae237a2",
-  "notes": "Bản cập nhật fzInK (Nâng cấp đăng nhập Google Drive dài hạn với Refresh Token, tự động gia hạn không bị đăng xuất sau 60 phút)",
-  "updateOrigin": "https://whiteboardfz.pages.dev"
+  "version": "1.2.12",
+  "buildId": "95928d12ce75",
+  "nativeVersion": "1.2.12",
+  "minNativeVersion": "1.2.12",
+  "notes": "Cập nhật fzInK với cơ chế cập nhật 2 tầng: cập nhật nhanh (OTA) cho thay đổi nhỏ và bộ cài đặt cho nâng cấp lớn.",
+  "updateOrigin": "https://whiteboardfz.pages.dev",
+  "otaBundleUrl": "web-update.zip",
+  "otaBundleSha256": "391b88db960958051c126995ee44d98cc27d2291612ac1b91496a6b0add4ed7b",
+  "otaBundleSize": 2270280
 }

@@ -2,8 +2,49 @@ import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import crypto from 'crypto';
 import fs from 'fs';
+import {createRequire} from 'module';
 import path from 'path';
 import {defineConfig} from 'vite';
+
+const require = createRequire(import.meta.url);
+const otaUpdater = require('./electron/otaUpdater.cjs');
+
+function readEffectiveReleaseConfig() {
+  const pkgPath = path.resolve(__dirname, 'package.json');
+  const versionCfgPath = path.resolve(__dirname, 'version.json');
+  let nativeVersion = '1.0.0';
+  try {
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+    if (pkg && typeof pkg.version === 'string' && pkg.version.trim()) {
+      nativeVersion = pkg.version.trim();
+    }
+  } catch {
+    // ignore
+  }
+
+  let cfg: {version?: string; minNativeVersion?: string; notes?: string} = {};
+  try {
+    if (fs.existsSync(versionCfgPath)) {
+      cfg = JSON.parse(fs.readFileSync(versionCfgPath, 'utf-8'));
+    }
+  } catch {
+    // ignore
+  }
+
+  const cfgMinNative = typeof cfg.minNativeVersion === 'string' ? cfg.minNativeVersion.trim() : '';
+  const cfgVersion = typeof cfg.version === 'string' ? cfg.version.trim() : '';
+  const minNativeVersion =
+    cfgMinNative && otaUpdater.compareVersions(cfgMinNative, nativeVersion) >= 0
+      ? cfgMinNative
+      : nativeVersion;
+  const version =
+    cfgVersion && otaUpdater.compareVersions(cfgVersion, nativeVersion) >= 0
+      ? cfgVersion
+      : nativeVersion;
+  const notes = typeof cfg.notes === 'string' ? cfg.notes.trim() : '';
+
+  return {version, nativeVersion, minNativeVersion, notes};
+}
 
 export default defineConfig(() => {
   return {
@@ -63,16 +104,19 @@ export default defineConfig(() => {
                 .digest('hex')
                 .slice(0, 12);
 
-              const versionManifest = {
-                version: 'v_fz.1.1.1.1.13',
+              const releaseConfig = readEffectiveReleaseConfig();
+              const embeddedManifest = {
+                version: releaseConfig.version,
                 buildId,
-                notes: 'Bản cập nhật fzInK (Nâng cấp đăng nhập Google Drive dài hạn với Refresh Token, tự động gia hạn không bị đăng xuất sau 60 phút)',
+                nativeVersion: releaseConfig.nativeVersion,
+                minNativeVersion: releaseConfig.minNativeVersion,
+                notes: releaseConfig.notes,
                 updateOrigin: 'https://whiteboardfz.pages.dev',
               };
 
-              const versionMetaScript = `<script>window.__BTTM_EMBEDDED_BUILD__=${JSON.stringify(versionManifest)};</script>`;
+              const versionMetaScript = `<script>window.__BTTM_EMBEDDED_BUILD__=${JSON.stringify(embeddedManifest)};</script>`;
 
-              // Inject version manifest directly into dist/index.html so Electron packaged app always knows its version and buildId
+              // Inject version manifest directly into dist/index.html so Electron packaged app & OTA builds always know their version and buildId
               if (fs.existsSync(indexHtmlPath)) {
                 let distHtml = fs.readFileSync(indexHtmlPath, 'utf-8');
                 if (!distHtml.includes('__BTTM_EMBEDDED_BUILD__')) {
@@ -80,6 +124,31 @@ export default defineConfig(() => {
                   fs.writeFileSync(indexHtmlPath, distHtml, 'utf-8');
                 }
               }
+
+              // Package dist/ into web-update.zip for fast 2-tier OTA desktop updates
+              const otaZipPath = path.resolve(distDir, 'web-update.zip');
+              if (fs.existsSync(otaZipPath)) {
+                fs.unlinkSync(otaZipPath);
+              }
+              const otaArchive = otaUpdater.createZipFromDirectory(distDir, otaZipPath, {
+                exclude: (relPosix: string) =>
+                  relPosix === 'web-update.zip' ||
+                  relPosix === 'desktop-app-bundle.html' ||
+                  relPosix === 'app-version.json' ||
+                  relPosix === 'app-version.js' ||
+                  relPosix === 'sw.js' ||
+                  relPosix === '_headers' ||
+                  relPosix === '_redirects' ||
+                  relPosix.startsWith('demo/') ||
+                  relPosix.startsWith('assets/aistudio/'),
+              });
+
+              const versionManifest = {
+                ...embeddedManifest,
+                otaBundleUrl: 'web-update.zip',
+                otaBundleSha256: otaArchive.sha256,
+                otaBundleSize: otaArchive.sizeBytes,
+              };
 
               const jsChunkNames = assetFiles.filter((f) => f.endsWith('.js') && f !== jsFile);
               let bundleJs = rawJs;

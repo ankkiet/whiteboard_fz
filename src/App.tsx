@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
+import React, { Suspense, lazy, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useBoardStore } from './store/useBoardStore';
 import { applyDocumentLanguage } from './i18n';
@@ -84,6 +84,18 @@ export default function App() {
 
   useEffect(() => {
     activeViewRef.current = activeView;
+  }, [activeView]);
+
+  useLayoutEffect(() => {
+    if (typeof document === 'undefined') return;
+    const isHome = activeView === 'home';
+    document.documentElement.classList.toggle('view-home', isHome);
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'auto' });
+    }
+    return () => {
+      document.documentElement.classList.remove('view-home');
+    };
   }, [activeView]);
 
   useEffect(() => {
@@ -174,7 +186,13 @@ export default function App() {
   }, [drive]);
 
   return (
-    <main className="relative w-screen h-screen overflow-hidden bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans select-none">
+    <main
+      className={
+        activeView === 'home'
+          ? 'relative min-h-dvh w-full bg-[#fafafa] dark:bg-[#111113] text-slate-900 dark:text-slate-100 font-sans select-text'
+          : 'relative w-screen h-screen overflow-hidden bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans select-none'
+      }
+    >
       {activeView === 'home' ? (
         <HomePage
           drive={drive}

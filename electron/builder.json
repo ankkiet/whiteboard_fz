@@ -9,8 +9,11 @@
   },
   "files": [
     "dist/**/*",
+    "!dist/web-update.zip",
+    "!dist/desktop-app-bundle.html",
     "electron/main.cjs",
     "electron/preload.cjs",
+    "electron/otaUpdater.cjs",
     "!node_modules/**/*"
   ],
   "extraMetadata": {
